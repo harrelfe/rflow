@@ -1,0 +1,35 @@
+# Caching {#sec-caching}
+
+```{dot}
+digraph {
+  rankdir = LR;
+  node [style=filled, color="#fff4dd", shape=none];
+  Ca [label = "Caching for Fast\nReport Re-compilation"]
+  bim [label = <<font color="darkblue" face="courier">knitr</font>  Built-in Mechanism>]
+  tc [label = <Taking Control with <font color="darkblue" face="courier">runifChanged</font>>]
+  Ca -> bim
+  Ca -> tc
+}
+```
+
+The workhorse behind `Rmarkdown` and `Quarto` (besides [`Pandoc`](https://pandoc.org)) is [knitr](https://www.r-project.org/nosvn/pandoc/knitr.html), which processes the code chunks and properly mingles code and tabular and graphical output.  `knitr` has a built-in caching mechanism to make it so that code is not needlessly executed when the code inputs have not changed. This easy-to-use process does have two disadvantages: the dependencies are not transparent, and the stored cache files may be quite large.  I like to take control of caching and to be able to read the stored results with other scripts.  To that end, the `Hmisc` package `runifChanged` function was written.  Here is an example of its use.  First a function with no arguments must be composed.  This is the (usually slow) function that will be conditionally run if any of a group of listed objects has changed since the last time it was run.  This function when needed to be run produces an object that is stored in binary form in a user-specified file (the default file name is the name of the current R code chunk with `.rds` appended).
+
+```{r runifch}
+require(rms)
+require(data.table)
+g <- function() {
+  # Fit a logistic regression model and bootstrap it 500 times, saving
+  # the matrix of bootstrapped coefficients
+  f <- lrm(y ~ x1 + x2, x=TRUE, y=TRUE, data=dat)
+  bootcov(f, B=500)
+}
+set.seed(3)
+n   <- 2000
+dat <- data.table(x1=runif(n), x2=runif(n),
+                  y=sample(0:1, n, replace=TRUE))
+# runifChanged will write runifch.rds if needed (chunk name.rds)
+# Will run if dat or source code for lrm or bootcov change
+b <- runifChanged(g, dat, lrm, bootcov)
+dim(b$boot.Coef)
+head(b$boot.Coef)
+```

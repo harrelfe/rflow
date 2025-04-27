@@ -1,0 +1,23 @@
+
+digraph {
+  graph [pad="0.5", nodesep="0.5", ranksep="2", splines=ortho]
+  //  splines=ortho for square connections
+  node  [shape=box, fontsize="30"]
+  rankdir=TD;
+  Enr [label="Enrolled (n=1000)"];
+  Enr;
+  E1 [label="urine (n=517, 483 remain)"];
+E2 [label="alb (n=197, 286 remain)"];
+E3 [label="income (n=83, 203 remain)"];
+E4 [label="bili (n=23, 180 remain)"];
+E5 [label="edu (n=8, 172 remain)"];
+E6 [label="wblc (n=3, 169 remain)"];
+Enr -> E1;
+E1 -> E2;
+E2 -> E3;
+E3 -> E4;
+E4 -> E5;
+E5 -> E6;
+	Extab [label=<<table border="0" cellborder="0" cellspacing="0"><tr><td><font color="darkblue"><b># Exclusions</b></font></td><td><font color="darkblue"><b># Subjects</b></font></td></tr><HR/><tr><td ALIGN="CENTER">0</td><td ALIGN="RIGHT">169</td></tr><tr><td ALIGN="CENTER">1</td><td ALIGN="RIGHT">147</td></tr><tr><td ALIGN="CENTER">2</td><td ALIGN="RIGHT">122</td></tr><tr><td ALIGN="CENTER">3</td><td ALIGN="RIGHT">233</td></tr><tr><td ALIGN="CENTER">4</td><td ALIGN="RIGHT">131</td></tr><tr><td ALIGN="CENTER">5</td><td ALIGN="RIGHT">134</td></tr><tr><td ALIGN="CENTER">6</td><td ALIGN="RIGHT">40</td></tr><tr><td ALIGN="CENTER">7</td><td ALIGN="RIGHT">22</td></tr><tr><td ALIGN="CENTER">8</td><td ALIGN="RIGHT">1</td></tr><tr><td ALIGN="CENTER">9</td><td ALIGN="RIGHT">1</td></tr></table>>];
+  Enr:e -> Extab [dir=none];
+}

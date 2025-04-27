@@ -1,0 +1,1020 @@
+# Data Manipulation and Aggregation {#sec-manip}
+
+```{mermaid}
+flowchart LR
+dt[data.table]
+sub[Subsetting Observations<br>and Variables]
+am[Adding/Modifying Variables]
+rec[Recode] --> hrec[R Expressions<br>factor<br>fcase<br>score.binary<br>table look-up]
+res[Reshape] --> lw[Long to Wide<br>dcast] & wl[Wide to Long<br>melt]
+flu[Fast Lookup<br>From Disk] --> dtf[data.table & fst]
+```
+
+## `data.table` {#sec-dt}
+
+The [`data.table`](https://hbiostat.org/R/data.table) package provides a concise, consistent syntax for managing simple and complex data manipulation tasks, and it is extremely efficient for large datasets.  One of the best organized tutorials is [this](https://riptutorial.com/data-table), and a cheatsheet for data transformation is [here](https://raw.githubusercontent.com/rstudio/cheatsheets/master/datatable.pdf).  Useful `data.table` vignettes are [here](https://cran.r-project.org/web/packages/data.table/vignettes). A master cheatsheet for `data.table` is [here](https://rdrr.io/cran/data.table/man/data.table.html) from which the general syntax below is taken, where `DT` represents a data table.[`data.table` [FAQ](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-faq.html#j-num)]{.aside}
+
+```
+   DT[ i,  j,  by ] # + extra arguments
+        |   |   |
+        |   |    -------> grouped by what?
+        |    -------> what to do?
+         ---> on which rows?
+```
+
+The following chart may help one to conceptualize the `data.table` framework.  To enter into the environment of a data table means to be able to address its columns directly without having, for example, the `DT` prefix.
+
+```{mermaid}
+flowchart TD
+DTO["DT ["]
+E["Enter Environment<br>of DT<br>DT[rows,columns,by/on]"]
+DTO --> E
+R[Rows To Fetch<br>Or Change]
+C["Columns to Fetch<br><hr>Or Create/Redefine<br>with :="]
+OB["by (grouping)<br><hr>on (matching)"]
+E --> R & C & OB
+R & C & OB --> DTC["]"] --> L[Leave<br>Environment]
+L --> N["No :=<br><br>Print/Plot Output<br>or Assign Result To<br>New Data Table"]
+L --> IP[":=<br><br>Change DT in Place"]
+```
+
+Data tables are also data frames so work on any method handling data frames.  But data tables do not contain `rownames`.
+
+Several `data.table` examples follow.  I like to hold the current dataset in `d` to save typing.  Some basic operations on data tables are:
+
+```{r eval=FALSE}
+d[2]                  # print 2nd row
+d[2:4]                # print rows 2,3,4
+d[month == 'November']# fetch rows for November
+d[month %like%  'mb'] # fetch rows with 'mb' in month
+d[month %ilike% 'mb'] # fetch rows with 'mb' in month ignoring case
+d[y > 2 & z > 3]      # rows satisfying conditions
+d[, age]              # retrieve one variable
+d[, .(age, gender)]   # make a new table with two variables
+i <- 2; d[, ..i]      # get column 2
+v <- 'age'; d[, ..v]  # get variable named by contents of v
+d[, (v)]              # another way; these return data tables
+d[.N]                 # last row
+d[, .N, keyby=age]    # number of rows for each age, sorted
+d[1:10, bhr:pkhr]     # first 10 rows, variables bhr - pkhr
+d[1:10, !(bhr:pkhr)]  # all but those variables
+d[, 2:4]              # get columns 2-4
+d[, {...}]            # run any number of lines of code in ...
+                      # that reference variables inside d
+```
+
+`data.table` does many of its operations _by reference_ to avoid the overhead of having multiple copies of data tables.  This idea carries over to _apparent_ copies of data tables.  Here is an example.
+
+```{r dfcopy}
+require(Hmisc)
+require(data.table)
+knit_print <- knitr::normal_print # make knitr standard print output (not kable)
+a <- data.table(x1=1:3, x2=letters[1:3])
+a
+b <- a                  # no copy; b is just a pointer to a
+b[, x2 := toupper(x2)]  # changes a
+a
+a <- data.table(x1=1:3, x2=letters[1:3])
+a2 <- copy(a)           # fresh copy with its own memory space
+a2[, x2 := toupper(x2)] # doesn't change a
+a
+```
+
+You can capitalize on `data.table` _by reference_ operations when you need to perform a similar manipulation to a series of data tables.  As in [here](https://stackoverflow.com/questions/42729019) just loop over a `list()` of the data tables.
+
+```{r dflist}
+a <- data.table(x=1:2, y=11:12)
+b <- data.table(x=4:5, y=14:15)
+for(w in list(a, b)) w[, y := 2 * y]
+a
+b
+```
+
+An element in a specify row and column of a data table is usually an atomic value such as an integer, logical, character, or real (double precision floating point) value.  But data tables may also hold complex objects such as `list`s.  Here is an example where a hierarchical structure is used to hold longitudinal data with varying number of observations per subject.
+
+```{r}
+d <- data.table(id = c('a1', 'a2'), age = c(20, 30),
+                t  = list(1:3, 3:4),
+                y  = list(c(1.1,1.2,1.3), c(1.3,1.4)))
+d
+d[id == 'a1']
+d[id == 'a1', t]
+d[id == 'a1', y]
+```
+
+Try holding more complex objects: `gplot2` plots.
+
+```{r}
+#| layout-nrow: 1
+require(ggplot2)
+g1 <- ggplot(mapping=aes(x=1:5, y=(1:5)/10))   + geom_point()
+g2 <- ggplot(mapping=aes(x=1:5, y=(1:5)^2/10)) + geom_point()
+d <- data.table(state=c('AK', 'AL'), graph=list(g1, g2))
+d
+d[state == 'AK', graph]
+d[state == 'AL', graph]
+```
+
+To have `data.table` subset a data table using a subsetting expression that is a character string, use the following example.  [This example was adapted from [this](https://stackoverflow.com/questions/78416327).]{.aside}
+
+```{r eval=FALSE}
+criteria <- 'sex == "female" & age > 30'
+d[.i, env = list(.i = str2lang(criteria))]
+```
+
+### Special Symbols in `data.table` Expressions {#sec-manip-dtspec}
+
+There are automatically-created special symbols you can use in `data.table` operations, as nicely summarized [here](https://rdrr.io/cran/data.table/man/special-symbols.html) and in the table below.  These special symbols are also special in the sense that when you save them in the output, they are automatically given nice R variables names.  For example, `.N` is stored as `N`.
+
+| Symbol   | Meaning |
+|----------|---------|
+| `.SD`    | a `data.table` containing variables (other than those in `by`) for the current `by`-group |
+| `.N`     | number of rows in the current group (whole data table if no `by`) |
+| `.I`     | absolute row number in the data table, whether grouping or not |
+| `.BY`    | a `list` containing a 1-vector for each variable in `by` |
+| `.GRP`   | an integer group counter |
+| `.NGRP`  | overall number of `by` groups |
+| `.EACHI` | used after `by=` to make each single row a group |
+
+Here is an example showing the special variables' values.
+
+```{r}
+d <- data.table(state=.q(AL, AL, AK, AK, AK), y=c(3,2,5,7,1))
+d[, .(.I, .N, .BY, .GRP, .NGRP), by=state]
+```
+
+To create a new variable containing the relative row number within a group, use the following.
+
+```{r}
+d[, seqno := 1 : .N, by=state]
+d
+```
+
+### Keys {#sec-manip-keys}
+
+Keys [play multiple roles](https://stackoverflow.com/questions/20039335) in `data.table`:
+
+* Fast indexing, e.g., if `id` is the key, one can use the shortcut syntax `d['23f']` to directly and instantly access data for a subject with `id='23f'`
+* Sorting the data for printing
+* Speeding up joins (merges)
+
+The speedup for merging data tables may not be significant for most data tables, and the `on=` option to `d[...]` is recommended instead of relying on keys that may be hidden earlier in the code, when merging.  See the above link and @sec-merge for more information.
+
+Keys may be assigned using the `key` argument to the `data.table` function, or using the `setkey` and `setkeyv` functions from the `data.table` package.  Here are some examples:
+
+```{r eval=FALSE}
+setkey(d, state, city)    # sort d by city within state and define key
+k <- c('state', 'city')   # or .q(state, city)
+setkeyv(d, k)
+key(d)                    # list keys for d
+```
+
+## Analyzing Selected Variables and Subsets {#sec-manip-asubsets}
+```{r dtsimple}
+options(prType='html')
+getHdata(stressEcho)
+d <- stressEcho
+setDT(d)
+d[, describe(age)]
+d[, describe(~ age + gender)]
+d[gender == 'female', describe(age)]   # analyze age for females
+describe(d[, .(age, gender)], 'Age and Gender Stats')
+```
+
+```{r dtsimple2}
+# Separate analysis by female, male.  Use keyby instead of by to sort the usual way.
+# To makek this work we have to use plain text rendering of describe
+options(prType='plain')
+d[, print(describe(age, descript=gender)), by=gender]
+```
+
+Let's use `data.table` to do a stratified analysis by running a function `g` over `gender` groups and having `g` produce a simple blank character string, where the real work done by `g` is the side effect of adding to an ever-growing `list` named `tabs`.  This allows accumulation of complex objects, here html containing a `gt` table including `javascript` code to produce interactive sparklines representing a spike histogram for a continuous variable `age`.  The side effect is done by having `g` use `<<-` to store values in the global environment, just just in the local `g` environment.
+
+```{r dtside}
+options(prType='html')
+sparkline::sparkline(0)   # <1>
+tabs <- list()
+g <- function(x, name) {
+  p <- print(x, 'cont')   # <2>
+  tabs <<- c(tabs, structure(list(p), names=as.character(name)))  # <3>
+	''}
+d[, g(describe(age), name=gender), by=gender] # <4>
+```
+1. Load `javascript` `jQuery` dependencies for interactive sparklines drawn by the `sparkline` package
+1. Use the special output option for `describe` for continuous variables, which makes a table with the `gt` package containing sparklines
+1. `structure(z, names=...)` addes the `names` attribute to `z` enclosed in a `list`; `c(...)` combines the new list with the current list `tabs`
+1. Current by-group `gender` name is passed to `g` to use in naming the list elements
+
+The `qreport` `maketabs` function relies on `results='asis'` being in the chunk header, and uses `Quarto` features to make a separate tab for each by-group, with an initial blank tab so that at the beginning no output is shown, when `initblank=TRUE`. But as of 2024-07-27, `knitr` throws an error when rendering this type of output through `maketabs`.  If you are interested in working on a `data.table` solution start with the following.
+
+```{r eval=FALSE}
+g <- function(x, by) list(print(describe(x, descript=by), 'cont')) #<1>
+w <- d[, .(des=g(age, gender)), by=gender] #<2>
+```
+1. Enclose the html `print` result in a `list()` so that `data.table` will keep it intact.
+2. Row 1 of `w` is for males, row 2 for females.  The `des` column contains the two `describe` html `print` outputs.
+
+This creates a 2$\times$ 2 data table `w` that you can convert to a `list()` with two elements with a little work.
+
+Here is a non-`data.table` solution using built-in R functions `split` and `lapply` whereby the dataset is split into two lists by `gender`.
+
+```{r}
+s <- split(d, d$gender) #<1>
+w <- lapply(s, function(x) print(describe(~ age, data=x), 'cont')) #<2>
+```
+1. Make a `list` with two elements named `male` and `female`.
+2. For each of the two elements in the `list` run `print(describe(...))` to make a new two-element list containing html.
+
+```{r results='asis',eval=FALSE}
+qreport::maketabs(w, initblank=TRUE)   # not run
+```
+
+This can also be done by creating a function that both subsets the data and runs the analysis. [Hover over the spike histogram to see data values, frequencies, and relative frequencies.]{.aside}
+
+```{r results='asis'}
+g    <- function(s) print(describe(~ age, data=d[gender == s]), 'cont')
+levs <- d[, levels(gender)]
+w    <- lapply(levs, g)
+names(w) <- levs
+qreport::maketabs(w, initblank=TRUE)
+```
+
+Get back to something simple: compute the mean and median age by gender.
+
+```{r dtsimple2b}
+d[, .(Mean=mean(age), Median=median(age)), by=gender]
+# To create a new subset
+w <- d[gender == 'female' & age < 70, ]
+```
+
+## Adding Aggregate Statistics to Raw Data {#sec-manip-bydup}
+
+Suppose one wished to compute a summary statistic stratified by groups, but the summary statistic is to be duplicated for all the raw data observations in each group.  This kind of operation is usually done in two steps: (1) compute summary statistics and (2) merge them with the original dataset.  With `data.table` it is easy to do this in one step.[This solution to the problem was provided [here](https://stackoverflow.com/questions/77374705)]{.aside}
+
+Let's create some data.
+
+```{r}
+d <- data.table(id     = 1:10,
+                clinic = .q(a, a, b, b, b, c, c, d, d, d),
+                sex    = .q(f, m, m, f, f, m, m, f, f, f),
+                sick   =  c(1, 0, 0, 0, 0, 1, 0, 1, 0, 1))
+d
+```
+
+Let's first add something simple to the data table: the number of persons in the same clinic as the clinic of the current row, counting the current row.
+
+```{r}
+d[, N := .N, by=.(clinic)]
+d
+```
+
+Next compute the proportion sick by clinic but smear it over all observations within clinic.  Add one complication: compute proportions only on females.  Note that a proportion is just a mean of 0/1 values.  Define our own mean function to handle the case where there are no females in a clinic.  The function returns `NA` in that case.  [The regular `mean` function returns `NaN` when the denominator is zero.]{.aside}
+
+```{r}
+mn <- function(x) {
+  x <- x[! is.na(x)]
+  if(! length(x)) NA_real_ else mean(x) # <1>
+}
+d[, psick := mn(sick[sex == 'f']), by=.(clinic)]
+d
+```
+1. `data.table` needs all groups to have the same mode for computed values such as means.  There are `NA` values for different variable modes.  We are using ordinary numeric floating point (`real`) double precision (15 digits of precision) values.
+
+## Adding, Changing, and Removing Variables {#sec-manip-acr}
+
+`data.table` provides a series of `set*` functions that can modify a data table by reference, i.e., in place, therefore increasing speed and minimizing memory usage.  One of these functions is `setcolorder` which will reorder columns into a user-specified order without moving any data.  Here are some examples.  Note that if the complete vector of names is not specified, `setcolorder` just moves the named varibles to the left.
+
+```{r eval=FALSE}
+setcolorder(mydata, c('id', 'age', 'sex'))
+setcolorder(mydata, .q(id,   age,   sex ))
+setcolorder(mydata, 'id')   # id variable becomes leftmost variable
+# Order variables by increasing number of NAs present
+setcolorder(mydata, order(sapply(mydata, function(x) sum(is.na(x)))))
+```
+
+With `data.table` you can create a new data table with added variables, or you can add or redefine variables in a data table in place.  The latter has major speed and memory efficiency implications when processing massive data tables.  Here `d` refers to a different data table from the one used above.
+
+```{r eval=FALSE}
+# Rename a variable
+setnames(d, c('gender', 'height'),
+            c(  'sex',      'ht'))
+# Easier:
+setnames(d, .q(gender, height),
+            .q(   sex,     ht))
+
+# Or
+ren <- .q(gender=sex, height=ht)
+setnames(d, names(ren), ren)
+
+# Or
+rename <- function(x, n) setnames(x, names(n), n)
+rename(d, .q(gender=sex, height=ht))
+
+# For all variables having baseline_ at the start of their names, remove it
+n <- names(d)
+setnames(d, n, sub('^baseline_', '', n))   # ^ = at start; use $ for at end
+
+# For all variables having baseline_ at the start of their names, remove it
+# and add Baseline to start of variable label
+n    <- names(d)
+n    <- n[grepl('^baseline_', n)]
+ren  <- sub('^baseline_', '', n); names(ren) <- n
+# Fetch vector of labels for variables whose names start with baseline_
+labs <- sapply(d, label)[n]   # label() result is "" if no label
+labs <- paste('Baseline', labs)
+d    <- updata(d, rename=ren, labels=labs)
+
+# Change all names to lower case
+n <- names(d)
+setnames(d, n, tolower(n))
+
+# Abbreviate names of all variables longer than 10 characters
+# abbreviate() will ensure that all names are unique
+n <- names(d)
+setnames(d, n, abbreviate(n, minlength=10))
+
+# For any variables having [...] or (...) in their labels, assume these
+# are units of measurement and move them from the label to the units
+# attribute
+d <- upData(d, moveUnits=TRUE)
+
+# Compute two new variables, storing result in a new data table
+z <- d[, .(bmi=wt / ht ^ 2, bsa=0.016667 * sqrt(wt * ht))]
+
+# Add one new variable in place
+d[, bmi := wt / ht ^ 2]
+
+# Add two new variables in place
+d[, `:=`(bmi = wt / ht ^ 2, bsa=0.016667 * sqrt(wt * ht))]
+d[, .q(bmi, bsa) := .(wt / ht ^ 2, 0.016667 * sqrt(wt * ht))]
+
+# Add two new variables whose names are specified in a vector v
+v <- .q(var1, var2)   # or c('var1', 'var2')
+d[, (v) := .(x1 * x2, sqrt(x2))]
+
+# Add a new variable computed from a function of several
+# variables whose names are in character vector v
+d[, newvar := do.call('min', .SD), .SDcols=v]
+
+# Add a new variable that is the number of non-missing variables with names = v
+g <- function(x) rowSums(! is.na(as.matrix(x)))
+d[, measured := g(.SD), .SDcols=v]
+
+# Change all variables named in v by converting them to integers
+d[, (v) := lapply(.SD, as.integer), .SDcols=v]
+
+# Compute something requiring a different formula for different types
+# of observations
+d[, htAdj := ifelse(sex == 'male', ht, ht * 1.07)]  # better" use fifelse in data.table
+d[, htAdj := ht * ifelse(sex == 'male', 1, 1.07)]
+d[, htAdj := (sex == 'male') * ht + (sex == 'female') * ht * 1.07]
+d[sex == 'male',   htAdj := ht]
+d[sex == 'female', htAdj := ht * 1.07]
+d[, htAdj := fcase(sex == 'male',   ht,          # fcase is in dta.table
+                   sex == 'female', ht * 1.07)]
+d[, htAdj := fcase(sex = 'female', ht * 1.07, default = ht)]
+
+# Add label & optional units (better to use upData which works on data tables)
+adlab <- function(x, lab, un='') {
+  label(x) <- lab
+  if(un != '') units(x) <- un
+  x
+}
+d[, maxhr := adlab(maxhr, 'Maximum Heart Rate', '/m')]
+
+# Delete a variable (or use upData)
+d[, bsa := NULL]
+
+# Delete two variables
+d[, `:=`(bsa=NULL, bmi=NULL)]
+d[, .q(bsa, bmi) := NULL]
+
+# Delete two variables whose names are in character vector v
+d[, (v) := NULL]
+# or set(d, j=v, value=NULL)
+
+# Delete all variables whose names end in _days
+d[, grep('_days$', colnames(d)) := NULL]
+# or:
+# v <- colnames(d)[grep('_days$', colnames(d))]
+# d[, (v) := NULL]
+
+# Delete a variable, but not in place (e.g, just print narrower table)
+d[, ! 'bsa']
+
+# Make a new data table that excludes columns containing xx in names
+d2 <- d[, .SD, .SDcols= ! patterns('xx')]
+```
+
+::: {.column-margin}
+See [this](https://stackoverflow.com/questions/9202413) for a comprehensive description of ways to remove columns using `data.table`.
+:::
+
+Beginning with [version 1.14.7 of `data.table`](https://github.com/Rdatatable/data.table/blob/master/NEWS.md) there is a new alias for `:=` that is especially useful when assigning or deleting multiple variables:
+
+```{r eval=FALSE}
+d[, let(bmi = wt / ht ^ 2, bsa=0.016667 * sqrt(wt * ht))]
+```
+
+### Adding Variables Depending on Other Variables Being Added {#sec-manip-newdep}
+
+When adding a series of variables to a data table using `:=` or `let`, the new variables may not depend on other new variables.  The following example shows how to easily get around that problem.  [See [here](https://stackoverflow.com/questions/56342915) for related ideas.]{.aside}
+
+
+```{r}
+d <- data.table(x=1:2, y=11:12)
+d[, .q(u, v, w) := {
+  u <- 2 * x
+  v <- y + u
+  w <- u + v
+  .(u, v, w)
+}]
+d
+```
+
+`{}` in R allows you to have multi-line expressions that end in one value (here a list with three elements), as if only that value were supplied to `data.table`.  The `<-` assignments (`=` may have been used instead) create temporary variables.
+
+This example is easier with the `Hmisc` `upData` function. [Add `print=FALSE` to `upData()` to suppress the output about changes to the dataset.]{.aside}
+
+```{r}
+d <- data.table(x=1:2, y=11:12)
+upData(d, u = 2 * x, v = y + u, w = u + v)
+```
+
+## Recoding Variables {#sec-manip-recode}
+
+```{r, eval=FALSE}
+# Group levels a1, a2 as a & b1,b2,b3 as b
+d[, x := factor(x, .q(a1,a2,b1,b2,b3),
+                   .q( a, a, b, b, b))]
+# Regroup an existing factor variable
+levels(d$x) <- list(a=.q(a1,a2), b=.q(b1,b2,b3))
+# or
+d <- upData(d, levels=list(x=list(a=.q(a1,a2), b=.q(b1,b2,b3))))
+
+# Combine all categories with frequency < 20 in to "OTHER"
+x <- combine.levels(x, m=20)
+# Instead of naming the catch-all category "OTHER" name it with a
+# comma-separated concatenation of all levels being combined and
+# use a relative threshold of n/20
+x <- combine.levels(x, minlev=0.05, plevels=TRUE)
+
+# For a categorical variable that is ordered, only allow categories
+# to be combined that are adjacent.  It makes sense for x to be
+# a factor and not character, because character variables have no
+# inherent ordering of levels.  If x is ordered() you can omit ord=TRUE.
+x <- combine.levels(x, m=10, ord=TRUE)
+
+# Manipulate character strings
+d[, x := substring(x, 1, 1)]   # replace x with first character of levels
+# or
+levels(d$x) <- substring(levels(d$x), 1, 1)
+
+# Recode a numeric variable with values 0, 1, 2, 3, 4 to 0, 1, 1, 1, 2
+d[, x := 1 * (x %in% 1:3) + 2 * (x == 4)]
+d[, x := fcase(x %in% 1:3, 1,          # fcase is in data.table
+               x == 4,     2)]
+d[, x := fcase(x %between% c(1,3), 1,
+               x    ==       4,    2)]  # %between% is in data.table
+
+# Recode a series of conditions to a factor variable whose value is taken
+# from the last condition that is TRUE using Hmisc::score.binary
+# Result is a factor variable unless you add retfactor=FALSE
+d[, x := score.binary(x1 == 'symptomatic',
+                      x2 %in% .q(stroke, MI),
+                      death)]
+# Same but code with numeric points
+d[, x := score.binary(x1 == 'symptomatic',
+                      x2 %in% .q(stroke, MI),
+                      death,  # TRUE/FALSE or 1/0 variable
+                      points=c(1,2,10))]
+# Or just reverse the conditions and use fcase which stops at the first
+# condition met
+d[, x := fcase(death,                  'death',        # takes precedence
+               x2 %in% .q(stroke, MI), 'stroke/MI',    # takes next precedence
+               x1 == 'symptomatic',    'symptomatic',
+               default =               'none')]
+
+# Recode from one set of character strings to another using named vector
+# A named vector can be subscripted with character strings as well as integers
+states <- c(AL='Alabama', AK='Alaska', AZ='Arizona', ...)
+# Could also do:
+#  states <- .q(AL=Alabama, AK=Alaska, AZ=Arizona, ..., NM='New Mexico', ...)
+# or do a merge for table lookup (see later)
+d[, State := states[state]]
+# states are unique, state can have duplicates and all are recoded
+d[, State := fcase(state == 'AL', 'Alabama',  state='AK', 'Alaska', ...)]
+
+# Recode from integers 1, 2, ..., to character strings
+labs <- .q(elephant, giraffe, dog, cat)
+d[, x := labs[x]]
+
+# Recode from character strings to integers
+d[, x := match(x, labs)]
+d[, x := fcase(x == 'elephant', 1,
+               x == 'giraffe',  2,
+               x == 'dog',      3,
+               x == 'cat',      4)]
+```
+
+As an example of more complex hierarchical recoding let's define codes in a nested `list`.
+
+```{r hrecode}
+a <- list(plant =
+            list(vegetable = .q(spinach, lettuce, potato),
+                 fruit     = .q(apple, orange, banana, pear)),
+          animal =
+            list(domestic  = .q(dog, cat, horse),
+                 wild      = .q(giraffe, elephant, lion, tiger)) )
+a
+a <- unlist(a)
+a
+# Pick names of unlist'ed elements apart to define kingdom and type
+n <- sub('[0-9]*$', '', names(a))  # remove sequence numbers from ends of names
+# Names are of the form kingdom.type; split at .
+s       <- strsplit(n, '.', fixed=TRUE)
+kingdom <- sapply(s, function(x) x[1])
+type    <- sapply(s, function(x) x[2])
+# or:   (note \\. is escaped . meaning not to use as wild card)
+#        .* = wild card: any number of characters
+# kingdom <- sub('\\..*', '', n)  # in xxx.yyy remove .yyy
+# type    <- sub('.*\\.', '', n)  # in xxx.yyy remove xxx.
+names(kingdom) <- names(type) <- a
+w <- data.table(kingdom, type, item=a, key=c('kingdom', 'item'))
+w
+# Example table lookups
+cat(kingdom['dog'], ':', type['dog'], '\n')
+kingdom[.q(dog, cat, spinach)]
+type   [.q(dog, cat, giraffe, spinach)]
+# But what if there is a plant named the same as an animal?
+# Then look up on two keys
+w[.('animal', 'lion'), type]
+```
+
+### Recoding From an Expression File {#sec-manip-recexp}
+
+In a project involving hundreds of variables and a team of analysts and programmers, specification and debugging of code that computes derived variables can be hard to manage, and the programming required may be tedious.  It is useful to separate derived variable computations from overall data processing code and to manage long lists of formulas in `Github` or other repositories.  Properly constructed, the code inside such a file can be streamlined, easier to read, and easy to apply to data tables.
+
+Consider the case where each derived variable involves only variables from one dataset.  An R `list` object is a good structure for specification of formulas, new variable names, and labels.  Consider this R structure for a single derived variable to be named `newname`.  The `Hmisc` `.q` function is used to quote variable names in the `drop` option.  The vector of variable names in `drop` specifies component variables to be dropped from the data table upon computation of `newname`.  `drop=` is omitted if no variables are to be dropped.  `label=` and/or `units=` are omitted if you don't give `newname` a label or units of measurement.
+```
+list(newname=expression(an R expression of one or more variables),
+     label='label for newname', units='units of measurement',
+     drop=.q(var1, var2, var3))
+```
+
+The expression to compute must be the first element of the `list` and it must be named with the new variable.  An existing variable name may be used instead, resulting in transformation and replacement of that variable in the data table.
+
+Here is an example in which body mass index is computed.
+
+```
+list(bmi = expression(703 * weight / height ^ 2),
+     label='Body Mass Index',
+     drop=.q(weight, height), units='Kg/m^2')
+```
+
+::: {.column-margin}
+The flexibility of R comes into play once you consider that complex derived variable expressions can use external functions that you store elsewhere.
+
+:::
+
+For multiple derived variables these `list`s are stacked, and surrounded by an overall `list` that contains all these variable-specific lists.  When dealing with multiple datasets, these overall `list`s can be combined into a mega `list`.  An example of a `Github` file containing such specification is [here](https://github.com/harrelfe/rscripts/blob/master/testderived.r), printed below.  Ignore the `updata` object for now.
+
+```{r echo=FALSE}
+file <- 'https://raw.githubusercontent.com/harrelfe/rscripts/master/testderived.r'
+w <- readLines(file)
+cat(w, sep='\n')
+```
+
+The following code reads the mega `list`, executing the code to create the needed definitions and storing the overall derivation information in object `derv`. [`derv` was the object name to which the mega `list` was assigned inside the external derivation file.]{.aside}
+
+```{r}
+source(file)
+derv
+```
+
+The `qreport` package has a function `runDeriveExpr` that runs the items in `derv` from a single dataset against that dataset using `data.table` to effect the specified changes.  The input datasets must be `data.table`s.  By default, `runDeriveExpr` prints to the console information about the changes.  Let's create data tables `A` and `B` to show how this works.
+
+```{r}
+require(qreport)    # defines runDeriveExpr
+A <- data.table(id=1:2, height=c(70, 50), weight=c(200, 170))
+A
+B <- data.table(id=1:2, x1=11:12, x2=21:22, x3=31:32,
+                y1=41:42, y2=51:52, z=1:2)
+runDeriveExpr(A, derv$A)
+contents(A)
+print(A)
+runDeriveExpr(B, derv$B)
+contents(B)
+print(B)
+```
+
+Note that `runDeriveExpr` does the data table modifications in-place on its first argument, so one does not assign the result of the function to an object.  If you want to keep the original data table intact, do something like `Aorig <- copy(A)` before running `runDeriveExpr`.
+
+If one only needed to assign labels and units, this would best be done with the `Hmisc` `upData` function.  `upData` can also be used to transform existing variables and to add new variables.  An `upData` approach to the whole process involves defining the `upData` information as a `list` in the external file as was also done in `testderived.r`. [There is one small change to the usual `upData` input: formulas must be enclosed in `expression()`.]{.aside}
+
+```{r}
+# updata object was defined by source(file) above
+A <- data.table(id=1:2, height=c(70, 50), weight=c(200, 170))
+B <- data.table(id=1:2, x1=11:12, x2=21:22, x3=31:32,
+                y1=41:42, y2=51:52, z=1:2)
+A <- do.call('upData', c(list(object=A), updata$A))
+B <- do.call('upData', c(list(object=B), updata$B))
+A
+B
+```
+
+Note that any arguments to `upData` may appear in the `lists` that defined the `updata` object.
+
+## Operations on Multiple Data Tables {#sec-manip-mult}
+
+Consider an [example](https://stackoverflow.com/questions/72854617) where two data tables have almost the same columns, and rows are identified uniquely using the `id` variable.  We wish to use non-`NA` values in the second data table to fill in `NA` values in the corresponding positions in the first data table.  The solution is simple, using the `data.table` `rbind` function to combine the rows, then for every variable in the combined data table taking the first non-`NA` value for a given `id`. [See also the example at the start of the chapter where `list()` is used to make the same in-place changes to multiple `data.table`s]{.aside}
+
+```{r}
+a <- data.table(id = c(1, 2, 3), v1 = c("w", "x", NA), v2 = c("a", NA, "c"),
+                  v3 = 7:9)
+b <- data.table(id = c(2, 3, 4), v1 = c(NA, "y", "z"), v2 = c("b", "c", NA))
+w <- rbind(a, b, fill=TRUE)  # fill creates NAs for b's v3
+a
+b
+w
+g <- function(x) x[! is.na(x)][1]  # first non-NA value in vector x
+u <- w[,             lapply(.SD, g), by = id]
+#                    |      |    |        |
+#   for every variable      |    |        |
+#  in current id's data table    |        |
+#               run the g function        |
+#               id variable defining groups
+u
+```
+
+## Reshaping Data {#sec-manip-reshape}
+
+To reshape data from long to wide format, take the `L` data table above as an example.
+
+```{r l2w}
+L <- data.table(id  = c(2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 5),
+                day = c(1, 2, 3, 1, 2, 3, 4, 1, 2, 1, 2, 3),
+                y    =  1 : 12, key='id')
+L
+w <- dcast(L, id ~ day, value.var='y')
+w
+# Now reverse the procedure  (see also meltData in Hmisc)
+m <- melt(w, id.vars='id', variable.name='day', value.name='y')
+m
+setkey(m, id, day)   # sorts
+m[! is.na(y)]
+```
+
+### Directly Creating a Melted Data Table {#sec-manip-melted}
+
+Suppose you wanted to compute multiple aggregate statistics on a single numeric variable, for each by-group.  It is easy to write a function that creates multiple rows per group as if the multiple statistics had been "melted".  The result will be suitable for plotting.  Here is an example.  The function creates a `list` that makes `data.table` create multiple rows per group.
+
+```{r}
+#| fig-height: 2.75
+#| fig-width: 3.5
+g <- function(x) {
+  x    <- x[! is.na(x)]
+  p    <- c(1, 5, 10, 25, 50, 75, 90, 95, 99) / 100
+  qu   <- unname(quantile(x, p))  # remove % names of quantiles
+  stat <- c('Mean', format(p))    # format gives consistent digits
+  stat <- factor(stat, stat)
+  list(stat=stat, val=c(mean(x), qu))
+}
+# Try it
+set.seed(5)
+g(runif(50))
+d <- rbind(data.table(sex='female', y=runif(50)),
+           data.table(sex='male',   y=runif(100)))
+w <- d[, g(y), by=sex]
+w
+ggplot(w, aes(x = val, y=stat, color=sex)) + geom_point() +
+  xlab('y') + ylab('Statistic')
+```
+
+### Restructuring Multiple Independent Variables {#sec-manip-multx}
+
+Suppose that a dataset contained days of exposure of four different chemicals (A,B,C,D), with zero days indicating that the person was never exposed to a chemical.  We wish to take a one record per person dataset and expand it into one record per person per chemical, dropping rows of zero exposure.  Variables not named in `measure.vars` are carried down the rows.
+
+```{r}
+d <- data.table(id = 1:3, y=91:93,
+                A = c(12, 0, 13),
+                B = c(14, 2,  3),
+                C = c(0,  7, 11),
+                D = c(1,  2,  3))
+setkey(d, id)
+d
+w <- melt(d, measure.vars=c('A','B','C','D'), # or .q() or LETTERS[1:4]
+          variable.name='chemical', value.name='exposure')
+# Sort by id
+setkey(w, id)
+w
+# Remove zero exposures if desired
+w <- w[exposure > 0, ]
+w
+```
+
+What if the chemicals are subdivided into subclasses?  Consider a data table where integers after chemical names represent subclasses, and we split these off from the chemical letter name to create a new variable `sub`.
+
+```{r}
+d <- data.table(id = 1:3, y=91:93,
+                A1 = c(12, 0, 13),
+                A2 = c(12, 0, 13) + 0.1,
+                B1 = c(14, 2,  3),
+                B2 = c(14, 2,  3) + 0.1,
+                B3 = c(14, 2,  3) + 0.2,
+                C1 = c(0,  7, 11),
+                C2 = c(0,  7, 11) + 0.1,
+                D1 = c(1,  2,  3))
+setkey(d, id)
+d
+w <- melt(d, id.vars=.q(id, y),    # all variables that don't change over columns
+          variable.name='chemical', value.name='exposure')
+# Sort by id
+setkey(w, id)
+w
+# Split off subclasses
+w[, sub      := sub('.*?([0-9]*$)', '\\1', chemical)]   # sub = ending integer
+w[, chemical := sub('[0-9]*$', '',         chemical)]   # truncate chemical name
+w
+```
+
+### Turning a Frequency Table Into Raw Data {#sec-manip-ftable}
+
+Suppose we have a two-way table of frequency counts and desire to convert this information into a one-row-per-observation data table, each row of which contains the identity of the original frequency table row and column categories.  `data.table` provides an elegant way to make this transformation by virtue of the fact that if one computes a new variable for a row and that variable has more than one value (is a vector), the by-variable values will be duplicated as often as need to produce the vertically-expanded dataset.
+
+```{r}
+k <- rbind(A = c(3, 7, 3),
+           B = c(5, 4, 2))
+colnames(k) <- c('a', 'b', 'c')
+w <- data.table(tx = rownames(k)[row(k)],
+                gr = colnames(k)[col(k)])
+d <- w[, .(group=rep(gr, k[tx, gr])), by=.(tx, gr)]
+k
+d[, table(tx, group)]
+```
+
+## Computing Total Scale Scores in Presence of `NA`s {#sec-manip-nascoring}
+
+Suppose the dataset had blocks of questions that are to be summed to obtain total scores.  Missing values causes such sums to be smaller, and in some situations it is appropriate to scale the sums back up to account for missing components.  This is equivalent to imputing `NA`s with the mean of the non-missing values for the observations.  In the following example we do such calculations for a scale `fitness` made up of responses to four questions: `fit1`, ..., `fit4`, and for a scale `illness` made up of three questions: `ill1`, `ill2`, `ill3`.
+
+```{r}
+d <- data.table(
+  id=1:3,
+  ill1=c(1,NA,3), ill2=c(2,2,3), ill3=c(1,1,1), 
+  fit1=c(4,5,6), fit2=c(NA,2,3), fit3=c(NA,1,7), fit4=c(NA,3,6))
+d2 <- copy(d)
+d
+d[, ill := 3 * rowMeans(.SD, na.rm=TRUE), .SDcols=patterns('ill')]
+d[, fit := 4 * rowMeans(.SD, na.rm=TRUE), .SDcols=patterns('fit')]
+d
+```
+
+To do this more systematically:
+
+```{r}
+for(v in .q(ill, fit)) {
+  x <- colnames(d2)[colnames(d2) %like% v]
+  cat('Computed', v, 'from', paste(x, collapse=', '), '\n')
+  d2[, (v) := length(x) * rowMeans(.SD, na.rm=TRUE), .SDcols=x]
+  d2[, (x) := NULL]   # if you want to delete original variables
+}
+print(d2)
+```
+
+## Text Analysis {#sec-manip-text}
+
+Here is a type of "short and narrow to long and more narrow" data table conversion to split text into individual words.  Consider a data table with a variable `x` that is a character string containing any number of words separated by spaces or commas (commas are not actually used in this example).  Use the `data.table` `tstrsplit` function to split the string by these delimeters to form multiple rows.  The original row numbers (line numbers) are preserved as a column named `line`.   This is the same operation as done by the [`tidytext` `unnest_tokens` function](https://www.tidytextmining.com/tidytext.html) and the [`corpus` `text_split` function](https://cran.r-project.org/web/packages/corpus/vignettes/corpus.html).  We will use the `corpus` approach later.
+
+```{r}
+text <- c("Because I could not stop for Death -",
+          "He kindly stopped for me -",
+          "The Carriage held but just Ourselves -",
+          "and Immortality")     # from a poem by Emily Dickinson
+d <- data.table(x=text)
+w <- d[, tstrsplit(x, split=' |,')]   # | is "or" in regular expressions
+w[, line := 1 : .N]              # add original line numbers
+w                                # tstrsplit is in data.table
+u <- melt(w, id.vars='line', value.name='word')
+u <- u[! is.na(word),]           # remove padding for short sentences
+u
+u <- u[, .q(line, wordno, variable, word) :=
+          .(line, as.integer(substring(variable, 2)), NULL, word)]
+setkey(u, line, wordno)
+print(u)                         # don't know why u without print() doesn't print
+```
+
+The work can be done with a single line of code if you use the [`splitstackshape` package's `cSplit` function](https://cran.r-project.org/web/packages/splitstackshape/index.html).  Or use the following intuitive function, which requires only simple functions.
+
+```{r}
+unpackstr <- function(x, split=' |,|;|:') {
+  s <- strsplit(x, split=split)
+  s <- lapply(s, function(u) list(wordno=1 : length(u), word=u))
+  r <- rbindlist(s, idcol='line')   # rbindlist is in data.table; stack lists into single table
+  setkey(r, line, wordno)
+  r
+}
+unpackstr(text)
+```
+
+As seen above, tokenizing words in text strings is not that difficult.  Tokenizing sentences is harder due to the presence of abbreviations that contain periods.  The `corpus` package handles this nicely, including support for multiple languages.
+Let's do some text processing on Barack Obama's 2016 State of the Union Speech provided by Taylor Arnold and Lauren Tilton in their [text analysis tutorial](https://programminghistorian.org/en/lessons/basic-text-processing-in-r).  Paragraphs are delimited by blank lines, and there can be multiple sentences within a paragraph.  Use `corpus`'s `text_split` function to tokenize sentences, putting each sentence into a separate line.  Then the same function is used on the tokenized sentences to tokenize words.  This allows us to link a word back to a particular sentence using the `parent` variable created by `text_split`.
+
+```{r}
+text <- readLines('https://raw.githubusercontent.com/programminghistorian/jekyll/gh-pages/assets/basic-text-processing-in-r/sotu_text/236.txt')
+length(text)
+# Change all HTML &mdash; to actual dash
+s <- gsub('&mdash;', ' - ', text)
+# Remove laughter which is marked by [laughter] and [Laughter]
+# Must escape [] in regular expressions using \\
+# [Ll] means any element within [], i.e., either upper or lower case L
+s <- gsub('\\[[Ll]aughter\\]', ' ', s)
+
+# Tokenize
+require(corpus)
+# Get overall statistics on combined text lines, ignoring empty lines
+sc <- paste(s, collapse=' ')
+text_stats(sc)
+# Summarize paragraphs, making sure that blank lines separating them
+# are ignoreod
+text_stats(setdiff(s, ''))
+# Summarize 4-word combinations ignoring punctuation
+term_stats(s, ngrams=4, filter=text_filter(drop_punct=TRUE))
+# Find all instances = 'military'
+text_locate(s, 'military')
+# Count occurrences of 'the best'
+text_count(sc, 'the best')
+
+# Break into sentences, recognizing abbreviations' periods
+sen <- text_split(s, units='sentences')
+sen
+dim(sen)
+# Compute number of tokens per sentence
+tps <- text_stats(sen)
+# Compute frequency distribution of sentence lengths
+table(tps$tokens)
+# Print longest sentence (but this does count punctuation as words)
+longest_sentence <- which(tps$tokens == max(tps$tokens))
+sen[longest_sentence, 'text']
+s[grep('But I can promise that', s)]
+
+words <- text_split(sen, units='tokens')
+# Consider also:
+# words <- text_split(sen, units='tokens', filter=text_filter(drop_punct=TRUE))
+words
+length(unique(words$parent))   # same as number of sentences
+
+# Convert to data.table.  as.data.frame and as.data.table don't work
+# because the text column has a special corpus class
+# Trim white space from words and convert to lower case
+w <- with(words,
+          data.table(parent=as.integer(as.character(parent)),
+                     index,
+                     word=tolower(trimws(as.character(text))),
+                     key=.q(parent, index)))
+
+# Remove 'words' that contain only punctuation, and zero length words
+# [[:punct:]] is the regular expression for any accepted punctuation characters
+# ^ means start of line of text, $ is the end of a line
+# So the overall regular expression means punctuation and nothing but
+w <- w[! grepl('^[[:punct:]]+$', word) & nchar(word) > 0,]
+
+# Show distribution of word lengths
+w[, table(nchar(word))]
+# Compute word frequencies
+f <- w[, as.data.table(table(word))]
+# Sort in descending order of frequency
+f <- f[order(-N),]
+# Find 10 most commonly used words, sorted in descending order of frequency
+f[1:10, ]
+
+# Get frequencies of most common word pairs
+# shift(x) = previous value, within sentence (parent)
+# Service function g to paste two words together to but return NA if
+# either is missing.  This applies to the first word of a sentence,
+# which has no predecessor.
+g <- function(a, b) ifelse(is.na(a) | is.na(b), NA, paste(a, b))
+u <- w[, pair := g(shift(word), word), by=parent]
+u
+f <- u[, as.data.table(table(pair))]
+f <- f[order(-N),]
+f[1:10, ]
+```
+
+
+## Fast Lookup from Disk {#sec-manip-fst}
+
+The `fst` package introduced in @sec-fcreate-fst provides fast, efficient storage of data frames and tables and instant retrieval of selected rows and columns from the binary disk file, as long as the rows are consecutive.  In the following example we create a 10,000,000 row data table grouped by region and state, with variable number of observations per state.  The R `datasets` package provides built-in variables `state.name` and `state.division` to facilitate this.  Start by creating a lookup table that defines regions (division) given state names.  Then create the large data table with a variable `x` that is repeatedly measured within each state.
+
+```{r}
+division <- as.character(state.division)
+names(division) <- state.name
+n <- 1e7
+set.seed(1)
+d <- data.table(state = sample(state.name, n, replace=TRUE),
+                x     = runif(n))
+# Add division variable.names to data table
+d[, division := division[state]]
+# Sort data table by division and state within division
+setkey(d, division, state)   # 0.28s
+```
+
+Make two index files, one for retrieval of whole divisions, and one for retrieval of one state.
+For each group compute the first and last row for it.  Start by creating a variable `rowno` that has values $1, 2, 3, ..., 10^{7}$.
+
+```{r}
+d[, rowno := 1 : .N]  # 0.03s
+```
+
+Now we can compute starting and ending rows for each group.
+
+```{r}
+idx_d <- d[, .(start=min(rowno), end=max(rowno)),
+           by=.(division)]
+idx_d
+idx_s <- d[, .(start=min(rowno), end=max(rowno)),
+           by=.(division, state)]                 # 0.5s
+head(idx_s)
+```
+
+Now store the data table and the two row number lookup tables for future use, using `fst`.  Since we didn't add labels or units to variables we don't need to use the method in @sec-fcreate-fst.  [When creating a data table with 100,000,000 rows, `write_fst` requires 5s to write the file using standard compression, resulting in a file size of 1.3G and a `read_fst` run time of 6s.  When using `compress=100`, `write_fst` takes 42s and creates a 564MB file, requiring 7s for `read_fst`.  `fst` is multi-threaded, and timings given here are for a 12-core machine.  Total run time will be longer if you have fewer cores.]{.aside}
+
+```{r}
+require(fst)
+write_fst(d,     'states.fst',    compress=100)   # 4.3s, 57MB
+write_fst(idx_d, 'divlocs.fst',   compress=100)
+write_fst(idx_s, 'statelocs.fst', compress=100)   # 0s, 1441 bytes
+```
+
+Directly access data from disk for Kentucky in the East South Central division.
+
+```{r}
+# Lookup by two data.table keys
+i <- idx_s[.("East South Central", "Kentucky")]
+i
+# First fetch Kentucky data from the in-memory data table making use of keys
+d[.("East South Central", "Kentucky")]   # 0.007s
+# Now fetch from disk, avoiding having to have whole dataset in memory
+# Lookup start and end rows by running  read_fst within the i environment
+dr <- i[, read_fst('states.fst', as.data.table=TRUE,
+        from=start, to=end)]  # 0.025s
+dr
+```
+
+Because of efficiencies built into `fst`, there is very little overhead from extracting > 200,000 observations for Kentucky from disk, and the 343MB of memory for storing data table `d` would not be needed if processing only a subset of `d`.
+
+Extract data for all east south central states.
+
+```{r}
+i <- idx_d['East South Central']
+i
+dr <- i[, read_fst('states.fst', as.data.table=TRUE,
+        from=start, to=end)]
+dr
+```
+
+Instead of dealing with predefined groups, what if we wanted to retrieve from the external file all the observations satisfying conditions that are defined by values of variables in the file?  `read_fst` is so fast that one can randomly access thousands of rows, one at a time.  In the code below, the 1006 observations with values of `x` above 0.9999 are fetched from the 10,000,000 row data table in a total of 0.13s.  These single observations are then stacked into a data table.
+
+```{r}
+# Read subsetting variable(s) from whole dataset
+x <- read_fst('states.fst', columns='x')$x   # 0.05s
+i <- which(x > 0.9999)   # row numbers
+n <- length(i)           # number of rows to fetch
+n
+# Set aside a list with n elements, each one a data.table
+w <- vector('list', n)
+k <- 0
+for(j in i) {    # 0.13s total
+  k <- k + 1
+  w[[k]] <- read_fst('states.fst', from=j, to=j)
+}
+# Run the data.table rbindlist function to efficiently stack
+# all the data tables
+u <- rbindlist(w)   # 0.002s
+u
+```
+
+If you want to subset a `fst` file on multiple variables within the file, here is a prototypical example.  Assume that `w.fst` contains a data table.
+
+```{r eval=FALSE}
+u <- read_fst('w.fst', columns=.q(age, sex), as.data.table=TRUE)
+i <- u[, which(sex == 'male' & age > 70)]
+# Or use a more complex single expression:
+# i <- read_fst('w.fst', columns=.q(age, sex), as.data.table=TRUE)[
+#      , which(sex == 'male' & age > 70)]
+n <- length(i)
+w <- vector('list', n)
+k <- 0
+for(j in i) {
+  k <- k + 1
+  w[[k]] <- read_fst('w.fst', from=j, to=j)
+  # Speed up by adding columns= if want to retrieve a minority
+  # of variables
+}
+u <- rbindlist(w)
+```
+
+```{r}
+# Remove external files if no longer needed
+invisible(file.remove('states.fst', 'divlocs.fst', 'statelocs.fst'))
+```
+

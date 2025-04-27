@@ -1,0 +1,521 @@
+# Manipulation of Longitudinal Data {#sec-long}
+
+```{mermaid}
+flowchart LR
+sf[Storage Formats]
+sf1[Tree]
+sf2[Short and Wide]
+sf3[Tall and Thin]
+sf3a[Uniform Number<br>of Rows,<br>With NAs]
+sf3b[Variable Number<br>of Rows,<br>With Few NAs]
+sf --> sf1 & sf2 & sf3
+sf3 --> sf3a & sf3b
+locf[Last<br>Observation<br>Carried<br>Forward]
+crr[Carry<br>Forward<br>by Adding<br>Rows]
+fi[Find First<br>Observation<br>Meeting Criteria]
+cf[Using Functions<br>That Count<br>Criteria Met]
+im[Inexact<br>Matching]
+sf3a --> locf
+sf3b --> crr & fi & cf & im
+```
+
+The `data.table` package provides exceptional capabilities for manipulating longitudinal data, especially when performing operations by subject.  Before showing a variety of examples that typify common tasks, consider that there are many ways to store longitudinal data, including
+
+* as an R `list` hierarchical tree with one branch per subject (not considered here)
+* "short and wide" with one column per time point (not considered here because this setup requires much more metadata setup, more storage space, and more coding)
+* "tall and thin" with one row per subject per time point _observed_ (the primary format considered in this chapter; typically there are few `NA`s unless many response variables are collected at a single time and some of them are `NA`)
+* "tall and thin" with one row per subject per time point _potentially observed_, with missing values (`NA`) for unobserved measurements (considered in the first example)
+
+Here are some useful guidelines for making the most of `data.table` when processing longitudinal data.  These elements are used in many of the examples in this chapter.
+
+
+*	Minimize the use of `$`
+*	Don't use `for` loops or `*apply`
+*	Write a little function that does what you need for one subject then incorporate that function inside `DT[…]` after running a variety of tests on the function, for one subject at a time.  Be sure to test edge cases such as there being no non-`NA` values for a subject.
+*	Think generally.  One of the examples in this chapter used run length encoding to make a function to count how many conditions are satisfied in a row (over time).  That kind of counting function allows you to do all kinds of things elegantly.
+
+
+## Uniform Number of Rows
+
+Consider first the case where most of the subjects have the same number of rows and `NA` is used as a placeholder with a certain measurement is not made on a given time.  Though highly questionable statistically[LOCF is a form of missing value imputation where imputed values are treated the same as real measurements, resulting in highly deflated estimates of standard errors and much higher than nominal $\alpha$ in frequentist statistical testing.]{.aside}, last observation carried forward (LOCF) is sometimes used to fill in `NA`s so that simple analyses can be performed.
+
+`data.table` has an efficient built-in functions for LOCF (and for last observation carried backward and fill-in using a constant value): [`nafill` and `setnafill`](https://www.rdocumentation.org/packages/data.table/versions/1.14.2/topics/nafill).  Consider a longitudinal data table `L` with 5 observations per each of two subjects.
+
+```{r}
+require(Hmisc)
+require(data.table)
+require(ggplot2)
+L <- data.table(id  = c(1, 1, 1, 1, 1, 2, 2, 2, 2, 2),
+                day = c(1, 2, 3, 4, 5, 1, 2, 3, 4, 5),
+                y1  = 1:10,
+                y2  = c(NA, 1, NA, NA, 2, 1, 2, 3, 4, NA),
+                key = .q(id, day))
+# .q(id, day) is the Hmisc version of c('id', 'day')
+L
+setnafill(L, "locf", cols=.q(y1, y2))
+L
+```
+
+`setnafill` changed the data table in place.  Note that `y1` is unchanged since it contained no `NA`s.
+
+## Variable Number of Rows
+
+Consider the somewhat more frequently occuring situation where there is one row per subject per time at which a measurement is made.  Consider a different data table `L`, and create records to fill out the observations, carrying forward to 4 days the subject's last observation on `y` if it was assessed earlier than day 4.
+
+```{r}
+L <- data.table(id  = c(2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 5),
+                day = c(1, 2, 3, 1, 2, 3, 4, 1, 2, 1, 2, 3),
+                y    =  1 : 12, key='id')
+w <- copy(L)                                        # <1>
+u <- w[, .q(seq, maxseq) := .(1 : .N, .N),          # <2>
+       by=id][                                      # <3>
+       seq == maxseq & day < 4,]                    # <4>
+u <- u[, .(day = (day + 1) : 4, y = y), by=id]      # <5>
+u
+w <- rbind(L, u, fill=TRUE)                         # <6>
+setkey(w, id, day)                                  # <7>
+w
+```
+
+1. fresh start with no propagation of changes back to `L`.  Only needed if will be using `:=` to compute variables in-place and you don't want the new variables also added to `L`.   This is related to data.table doing things by reference instead of making copies.  `w <- L` does not create new memory for `w`.
+2. within one subject compute consecutive record numbers `1 : .N` and last record number `.N`
+3. separately by subject
+4. feed this result directly into a `data.table` operation to save last records when the last record is on a day before day 4
+5. fill out to day 4 by adding extra observations, separately by subject
+6. vertically combine observations in `L` and `u`, filling variables missing from one of the data tables with missing values (`NA`)
+7. sort by subject `id` and `day` within `id` and set these variables as dataset keys
+
+
+Find the first time at which y >= 3 and at which y >= 7.  [`day[y >= 3]` is read as "the value of `day` when `y >= 3`".  It is a standard subscripting operation in R for two parallel vectors `day` and `y`.  Taking the minimum value of `day` satisfying the condition gives us the first qualifying day.]{.aside}
+
+```{r firstt}
+L[, .(first3 = min(day[y >= 3]),
+      first7 = min(day[y >= 7])), by=id]
+```
+
+Same but instead of resulting in an infinite value if no observations for a subject meet the condition, make the result `NA`.
+
+```{r firstna}
+mn <- function(x) if(length(x)) min(x) else as.double(NA)
+# as.double needed because day is stored as double precision
+# (type contents(L) to see this) and data.table requires
+# consistent storage types
+L[, .(first3 = mn(day[y >= 3]),
+      first7 = mn(day[y >= 7])), by=id]
+```
+
+Add a new variable `z` and compute the first day at which `z` is above 0.5 for two days in a row for the subject.  Note that the logic below looks for consecutive days _for which records exist for a subject_.  To also require the days to be one day apart add the clause `day == shift(day) + 1` after `shift(z) > 0.5`.
+
+```{r}
+set.seed(1)
+w <- copy(L)
+w[, z := round(runif(.N), 3)]
+u <- copy(w)
+u
+mn <- function(x)
+  if(! length(x) || all(is.na(x))) as.double(NA) else min(x, na.rm=TRUE)
+u[, consecutive := z > 0.5 & shift(z) > 0.5, by=id][, 
+    firstday    := mn(day[consecutive]),     by=id]
+u
+```
+
+In general, using methods that involve counters makes logic more clear, easier to incrementally debug, and easier to extend the condition to any number of consecutive times.  Create a function that computes the number of consecutive `TRUE` values or ones such that whenever the sequence is interrupted by `FALSE` or 0 the counting starts over.
+As before we compute the first `day` at which two consecutive `z` values exceed 0.5. [`nconsec` is modified from code found [here](https://stackoverflow.com/questions/19998836).]{.aside}
+
+
+```{r nconsec}
+nconsec <- function(x) x * sequence(rle(x)$lengths)
+# rle in base R: run length encoding; see also data.table::rleid and
+# https://stackoverflow.com/questions/79107086
+# Example:
+x <- c(0,0,1,1,0,1,1,0,1,1,1,1)
+nconsec(x)
+# To require that the time gap between measurements must be <= 2 time
+# units use the following example
+t <- c(1:9, 11, 14, 15)
+rbind(t=t, x=x)
+nconsec(x & t <= shift(t) + 2)
+
+u <- copy(w)
+# nconsec(z > 0.5) = number of consecutive days (counting current
+# day) for which the subject had z > 0.5
+# u[, firstday := mn(day[nconsec(z > 0.5) == 2]), by=id] 
+#                 |  |  |                    |
+#           minimum  |  |                    |
+#                  day  |                    |
+#               such that                    |
+#    it's the 2nd consecutive day with z > 0.5
+u[,                                     # <1>
+    firstday :=                         # <2>
+                 mn(day                 # <3>
+                    [                   # <4>
+                     nconsec(z > 0.05)  # <5>
+                     == 2]),            # <6>
+    by=id]                              # <7>
+u
+```
+1. for all rows in data table `u`
+2. add new column `firstday`
+3. whose value is the minimum `day` (first `day`)
+4. such that
+5. the number of consecutive days (previous or current) for which `z > 0.05`
+6. equals 2
+7. run separately by subject `id`
+
+## Computing Gap Times Between Intervals {#sec-long-gap}
+
+Suppose that subjects have varying numbers of intervals (observations) with `start` and `stop` times, and that we want to compute the interval gaps, i.e., the gap between the `stop` time from a previous interval and the current interval's `start` time.  This is easily done by sorting the data by ascending `start` within `id` and using the `shift` function to retrieve the previous interval's `stop` time for the same `id`.
+
+```{r}
+L <- data.table(id    = c( 1, 2,   2,   3, 3,  3),
+                start = c(10, 1, 2.3, 0.1, 5, 22),
+                stop  = c(99, 3,   5,   2, 9, 30),
+                key = .q(id, start))
+L[, gap := start -shift(stop), by=id]
+L
+L[, table(gap)]
+```
+
+To print all the data for any subject having overlapping intervals, here are two approaches.
+
+```{r}
+L[L[gap <= 0], on=.(id)]
+L[id %in% L[gap <= 0, id]]
+```
+
+## Summarizing Multiple Baseline Measurements {#sec-long-summary}
+
+Suppose that subjects have varying numbers of records, with some having only two measurements, and that at least one measurement occurs before an intervention takes place at day zero.  Our goal is to summarize the pre-intervention measurements, adding three new variables to the data and doing away with baseline records but instead carrying forward the three baseline summarizes merged with the post-intervention responses.  The three summary measures are
+
+* the average response measurement over all measurements made between day -7 and day 0
+* the average response over all measurements made earlier than day -7 if there are any (`NA` otherwise)
+* the slope over all measurements made on day 0 or earlier if there are at least two such measurements that are at least 2 days apart (`NA` otherwise)
+
+Simulate data, starting with simulating a random number `npre` of baseline measures from 1-5 and a possibly different random number `npost` of follow-up measurements from 1-5.  Sample days without replacement so that measurements within subject are always on different days.  The dataset has a subject-specific variable `age` that is not used in this analysis added to it.  The overall mean time trend is quadratic in time.
+
+```{r}
+set.seed(11)
+n <- 40
+w <- lapply(1 : n,                                   # <1>
+            function(i) { npre   <- sample(1:5, 1)   # <2>
+                          npost  <- sample(1:5, 1)
+                          day <- sort(c(sample(-21 : 0, npre),
+                                        sample(1 : 180, npost)))
+                          age <- sample(40:80, 1)
+                          y <- round(day + (day - 90)^2 / 20 + 30 * rnorm(npre + npost))
+                          data.table(id=i, age, day, y=y)
+                        }  )
+head(w)
+u <- rbindlist(w)                                   # <3>
+u
+# Show distribution of number of points per subject
+with(u, table(table(id)))
+u[, id := factor(id)]                               # <4> 
+ggplot(u, aes(x=day, y=y)) +
+  geom_line(aes(col=id, alpha=I(0.4)), data=u) +
+  geom_point(aes(col=id), data=u) +
+  guides(color='none')
+```
+1. separately for integers 1, 2, 3, ..., n runs a function on that integer with the function producing a `list` that is stored in an element of a larger `list`; response `y` is normal with mean being a quadratic function of `day`
+2. argument `i` is the subject number; for that subject simulate the number of observations then simulate data using that number
+3. stack all the little data tables into one tall data table `u`
+4. `ggplot2` needs a variable mapped to the `color` aesthetic to be factor so it treats subject `id` as categorical and doesn't try to create a continuous color gradient
+
+For one subject write a function to compute all of the three summary measures for which the data needed are available.  Don't try to estimate the slope if some times are not at least 3 days apart.  By returning a `list` the `g` function causes `data.table` to create three variables.
+
+```{r}
+g <- function(x, y) {
+  j <- x <= 0 & ! is.na(y)  # <1>
+  x <- x[j]; y <- y[j]
+  n <- length(x)
+  if(n == 0) return(list(y0 = NA_real_, ym8 = NA_real_, slope = NA_real_))  # <2>
+  pre0  <- x >= -7
+  prem8 <- x <  -7
+  list(y0    = if(any(pre0))     mean(y[pre0])                else NA_real_,
+       ym8   = if(any(prem8))    mean(y[prem8])               else NA_real_,
+       slope = if(length(x) > 1 && diff(range(x)) >= 3)
+                                 unname(coef(lsfit(x, y))[2]) else NA_real_)   # <3>
+}
+```
+1. Analyze observations with non-missing `y` that are measured pre-intervention
+1. `data.table` requires all variables being created to have the same type for every observation; this includes the type of `NA`
+1. `range(x)` computes a 2-vector with the min and max `x`, and `diff` subtracts the min from the max.  The `&&` _and_ operator causes `diff(...)` to not even be evaluated unless there are at least two points.  `lsfit` is a simple function to fit a linear regression.  `coef` extracts the vector of regression coefficients from the fit, and we keep the second coefficient, which is the slope.  The slope carries an element name of `X` (created by `lsfit`) which is removed by `unname()`.
+
+Check the function.
+
+```{r}
+g(numeric(0), numeric(0))
+g(-10, 1)
+g(c(-10, -9), c(1, 2))
+g(c(-10, -3), c(1, 2))
+```
+
+Now run the function separately on each subject.  Then drop the pre-intervention records from the main data table `u` and merge the new baseline variables with the follow-up records.
+
+```{r}
+base <- u[, g(day, y), by = .(id)]
+head(base)
+dim(u)
+u <- u[day > 0]   # Keep only post-intervention (follow-up) records
+dim(u)
+u <- Merge(base, u, id = ~ id)     # Merge is in Hmisc
+u
+```
+
+## Interpolation/Extrapolation to a Specific Time {#sec-long-interp}
+
+Suppose that subjects have varying numbers of records, with some having only one measurement.  Our goal is to summarize each subject with a single measurement targeted to estimate the subject's response at 90 days.  Our strategy is as follows:
+
+* If the subject has a measurement at exactly 90 days, use it.
+* If the subject has only one measurement, use that measurement to estimate that subject's intercept (vertical shift), and use the time-response curve estimated from all subjects to extrapolate an estimate at 90 days.
+* If the subject has two or more measurements, use the same approach but average all vertical shifts from the overall `loess` curve to adjust the `loess` "intercept" in estimating `y` at the target time.
+
+Use the data table `u` created above.
+
+```{r}
+timeresp <- u[! is.na(day + y), approxfun(lowess(day, y))]   # <1>
+w <- data.table(day=1:180, y=timeresp(1:180))                # <2>
+ggplot(u, aes(x=day, y=y)) +
+  geom_line(aes(col=id, alpha=I(0.4)), data=u) +
+  geom_point(aes(col=id), data=u) +
+  geom_line(aes(x=day, y, size=I(1.5)), data=w) +
+  guides(color='none')
+```
+1. `lowess` runs the `loess` nonparametric smoother and creates a list with vectors `x` and `y`; `approxfun` translates this list into a function that linearly interpolates while doing the table look-up into the `lowess` result.  `timeresp` is then a function to estimate the all-subjects-combined time-response curve.  `lowess` doesn't handle `NA`s properly so we excluded points that are missing on either variable.
+2. evaluates the whole time-response curve for day 1, 2, 3, ..., 180
+
+As done previously, we follow the good practice of perfecting a function that summarizes the data for one subject, then let `data.table` run that function separately `by` subject ID.  The method adjusts the _loess_ curve so that it perfectly fits one observed point or best fits all observed points on the average, then we use that adjusted curve to estimate the response at day 90.  This is an empirical approach that trusts the raw data to provide the intercept, resulting in interpolated or extrapolated estimates that are as noisy as the real data.  Function `f` also returns the number of days from 90 to the closest day used for estimation of day 90's response.  
+
+```{r}
+f <- function(x, y, id=character(0), target=90) {
+  j <- ! is.na(x + y)
+	if(! any(j)) {
+	  cat('no non-missing x, y pairs for subject', id, '\n')
+		return(list(day = target, distance=NA_real_, yest=NA_real_))
+		}
+  x <- x[! is.na(x)]; y <- y[! is.na(y)]
+  distance <- abs(x - target)
+  i        <- which(distance == 0)
+  if(length(i)) return(list(day=target, distance=0., yest=mean(y[i])))
+  # estimate mean y at observed x - mean loess at observed x to adjust
+  z <- timeresp(c(target, x))
+  list(day      = target,
+       distance = min(distance),
+       yest     = z[1] + mean(y) - mean(z[-1]) )
+  }
+```
+
+Test the function under a variety of situations.
+
+```{r}
+# n=1, y is on the loess curve so projected y at x=90 should be also
+f(25, 253.0339)
+timeresp(c(25, 90))
+# n=1, x=90 exactly
+f(90, 111.11)
+# n=3, two x=90
+f(c(1, 2, 90, 90), c(37, 3, 33, 34))
+# n=1, not on loess curve
+f(25, timeresp(25) - 100)
+timeresp(90) - 100
+# n=2, interpolate to 90 guided by loess
+f(c(80, 100), c(100, 200))
+# n=2, extrapolate to 90
+f(c(70, 80), c(100, 200))
+```
+
+Now apply the function to each subject.  Add the new points to the original plot.  Keep the `age` variable in the one subject per record data table `z`.
+
+```{r}
+z <- u[, c(list(age=age), f(day, y, id)), by=id]   # just use u[, f(day, y, id), ...] if don't need age
+# Show distribution of distance between 90 and closest observed day
+z[, table(distance)]
+ggplot(u, aes(x=day, y=y)) +
+  geom_line(aes(col=id), data=u) +
+  geom_point(aes(col=id), data=u) +
+  geom_line(aes(x=day, y, size=I(1.5)), data=w) +
+  geom_point(aes(x=day, y=yest, col=id, shape=I('x'), size=I(3)), data=z) +
+  guides(color='none')
+```
+
+## Linear Interpolation to a Vector of Times {#sec-long-regtimes}
+
+Suppose that 10 subjects have varying numbers of records, corresponding to assessment times t ranging from 0 to 2 years.  We want to estimate the values of variable y over a regular sequence of values 0.25 years apart, for all subjects having at least two records at distinct times.  Use linear interpolation, or linear extrapolation if one of the target times is outside the range of a subject's data.  It is advisable to specify the time sequence as consisting of points interior to [0, 2] so that the estimates at the end have a good chance to be symmetrically interpolated/extrapolated.  For any value of t in the grid, set the calculated interpolated/extrapolated value to `NA` if there is no measurement within 0.25 years of t.
+
+Create the test dataset and a function to do the calculations on a single subject.
+
+```{r}
+set.seed(15)
+n <- 10
+w <- lapply(1 : n,
+            function(i) { m <- sample(1 : 20, 1)  #<1>
+                          t <- sort(runif(m, 0, 2)) #<2>
+                          y <- abs(t - 1) + 0.5 * rnorm(m) #<3>
+                          data.table(id=as.character(i), t, y)}) #<4>
+u <- rbindlist(w)
+# Show distribution of number of points per subject
+with(u, table(table(id)))
+ggplot(u, aes(x=t, y=y)) +
+  geom_line(aes(col=id, alpha=I(0.4)), data=u) + #<5>
+  geom_point(aes(col=id), data=u) +
+  guides(color='none') #<6>
+```
+1. Number of assessments for a subject is a random number between 1 and 20
+2. Uniformly distributed assessment times in ascending order
+3. True responses have means that are V-shaped in time
+4. Setting `id` to a character variable will keep `ggplot2` from trying to treat `id` as a continuous variable
+5. Using a transparency of 0.4 makes it easier to read spaghetti plots
+6. Prevent `ggplot2` from creating a legend for `id`
+
+```{r}
+# Set target times to regularize to
+times <- seq(0.25, 1.75, by=0.25)
+g <- function(t, y) { #<1>
+  i <- ! is.na(y)
+  if(any(! i)) {
+    t <- t[i]
+    y <- y[i]
+  }
+  if(uniqueN(t) < 2) return(list(t=times, y=rep(NA_real_, length(times)))) #<2>
+  z <- approxExtrap(t, y, xout=times)$y #<3>
+  # For each target time compute the number of measurements within 0.25
+  # years of the target
+  nclose <- sapply(times, function(x) sum(abs(t - x) <= 0.25))
+  z[nclose < 1] <- NA_real_
+  list(t=times, y=z)
+}
+```
+1. `g` is a function of two vectors (all values for one subject) that returns a `list`, which makes `data.table` place the output into two variables with names given in `list()` (t and y)
+2. `uniqueN` is in `data.table` and computes the number of distinct values of its argument.  Remember that when you need `NA` placeholders in building a `data.table` you need to declare the storage mode for the `NA`.  Here `real` means double precision floating point (16 digits of precision, the standard R non-integer numeric).
+3. `approxExtrap` is in the `Hmisc` package.  It extends the built-in R `approx` function to do linear extrapolation.
+
+Test the function.
+
+```{r}
+g(1, 1)
+g(1:2, 11:12)
+```
+
+Create a data table with the new variables, and plot the derived estimates along with the raw data.  X's are regularized y-values.  X's that are not touching lines represent extrapolations, and those on lines are interpolations.
+
+```{r}
+z <- u[, g(t, y), by=id]
+ggplot(u, aes(x=t, y=y)) +
+  geom_line(aes(col=id), data=u) +
+  geom_point(aes(col=id), data=u) +
+  geom_point(aes(x=t, y=y, col=id, shape=I('x'), size=I(4)), data=z) +
+  guides(color='none')
+```
+
+Look at raw data for the two Xs on the plot that are not touching lines at t=0.25 (id=7) and 0.5 (id=4).  For id=4 the X marks an extrapolation to the left of a steep drop over the first two points.  For id=7 there is also extrapolation to the left.
+
+```{r}
+u[id %in% c(4,7)]
+```
+
+Let's summarize the regularized data by computing the interpolated y at t=1,  Gini's mean difference, and mean absolute consecutive y difference for each subject.  Also compute the number of non-missing regularized values.
+
+```{r}
+g <- function(y) {
+  n <- sum(! is.na(y))
+  if(n < 2) return(list(n=n, y1=NA_real_, gmd=NA_real_, consec=NA_real_))
+  list(n      = n,
+       y1     = y[abs(times - 1.) < 0.001], #<1>
+       gmd    = GiniMd(y, na.rm=TRUE),
+       consec = mean(abs(y - Lag(y)), na.rm=TRUE)) #<2>
+}
+g(c(1, 2, NA, 5, 8, 9, 10))
+w <- z[, g(y), by=id]
+w
+```
+1. Checking against integers such as times = 1 will not have a problem with code such as `y[times == 1]` but to work in general when values being checked for equality may not be exactly represented in base 2 it's best to allow for a tolerance such as 0.001.
+2. `Lag` is in the `Hmisc` package; by default it shifts the y vector back one observation
+
+## Overlap Joins and Non-equi Merges {#sec-long-overlap}
+
+@sec-merge-closest covered simple inexact matching/merging.  Now consider more complex tasks.
+
+The `foverlaps` function in `data.table` provides an amazingly fast way to do complex overlap joins.  Our first example is modified from an example in the help file for `foverlaps`.  An annotation column is added to describe what happened.
+
+```{r overlap}
+d1 <- data.table(w     =.q(a, a, b, b, b),
+                 start = c( 5, 10, 1, 25, 50),
+                 end   = c(11, 20, 4, 52, 60))
+d2 <- data.table(w     =.q(a, a, b),
+                 start = c(1, 15,  1),
+                 end   = c(4, 18, 55),
+                 name  = .q(dog, cat, giraffe),
+                 key   = .q(w, start, end))
+f <- foverlaps(d1, d2, type="any")
+ann <- c('no a overlap with d1 5-11 & d2 interval',
+         'a 10-20 overlaps with a 16-18',
+         'b 1-4 overlaps with b 1-55',
+         'b 25-62 overlaps with b 1-55',
+         'b 50-60 overlaps with b 1-55')
+f[, annotation := ann]
+f
+# Don't include record for non-match
+foverlaps(d1, d2, type='any', nomatch=NULL)
+# Require the d1 interval to be within the d2 interval
+foverlaps(d1, d2, type="within")
+# Require the intervals to have the same starting point
+foverlaps(d1, d2, type="start")
+```
+
+Now consider an example where there is an "events" dataset `e` with 0 or more rows per
+subject containing start (`s`) and end (`e`) times and a measurement `x`
+representing a daily dose of something given to the subject from `s` to `e`.
+The base dataset `b` has one record per subject with times `c` and `d`.  Compute the total dose of drug received between `c` and `d` for the
+subject.  This is done by finding all records in `e` for the subject
+such that the interval `[c,d]` has any overlap with the interval `[s,e]`.
+For each match compute the number of days in the interval `[s,e]` that are
+also in `[c,d]`.  This is given by `min(e,d) + 1 - max(c,s)`.  Multiply this
+duration by `x` to get the total dose given in `[c,d]`.  For multiple records
+with intervals touching `[c,d]` add these products.
+
+```{r totaldose}
+base   <- data.table(id    = .q(a,b,c), low=10, hi=20)
+events <- data.table(id    = .q(a,b,b,b,k),
+                     start = c( 8,  7, 12, 19, 99),
+                     end   = c( 9,  8, 14, 88, 99),
+                     dose  = c(13, 17, 19, 23, 29))
+setkey(base,   id, low,   hi)
+setkey(events, id, start, end)
+w <- foverlaps(base, events,
+               by.x = .q(id, low,   hi),
+               by.y = .q(id, start, end ),
+               type = 'any', mult='all', nomatch=NA)
+
+w[, elapsed := pmin(end, hi) + 1 - pmax(start, low)]
+w[, .(total.dose = sum(dose * elapsed, na.rm=TRUE)), by=id]
+```
+
+Similar things are can be done with _non-equi merges_.  For those you can require exact subject matches but allow inexact matches on other variables.  The following example is modified from [here](https://www.scitilab.com/post_data/non_equi_joins/2020_11_17_non_equi_merge). A `medication` dataset holds the start and end dates for a patient being on a treatment, and a second dataset `visit` has one record per subject ID per doctor visit.  For each visit look up the drug in effect if there was one.
+
+```{r noneq}
+medication <-
+  data.table(ID         = c( 1, 1, 2, 3, 3),
+             medication = .q(a, b, a, a, b),
+             start      = as.Date(c("2003-03-25","2006-04-27","2008-12-05",
+                                    "2004-01-03","2005-09-18")),
+             stop       = as.Date(c("2006-04-02","2012-02-03","2011-05-03",
+                                    "2005-06-30","2010-07-12")),
+             key        = 'ID')
+medication
+set.seed(123)
+visit <- data.table(
+  ID   = rep(1:3, 4),
+  date = sample(seq(as.Date('2003-01-01'), as.Date('2013-01-01'), 1), 12),
+  sbp  = round(rnorm(12, 120, 15)),
+  key  = c('ID', 'date'))
+visit
+# Variables named in inequalities need to have variables in
+# medication listed first
+m <- medication[visit, on = .(ID, start <= date, stop > date)]
+m
+# start and stop dates are replaced with actual date of visit
+# drop one of them and rename the other
+m[, stop := NULL]
+setnames(m, 'start', 'date')
+m
+```

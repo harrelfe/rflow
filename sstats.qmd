@@ -1,0 +1,332 @@
+# Computing Summary Statistics {#sec-sstats}
+
+```{mermaid}
+flowchart LR
+oav[Statistical Summaries of All Variables]
+osv[Summaries of Variable Subsets]
+ofun[Summaries Using Functions<br>Returning Multi-dimensional Results]
+ms["Marginal Summaries<br>(e.g. Subtotals)"]
+```
+
+Many applications can use the automatically created `data.table` object `.SD` which stands for the data table for the current group being processed.  If `.SDcols` were not specified, all variables would be attempted to be analyzed.  Specify a vector of variable names as `.SDcols` to restrict the analysis.  If there were no `by` variable(s), `.SD` stands for the whole data table.
+
+```{r ss}
+require(Hmisc)
+require(data.table)
+getHdata(stressEcho)
+d <- stressEcho
+setDT(d)
+# Compute the number of distinct values for all variables
+d[, sapply(.SD, uniqueN)]   # uniqueN is in data.table
+# Same but only for variables whose names contain hx and either D or M
+d[, sapply(.SD, uniqueN), .SDcols=patterns('hx', 'D|M')]
+
+# Compute means on all numeric variables
+mn <- function(x) mean(x, na.rm=TRUE)
+d[, lapply(.SD, mn), .SDcols=is.numeric]
+# Compute means on all numeric non-binary variables
+nnb <- function(x) is.numeric(x) && uniqueN(x) > 2
+d[, lapply(.SD, mn), .SDcols=nnb]
+
+# Print frequency tables of all categorical variables with > 2 levels
+cmult <- function(x) ! is.numeric(x) && uniqueN(x) > 2
+tab <- function(x) {
+  z <- table(x, useNA='ifany')
+  paste(paste0(names(z), ': ', z), collapse=', ')
+}
+d[, lapply(.SD, tab), .SDcols=cmult]
+```
+
+Tabulate all variables having between 3 and 10 distinct values and create a side effect when `data.table` is running that makes the summarization function `tab` store all values and frequencies in a growing list `Z` so that `kable` can render a `markdown` table after we pad columns to the maximum length of all columns (maximum number of distinct values). 
+
+```{r diffreq}
+# Using <<- makes data.table have a side effect of augmenting Z and
+# Align in the global environment
+tab <- function(x) {
+  z <- table(x, useNA='ifany')
+  i <- length(Z)
+  Z[[i+1]] <<- names(z)
+  Z[[i+2]] <<- as.vector(z)
+  Align <<- c(Align, if(is.numeric(x)) 'r' else 'l', 'r')
+  length(z)
+}
+discr <- function(x) { i <- uniqueN(x); i > 2 & i < 11 }
+#                                       or i %between% c(2,11)
+Z    <- list(); Align <- character(0)
+w    <- d[, lapply(.SD, tab), .SDcols=discr]
+maxl <- max(w)
+# Pad shorter vectors with blanks
+Z <- lapply(Z, function(x) c(x, rep('', maxl - length(x))))
+Z <- do.call('cbind', Z)  # combine all into columns of a matrix
+colnames(Z) <- rep(names(w), each=2)
+colnames(Z)[seq(2, ncol(Z), by=2)] <- 'Freq'
+knitr::kable(Z, align=Align)
+```
+
+A better approach is to let the `kables` function put together a series of separate `markdown` tables of different sizes.  By using the "updating `Z` in the global environment" side effect we are able to let `data.table` output any type of objects of non-conformable dimensions over variables (such as frequency tabulations).
+
+```{r tabalt}
+tab <- function(x) {
+  z <- table(x, useNA='ifany')
+  i <- length(Z)
+  w <- matrix(cbind(names(z), z), ncol=2,
+              dimnames=list(NULL, c(vnames[i+1], 'Freq')))
+  Z[[i+1]] <<- knitr::kable(w, align=c(if(is.numeric(x)) 'r' else 'l', 'r'))
+  length(z)
+}
+discr <- function(x) { i <- uniqueN(x); i > 2 & i < 11 }
+Z      <- list()
+vnames <- names(d[, .SD, .SDcols=discr])
+w      <- d[, lapply(.SD, tab), .SDcols=discr]
+knitr::kables(Z)
+```
+
+Use a similar side-effect approach to get separate `html` `describe` output by `gender`.
+
+```{r bydesc,results='asis'}
+g <- function(x, by) {
+  Z[[length(Z) + 1]] <<- describe(x, descript=paste('age for', by))
+  by
+}
+Z <- list()
+by <- d[, g(age, gender), by=gender]
+# Make Z look like describe() output for multiple variables
+class(Z) <- 'describe'
+attr(Z, 'dimensions') <- c(nrow(d), nrow(by))
+attr(Z, 'descript') <- 'Age by Gender'
+html(Z)
+```
+
+```{r morestats}
+# Compute a 1-valued statistic on multiple variables, by cross-classification
+# of two variables.  Do this on a subset.  .SDcols=a:b uses variables in order
+# Use keyby instead of by to order output the usual way
+d[age < 70, lapply(.SD, mean), keyby=.(gender, newMI), .SDcols=pkhr:dp]
+
+# Compute multiple statistics on one variable
+# Note: .N is a special variable: count of obs for current group
+d[, .(Max=max(bhr), Min=min(bhr), Mean=mean(bhr), N=.N), by=.(gender, newMI)]
+# Same result another way
+g <- function(x) list(Max=max(x), Min=min(x), Mean=mean(x), N=length(x))
+d[, g(bhr), by=.(gender, newMI)]  # if g returned a vector instead, use as.list(g(bhr))
+
+d[, as.list(quantile(bhr)), by=gender]
+
+# Compute mean bhr by quintiles of age using Hmisc::cut2
+# Bad statistical practice; use scatterplot + smoother instead
+d[, .(Mean=mean(bhr)), keyby=.(fifth=cut2(age, g=5))]
+
+# Compute multiple statistics on multiple variables
+d[, lapply(.SD, quantile), by=gender, .SDcols=.q(bhr, pkhr, sbp)]
+# Similar but put percentile number in front of statistic value
+# Do only quartiles
+g <- function(x) {
+  z <- quantile(x, (1:3)/4, na.rm=TRUE)
+  paste(format(names(z)), format(round(z)))
+}
+d[, lapply(.SD, g), by=gender, .SDcols=.q(bhr, pkhr, sbp)]
+# To have more control over labeling and to have one row per sex:
+g <- function(x) {
+  s <- sapply(x, quantile, na.rm=TRUE)  # compute quantiles for all variables -> matrix
+  h <- as.list(s)  # vectorizes first
+  # Cross row names (percentile names) with column (variable) names
+  # paste(b, a) puts variable name in front of percentile
+  names(h) <- outer(rownames(s), colnames(s), function(a, b) paste(b, a))
+  h
+}
+d[, g(.SD), by=gender, .SDcols=.q(bhr, pkhr, sbp)]
+# Restrict to variables bhr - basedp in order columns created in data table
+d[, g(.SD), by=gender, .SDcols=bhr : basedp]
+# Can put ! in front of a sequence of variables to do the opposite
+
+# To add duplicated means to raw data use e.g.
+# d[, Mean := mean(x), by=sex]
+```
+
+## Summary Statistics Using Functions Returning Two-Dimensional Results {#sec-sstats-mult}
+
+`data.table` can create objects where results are matrices instead of data tables, or where table elements are not just scalar quantities but are `list`s.  We previously saw examples where the summarization function produced a vector or where complex side effects happened without storing the results in a data table.  Now consider examples where the summarization function produces a matrix or a list of lists and the final result is a matrix or a more complex data table.  Start with calculating three quartiles on one variable two different ways.  The examples that follow do not give satisfactory labeling when a `by` variable is added.
+
+```{r}
+qu <- function(x, type=7) {
+  y <- quantile(x, (1:3)/4, na.rm=TRUE, type=type)
+  names(y) <- .q(Q1, Q2, Q3)
+  y
+}
+g  <- function(x) rbind(type7=qu(x), type8=qu(x, type=8))
+d[, g(pkhr)]   # 2 x 3 matrix
+# d[, g(pkhr), by=gender] does not retain names
+```
+
+Compute 3 quartiles for each of 3 variables.
+
+```{r}
+g <- function(x) lapply(x, qu)
+d[, g(.SD), .SDcols=.q(bhr, pkhr, sbp)]  # a data.table w/out Q1 Q2 Q3 labels
+g <- function(x) apply(x, 2, qu)
+d[, g(.SD), .SDcols=.q(bhr, pkhr, sbp)]  # a matrix with Q1 Q2 Q3 labels
+```
+
+Now consider a summarization function computing a 2 $\times$ 2 result where some values are numeric and some are character strings.  Separately for each value of a `by` variable we desire the name of the variable having the lowest number of missing values, and the frequency of `NA`s, and the name of the variable having the highest number of missing values, and that frequency.  We use the `pbc` dataset that comes with the `survival` package, and do the variable search separately by outcome status.  The summarization function `g` operates on a data table for the current outcome status.  Consider only the variables in `pbc` that are ever `NA`.
+
+```{r}
+data(pbc, package='survival')
+p <- copy(pbc)
+setDT(p, key='status')  # sort by status
+numna <- sapply(p, function(x) sum(is.na(x)))  # loops over vars and counts NAs -> vector
+v     <- names(numna[numna > 0])   # names of variables with any NA 
+
+g <- function(x) {
+  m <- sapply(x, function(y) sum(is.na(y)))
+  mn <- m[which.min(m)]   # keeps variable name in names attribute
+  mx <- m[which.max(m)]
+  list(Lowest  = list(VariableLow  = names(mn), Nlow  = mn),
+       Highest = list(VariableHigh = names(mx), Nhigh = mx))
+}
+w=p[, g(.SD), by=status, .SDcols = v]   # data.table
+w
+sapply(w, class)
+w[1]
+w[1, Lowest]
+w[2, Lowest]
+```
+
+The `Lowest` and `Highest` elements of a given row of `w` are R `list`s, allowing for mixed object types (character/integer).  This doesn't make for the most concise way to retrieve individual elements but `w` prints well.  We can make a more conventional data table with the following code.
+
+```{r}
+g <- function(x) {
+  m <- sapply(x, function(y) sum(is.na(y)))
+  mn <- m[which.min(m)]
+  mx <- m[which.max(m)]
+  list(VarLow  = names(mn), Nlow  = mn,
+       VarHigh = names(mx), Nhigh = mx)
+}
+w=p[, g(.SD), by=status, .SDcols = v]   # data.table
+sapply(w, class)
+w
+```
+
+## Summary Statistics With Marginal Summaries {#sec-sstats-marg}
+
+The `cube` function in the `data.table` package will compute all possible marginal statistics.  When there is only one `by` variable, the overall statistic is computed in addition to compute stratified values.  When a dimension is being marginalized over, the value of the `by` variable for that dimension will be `NA`.
+
+```{r cube}
+mn  <- function(x) as.double(mean(x, na.rm=TRUE))
+# as.double ensures consistency of numeric type across groups
+Nna <- function(x) sum(! is.na(x))
+cube(d, .(Meanbhr = mn(bhr), N = Nna(bhr)), by='gender', id=TRUE)
+cube(d, .(Meanbhr = mn(bhr), N = Nna(bhr)), by=.q(gender, hxofMI), id=TRUE)
+# id=TRUE creates output variable grouping to detail level of marginalization
+# It is a binary representation, e.g. if by has 3 variables and a row
+# is marginalizing over the first and third variables,
+# grouping=binary 101 = 5
+# Use groupingsets() to control the marginalizations
+# Example: marginalize only one variable at a time
+groupingsets(d, .(Meanbhr = mn(bhr), N=Nna(bhr)), by=.q(gender, hxofMI),
+             sets=list('gender', 'hxofMI'), id=TRUE)
+```
+
+## Customizing Tables of Summary Statistics {#sec-sstats-gt}
+
+Suppose we wanted to compute N, the mean, the quartiles, and Gini's mean difference for 4 continuous variables, stratified by treatments A and B and not randomized.  Start by writing the per-variable per-stratum summarization function `g`.
+
+```{r}
+g <- function(x) {
+  x <- x[! is.na(x)]
+	n <- length(x)
+	if(n < 2) return(list(N=n, Mean=if(n == 1) x else NA_real_,
+	                      Q1=NA_real_, Q2=NA_real_, Q3=NA_real_, Gini=NA_real_))
+	q <- quantile(x, (1:3) / 4)
+	# data table wants constant numeric types across by-groups
+	list(N=n,
+       Mean = as.double(mean(x)),
+       Q1   = as.double(q[1]),
+       Q2   = as.double(q[2]),
+       Q3   = as.double(q[3]),
+       Gini = as.double(GiniMd(x)))  # GiniMd is in Hmisc
+	}
+set.seed(1)
+g(runif(1000))  # test it
+```
+
+Next, `melt` the data table to make it tall and thin so that all the analysis variables may be processed in the same way with repetitive programming.  The `Hmisc` `meltData` function makes this easy, and defaults to using variable labels.  Let's put units of measurement as a separate variable `Units`.
+
+```{r}
+p <- upData(p,
+            trt = ifelse(is.na(trt), 3, trt),
+            trt = factor(trt, 1:3, c('A', 'B', 'Not Randomized')),
+            labels=c(age ='Age', bili='Serum Bilirubin',
+                     chol='Serum Cholesterol', albumin='Serum Albumin'),
+            units=c(age='years', chol='mg/dL'))
+m <- meltData(age + bili + chol + albumin ~ trt, data=p, tall='left',
+              sepunits=TRUE)   # creates Units variable
+```
+
+Now for each variable compute the statistical summary.  Then use `data.table::dcast` to put treatments side-by-side for each variable (row).  In the code below we are careful to follow the good programming practice of computing column numbers instead of hard-coding column numbers for `gt`.
+
+```{r}
+s <- m[, g(value), by=.(variable, Units, trt)]
+s
+w <- dcast(s, variable + Units ~ trt, value.var=.q(N, Mean, Q1, Q2, Q3, Gini))
+# Sort columns so that treatments are together
+v <- names(w)
+# Function to get list of variable names ending with a
+u <- function(a) v[grep(paste0(a, '$'), v)]
+# Check it
+u('_A')
+# Put columns in desired order using data.table::setcolorder
+setcolorder(w, c('variable', 'Units',
+                 cola <- u('_A'), colb <- u('_B'),
+                 colnr <- u('_Not Randomized')))
+# Make short column names
+sn <- sub('_A$|_B$|_Not Randomized$', '', names(w))
+sn[1] <- ''
+# Reformat quantile headings to use html subscripts
+# qt will not vertically align these properly if using markdown instead.
+sn <- sub('^Q(.)', 'Q<sub>\\1</sub>', sn)
+names(sn) <- names(w)
+sn
+# Save column numbers for Ns
+colN <- grep('^N_', names(w))
+```
+
+Compose the table using the `gt` package.  See also @sec-rformat-gt and @sec-rformat-mix.
+
+```{r}
+#| column: screen-left
+require(gt)
+gt(w) |>
+  tab_style(style=cell_text(size='small'),               # <1>
+            locations=cells_column_labels(columns='Units')) |>
+  tab_style(style=cell_text(size='x-small', font='arial'), # <2>
+            locations=cells_body(columns=Units))  |>
+  cols_label(.list=sn, .fn=html)                  |>     # <3>
+  sub_missing(missing_text='')                    |>     # <4>
+  tab_spanner('A', columns=cola)                  |>     # <5>
+  tab_spanner('B', columns=colb)                  |>
+  tab_spanner('Not Randomized', columns=colnr)    |>
+  fmt_number(decimals=2)                          |>     # <6>
+  fmt_number(columns=colN, decimals=0)                   # <7>
+```
+
+1. smaller font for Units column heading
+1. extra-small arial font for Units column contents
+1. rename columns to short names and recognize html
+1. turn NA into blank
+1. group columns
+1. 2 decimals to the right for all numeric columns except ...
+1. integer format for N
+
+
+But don't forget the `Hmisc` `summaryM` which, aside from substituting the less useful standard deviation for Gini's mean difference, provides all the needed summaries for both continuous and categorical variables, as shown below.  `summaryM` will also print test statistics, although these are inappropriate for a randomized trial when testing baseline characteristics.
+
+```{r}
+#| column: page-right
+options(prType='html')
+s <- summaryM(age + bili + chol + albumin + sex + edema + stage ~ trt,
+              data=p)
+# Define a function to specify a 20% smaller font size in html
+smaller <- markupSpecs$html$smaller   # is in Hmisc; see also smaller2
+print(s, npct='both', prmsd=TRUE, msdsize=smaller, prN=TRUE,
+      middle.bold=TRUE, round='auto')
+```

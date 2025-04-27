@@ -1,0 +1,47 @@
+# Introduction
+
+This book describes workflow that I've found to be efficient in making reproducible research reports using R with `Rmarkdown` and now `Quarto` in data analysis projects.  I start with a fairly complete case study of survival patterns of passengers on the _Titanic_ that exemplifies many of the methods presented in the book.  This is followed by chapters covering importing data, creating annotated analysis files, examining extent and patterns of missing data, and running descriptive statistics on them with goals of understanding the data and their quality and completeness.  Functions in the `Hmisc` package are used to annotate data frames and data tables with labels and units of measurement, show metadata/data dictionaries, and to produce tabular and graphical statistical summaries.  Efficient and clear methods of recoding variables are given.  Several examples of processing and manipulating data using the `data.table` package are given, including some non-trivial longitudinal data computations.  General principles of data analysis are briefly surveyed and some flexible bivariate and 3-variable analysis methods are presented with emphasis on staying close to the data while avoiding highly problematic categorization of continuous independent variables.  Examples of diagramming the flow of exclusion of observations from analysis, caching results, parallel processing, and simulation are presented.  In the process several useful report writing methods are exemplified, including program-controlled creation of multiple report tabs. [[Comments](https://hbiostat.org/comment.html)<br>[Change log](https://github.com/harrelfe/blogd/commits/master/content/post/rflow.qmd)]{.aside}
+
+## R Code Repositories Used in This Book
+This report makes heavy use of the following R packages and Github repository:
+
+* [`Hmisc` package](https://hbiostat.org/R/Hmisc) which contains functions for importing data, data annotation, summary statistics, statistical graphics, advanced table making, etc.  Some new `Hmisc` functions are used, especially
+   + `addggLayers` for adding extended box plots and spike histograms to `ggplot2` plots, especially when run on the output of `meltData`
+   + `meltData` melt a data table according to a formula, with optional substitution of variable labels for variable names
+   + `seqFreq` for creating a factor variable with categories in descending order of sequential frequencies of conditions (as used in computing study exclusion counts)
+   + `hashCheck` for checking if parent objects have changed so a slow analysis has to be re-run (i.e., talking control of caching)
+   + `runifChanged` which uses `hashCheck` to automatically re-run an analysis if needed, otherwise to retrieve previous results efficiently
+   + `movStats` for computing summary statistics by moving overlapping windows of a continuous variable, or simply stratified by a categorical variable
+* [`qreport` package](https://hbiostat.org/R/qreport), a new R package available on CRAN for facilitating composition of `Quarto` reports, books, and web sites.  Some of the `qreport` functions used here are
+   + `addCap`, `printCap` for adding captions to a list of figures and for printing the list
+   + `dataChk` for data checking
+   + `dataOverview` dataset overview
+   + `htmlList` to easily print vectors in a named list using `kable`
+   + `htmlView`, `htmlViewx` for viewing data dictionaries/metadata in browser windows
+   + `kabl` to make it easy to use `kable` and `kables` for making html tables
+   + `maketabs` to automatically make multiple tabs in `Quarto` reports, each tab holding the output of one or more R command
+   + `makecolmarg` to print an object in the right margin in `Quarto` reports
+   + `makecnote` to print an object in a collapsible `Quarto` note
+   + `makecallout` a generic Quarto callout maker called by `makecolmarg`, `makecnote`
+   + `makecodechunk` 
+   + `makemermaid` make Quarto `mermaid` diagrams with insertion of variable values
+   + `makegraphviz` does likewise for `graphviz` diagrams
+   + `scplot` for putting graphs in separate chunks with captions in TOC
+   + `vClus` for variable clustering
+   + `aePlot` for making an interactive `plotly` dot chart of adverse event proportions by treatment
+* [`data.table` package](https://www.rdocumentation.org/packages/data.table/versions/1.14.2) for data storage, retrieval, manipulation, munging, aggregation, merging, and reshaping
+* [`haven` package](https://haven.tidyverse.org) for importing datasets from statistical packages
+* [`rio` package](https://github.com/leeper/rio) for one-stop importing of a wide variety of file types
+* [`ggplot2` package](https://ggplot2.tidyverse.org) for static graphics
+* [`gt` package](https://gt.rstudio.com) for a comprehensive and flexible approach to making tables
+* [`consort` package](https://cran.r-project.org/web/packages/consort) for consort diagrams showing observation filtering
+* [`plotly` package](https://plotly.com/r) for interactive graphics
+* [`rms` package](https://hbiostat.org/R/rms) for statistical modeling, validation, and presentation
+* [`knitr` package](https://cran.r-project.org/web/packages/knitr) for running reproducible reports, and also providing `kable` and `kables` functions for simple html table printing
+* [`grid`](https://cran.r-project.org/web/packages/grid) and [`gridExtra`](https://cran.r-project.org/web/packages/gridExtra) packages for converting tables to graphs (@sec-rformat-mix)
+
+## Installing R and `RStudio` {#sec-intro-install}
+
+* Watch [this video](https://youtu.be/YKvkXKeGoa8) from Negoita's [R for Ecology Course](https://www.rforecology.com/post/how-to-install-r-and-rstudio)
+* [Installing R and `RStudio`](https://rstudio-education.github.io/hopr/starting.html)
+* [Installing R on Your Machine](https://www.dataquest.io/blog/installing-r-on-your-computer)

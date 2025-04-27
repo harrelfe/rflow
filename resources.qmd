@@ -1,0 +1,26 @@
+# Other Resources and Computing Environment {#sec-resenv}
+
+## Other Resources
+
+* [Software development resources for data scientists](https://www.rstudio.com/blog/software-development-resources-for-data-scientists) by Isabella VELÁSQUEZ
+* [Teaching R in a kinder, gentler, more effective manner: Use base-R, not the tidyverse](https://github.com/matloff/TidyverseSkeptic) by Norm Matloff
+* [Setting up an R workflow](https://learn.r-journalism.com/en/publishing/workflow/r-projects) by Andrew Ba Tran
+
+## Computing Environment
+
+The  method for nicely printing environment information used here requires installation of the `grateful` package.  It required the following to be included in `_quarto.yml`. [As an alternative, run `Hmisc::markupSpecs$html$session()`.]{.aside}
+
+```
+bibliography:
+  - grateful-refs.bib
+```
+
+```{r}
+require(rms)
+require(data.table)
+require(consort)
+require(ggplot2)
+grateful::cite_packages(pkgs='Session', output='paragraph', out.dir='.',
+    cite.tidyverse=FALSE, omit='grateful')
+```
+

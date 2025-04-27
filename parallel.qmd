@@ -1,0 +1,44 @@
+# Parallel Computing {#sec-parallel}
+
+```{dot}
+digraph {
+  rankdir = TD;
+  node [style=filled, color="#fff4dd", shape=none];
+  D [label = "Decrease Computing Time\nUsing Multiple CPUs"]
+  bi [label = <R Built-in <font color="darkblue" face="courier">parallel</font>  Package>]
+  hm [label = <Simple Front-end to <font color="darkblue" face="courier">parallel: runParallel</font>>]
+  D -> bi
+  bi -> hm
+}
+```
+
+The `Hmisc` `runParallel` function makes it easy to use available multiprocessor cores to speed up parallel computations especially for simulations.  By default it runs the number of available cores, less one.  `runParallel` makes the `parallel` package easier to use and does recombinations over per-core batches.  The user writes a function that does the work on one core, and the same function is run on all cores.  This function has set arguments and must return a named list.  A base random number `seed` is given, and the seed is set to this plus `i` for core number `i`.  The total number of repetitions is given, and this most balanced possible number of repetitions is run on each core to sum to the total desired number of iterations.  `runifChanged` is again used, to avoid running the simulations if no inputs have changed.
+
+```{r rflowpar}
+require(rms)
+# Loads Hmisc which has the runParallel function
+
+# Function to do simulations on one core
+run1 <- function(reps, showprogress, core) {
+  cof <- matrix(NA, nrow=reps, ncol=3,
+                dimnames=list(NULL, .q(a, b1, b2)))
+  for(i in 1 : reps) {
+    y <- sample(0:1, n, replace=TRUE)
+    f <- lrm(y ~ X)
+    cof[i, ] <- coef(f)
+  }
+  list(coef=cof)
+}
+# Debug one core run, with only 3 iterations
+n    <- 300
+seed <- 3
+set.seed(seed)
+X    <- cbind(x1=runif(n), x2=runif(n))  # condition on covariates
+run1(3)
+
+nsim <- 5000
+g <- function() runParallel(run1, reps=nsim, seed=seed)
+Coefs <- runifChanged(g, X, run1, nsim, seed)
+dim(Coefs)
+apply(Coefs, 2, mean)
+```

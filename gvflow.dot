@@ -1,0 +1,25 @@
+digraph {
+    rankdir =LR;
+    node [style=filled, shape=box, fontname="Times-Roman", fontsize=18, fontcolor=blue, fillcolor=azure, penwidth=0.1];
+    edge [color=blue3, arrowsize=0.7];
+    R[label="Root text"]
+n1[label=<Major 1>]
+n11[label=<Minor 11 jj>]
+n12[label=<Minor 12>]
+n2[label=<Major 2>]
+n21[label=<Minor 21>]
+n22[label=<Minor 22>]
+n23[label=<Minor 23 that is very very<br></br>long and just keeps going>]
+n231[label=<tiny 231 and &#945;+<br></br>&#8721;<sub>i=1</sub><sup>n</sup>X<sub>i</sub>>]
+n232[label=<tiny 232<br></br><br></br>a second line for<br></br>tiny 232 that is pretty<br></br>long<br></br><br></br>a third line for tiny<br></br>232>]
+n3[label=<Major 3>]
+n31[label=<Minor 31>]
+n311[label=<tiny 311>]
+R -> {n1, n2, n3}
+n1 -> {n11, n12}
+n2 -> {n21, n22, n23}
+n23 -> {n231, n232}
+n3 -> {n31}
+n31 -> {n311}
+n12 -> n21
+}

@@ -1,0 +1,2820 @@
+---
+title: R Workflow
+author:
+  - name: Frank Harrell
+    url: https://hbiostat.org
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    number-depth: 3
+    anchor-sections: true
+    code-tools: true
+    code-fold: false
+    code-link: false
+    fig-width: 6
+    fig-height: 4.5
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    mainfont: Source Sans Pro
+    theme: journal
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    captions: true
+    cap-location: margin
+    table-captions: true
+    tbl-cap-location: margin
+    reference-location: margin
+    include-in-header: /home/harrelfe/doc/html/ganalytics.html
+
+comments:
+  hypothesis: true
+
+execute:
+  warning: false
+  message: false
+---
+
+<!-- To compile: quarto render rflow.qmd  -->
+
+<!-- Needed to make hover text work with mermaid diagrams -->
+<style>
+  .mermaidTooltip {
+      font-family: courier;
+			white-space: pre;
+    }
+</style>
+-->
+
+```{r include=FALSE}
+source('~/r/rmarkdown/qbookfun.r')
+```
+
+This article outlines analysis project workflow that I've found to be efficient in making reproducible research reports using R with `Rmarkdown` and now `Quarto`.  I start by covering importing data, creating annotated analysis files, examining extent and patters of missing data, and running descriptive statistics on them with goals of understanding the data and their quality and completeness.  Functions in the `Hmisc` package are used to annotate data frames and data tables with labels and units of measurement, show metadata/data dictionaries, and to produce tabular and graphical statistical summaries.  Efficient and clear methods of recoding variables are given.  Several examples of processing and manipulating data using the `data.table` package are given, including some non-trivial longitudinal data computations.  General principles of data analysis are briefly surveyed and some flexible bivariate and 3-variable analysis methods are presented with emphasis on staying close to the data while avoiding highly problematic categorization of continuous independent variables.  Examples of diagramming the flow of exclusion of observations from analysis, caching results, parallel processing, and simulation are presented.  In the process several useful report writing methods are exemplified, including program-controlled creation of multiple report tabs. [[Comments](https://hbiostat.org/comment.html)<br>[Change log](https://github.com/harrelfe/blogd/commits/master/content/post/rflow.qmd)]{.aside}
+
+::: {.callout-note collapse="true"}
+# R Code Repositories Used in This Report
+This report makes heavy use of the following R packages and Github repository:
+
+* [`Hmisc` package](https://hbiostat.org/R/Hmisc) which contains functions for importing data, data annotation, summary statistics, statistical graphics, advanced table making, etc.
+* [`data.table` package](https://www.rdocumentation.org/packages/data.table/versions/1.14.2) for data storage, retrieval, manipulation, munging, aggregation, merging, and reshaping
+* [`haven` package](https://haven.tidyverse.org) for importing datasets from statistical packages
+* [`ggplot2` package](https://ggplot2.tidyverse.org) for static graphics
+* [`consort` package](https://cran.r-project.org/web/packages/consort) for consort diagrams
+* [`plotly` package](https://plotly.com/r) for interactive graphics
+* [`consort` package](https://cran.r-project.org/web/packages/consort) for consort diagrams showing observation filtering
+* [`rms` package](https://hbiostat.org/R/rms) for statistical modeling, validation, and presentation
+* [`knitr` package](https://cran.r-project.org/web/packages/knitr) for running reproducible reports, and also providing `kable` and `kables` functions for simple html table printing
+* [`rscripts` Github repository](https://github.com/harrelfe/rscripts) with utility functions that are all loaded when `reptools.r` is loaded
+   + `addCap`, `printCap` for adding captions to a list of figures and for printing the list
+   + `addggLayers` for adding extended box plots and spike histograms to `ggplot2` plots, especially when run on the output of `meltData`
+   + `dataChk` for data checking
+   + `dataOverview` dataset overview
+   + `hashCheck` for checking if parent objects have changed so a slow analysis has to be re-run (i.e., talking control of caching)
+|`hookaddcap` |makes `knitr` automatically extract figure labels, captions, short captions for use in list of figures|
+   + `htmlList` to easily print vectors in a named list using `kable`
+   + `htmlView`, `htmlViewx` for viewing data dictionaries/metadata in browser windows
+   + `kabl` to make it easy to use `kable` and `kables` for making html tables
+   + `maketabs` to automatically make multiple tabs in `Quarto` reports, each tab holding the output of one or more R command
+   + `makecolmarg` to print an object in the right margin in `Quarto` reports
+   + `makecnote` to print an object in a collapsible `Quarto` note
+   + `makecallout` a generic Quarto callout maker called by `makecolmarg`, `makecnote`
+   + `makecodechunk` 
+   + `makemermaid` make Quarto `mermaid` diagrams with insertion of variable values
+   + `meltData` melt a data table according to a formula, with optional substitution of variable labels for variable names
+   + `rsHelp` for viewing helps files for functions in `rscripts`
+   + `scplot` for putting graphs in separate chunks with captions in TOC
+   + `seqFreq` for creating a factor variable with categories in descending order of sequential frequencies of conditions (as used in computing study exclusion counts)
+   + `vClus` for variable clustering
+   + `runifChanged` which uses `hashCheck` to automatically re-run an analysis if needed, otherwise to retrieve previous results efficiently
+* [`qreport` Github repository](https://github.com/harrelfe/qreport/tree/master) which has functions dedicated to randomized clinical trial reporting
+   + `aePlot` for making an interactive `plotly` dot chart of adverse event proportions by treatment
+
+Another file in `rscripts` is `movStats.r` which defines the `movStats` function for computing summary statistics by moving overlapping windows of a continuous variable, or simply stratified by a categorical variable.
+The `rscripts` `Github` functions are accessed by the `Hmisc` function `getRs`, e.g.
+
+```{r eval=FALSE}
+require(Hmisc)
+getRs('reptools.r', put='source')
+getRs('movStats.r', put='source')
+```
+   
+All the available help files for functions in `rscripts` are at [hbiostat.org/R/rscripts](https://hbiostat.org/R/rscripts).  To view a help file for one of the functions in the `RStudio` `Viewer` pane use for example `rsHelp(movStats)` or `rsHelp(reptools)`.
+:::
+
+::: {.callout-note collapse="true"}
+# R Basics
+
+## Assignment Operator {.unnumbered}
+
+You assign an R object to a value using the assignment operator `<-` or the equal sign.  `<-` is read as "gets".
+
+```{r eval=FALSE}
+x <- y
+d <- read.csv('mydata.csv')
+x = y
+```
+
+## Object Types {.unnumbered}
+
+Everything in R is an object.  Some primitive types of objects in R are below.
+
+| Type | Meaning |
+|------|---------|
+| integer | whole numbers |
+| logical | values of `TRUE` or `FALSE` |
+| double  | floating point non-whole numbers |
+| character | character strings |
+| function| code defining a function |
+
+In the table below, objects of different shapes are described.
+`rows` and `cols` refers to vectors of integers or logicals, or if the elements of the object are named, character strings.
+
+| Type | Example |Values Retrieved By|
+|------|---------|--------------------|
+| scalar |  `x <- 3` | `x` |
+| vector | `y <- c(1, 2, 5)` | `y[2]` (2), `y[2:3]` (2, 5), `y[-1]` (2, 5), `y[c(TRUE,FALSE,TRUE)]` (1) |
+| named vector | `y <- c(a=1, b=2, d=5)` | `y[2]` (2), `y['b']` (2), `y[c('a','b')]` (1, 2) |
+| matrix | `y <- cbind(1:3, 4:5)` | `y[rows,cols]`, `y[rows,]` (all cols), `y[,cols]` (all rows) |
+| list | `x <- list(a='cat', b=c(1,3,7))` | `x$a` ('cat'), `x[[1]]` ('cat'), `x[['a']]` ('cat') |
+
+Named vectors provide an extremely quick table lookup and recoding capability.
+
+`list` objects are arbitrary trees and can have elements nested to any level.  You can have lists of lists or lists of data frames/tables.
+
+Vectors can be of many different types when a `class` is added to them.  Two of the most common are `Date`s and `factor`s.  Character strings are handled very efficiently in R so there is not always a need to store categorical variables as `factor`s.  But there is one reason: to order levels, i.e., distinct variable values, so that tabular and graphical output will list values in a more logical order than alphabetic.  A factor variable has a `levels` _attribute_ added to it to accomplish this.  An example is `x <- factor(x, 1:3, c('cat', 'dog', 'fox'))` where the second argument `1:3` is the vector of possible numeric values `x` currently takes on (in order) and the three character strings are the corresponding `levels`.  Internally `factors` are coded as integers, but they print as character strings.
+
+Rectangular data objects, i.e., when the number of rows is the same for every column (variable), can be represented by matrices, `data.frame`s, and `data.table`s.  In a matrix, every value is of the same type.  A `data.frame` or a `data.table` is an R `list` that can have mixtures of numeric, character, factor, dates, and other object types.  A `data.table` is also a `data.frame` but the converse isn't true.  `data.table`s are handled by the R `data.table` package and don't have row names but can be indexed, are much faster to process, and have a host of methods implemented for aggregation and other operations.  `data.frame`s are handled by base R.
+
+Data frames are best managed by converting them to data tables and using the `data.table` package.  When `data.table` is not used there are three indispensable functions for operating on data frames:
+
+* `with` for analyzing variables within a data frame without constantly prefixing variable names with `dataframename$`
+* `transform` for adding or changing variables within a data frame
+* `Hmisc` `upData` function for doing the same as `transform` but also allowing metadata to be added to the data, e.g., variable labels and units (to be discussed later)
+
+Here are some examples of `with` and `transform`.
+
+```{r with,eval=FALSE}
+# Better than mean(mydata$systolic.bp - mydata$diastolic.bp) :
+with(mydata, mean(systolic.bp - diastolic.bp))
+# Better than mydata$pulse.pressure <- mydata$systolic.bp - mydata$diastolic.bp:
+mydata <- transform(mydata,
+                    pulse.pressure = systolic.bp - diastolic.bp,
+                    bmi            = wt / ht ^ 2)
+# Perform several operations on the same data frame
+with(mydata, {
+               x3 <- x1 / sqrt(x2)
+               ols(y ~ x3)
+             }  )
+```
+
+## Subscripting {.unnumbered}
+
+Examples of subscripting are given above. 
+Subscripting via placement of `[]` after an object name is used for subsetting, and occasionally for using some elements more than once:
+
+```{r subsc}
+x <- c('cat', 'dog', 'fox')
+x[2:3]
+x[c(1, 1, 3, 3, 2)]
+```
+
+Subscripting a variable or a data frame/table by a vector of `TRUE/FALSE` values is a very powerful feature of R.  This is used to obtain elements satisfying one or more conditions:
+
+```{r subcond}
+x <- c(1, 2, 3, 2, 1, 4, 7)
+y <- c(1, 8, 2, 3, 8, 9, 2)
+x[y > 7]
+```
+
+The last line of code can be read as "values of `x` such that `y > 7`".
+
+## Branching and If/Then {.unnumbered}
+
+### Decisions Based on One Scalar Value {.unnumbered}
+
+Common approaches to this problem are `if` and `switch`.
+
+```{r ifs,eval=FALSE}
+type <- 'semiparametric'
+f <- switch(parametric     = ols(y ~ x),
+            semiparametric = orm(y ~ x),
+            nonparametric  = rcorr(x, y, type='spearman'),
+            { z <- y / x
+              c(median=median(z), gmean=exp(mean(log(z)))) } )
+# The last 2 lines are executed for any type other than the 3 listed
+f <- if(type == 'parametric')    ols(y ~ x)
+  else
+    if(type == 'semiparametric') orm(y ~ x)
+  else
+    if(type == 'nonparametric')  rcorr(x, y, type='spearman')
+  else {
+    z <- y / z
+    c(median=median(z), gmean=exp(mean(log(z)))
+  }
+```
+
+What is inside `if( )` must be a single scalar element that is evaluated to whether it's `TRUE` or `FALSE`.
+
+### Series of Separate Decisions Over a Vector of Values {.unnumbered}
+
+The `ifelse` or `data.table::fifelse` functions are most often used for this, but `data.table::fcase` is a little better.  Here's an example.
+
+```{r ifelse}
+x <- c('cat', 'dog', 'giraffe', 'elephant')
+type <- ifelse(x %in% c('cat', 'dog'), 'domestic', 'wild')
+type
+require(data.table)
+fcase(x %in% c('cat', 'dog'), 'domestic', default='wild')
+```
+
+### `if` Trick {.unnumbered}
+
+Sometimes when constructing variable-length vectors and other objects, elements are to be included in the newly constructed object only when certain conditions apply.  When a condition does not apply, no element is to be inserted.  We can capitalize on the fact that the result of `if(...)` is `NULL` when `...` is not `TRUE`, and concatenating `NULL` results in ignoring it.  Here are two examples.  In the first the resulting vector will have length 2, 3, or 4 depending on `sex` and `height`.  In the second example the new vector will have the appropriate element `names` preserved.
+
+```{r iftrick}
+y <- 23; z <- 46; sex <- 'female'; height <- 71; u <- pi; w <- 7
+c(y, z, if(sex == 'male') u, if(height > 70) w)
+c(x1=3, if(sex == 'male') c(x2=4), if(height > 70) c(x3=height))
+# reduce clutter in case of variable name conflicts:
+rm(y, z, sex, height, u, w)
+```
+
+## Functions {.unnumbered}
+
+There are so many functions in R that it may be better to use the [stackoverflow.com](https://stackoverflow.com/questions/tagged/r) Q&A to find the ones you need (as of 2022-05-26 there are 450,000 R questions there).  Here are just a few of the multitude of handy R functions.  The first functions listed below return the R missing value `NA` if any element is missing.  You can specify `na.rm=TRUE` to remove `NA`s from consideration first, so they will not cause the result to be `NA`.  Must functions get their arguments (inputs) in () after the function name.  Some functions like `%in%` are binary operators whose two arguments are given on the left and right of `%in%`.
+
+* `mean`, `median`, `quantile`, `var`, `sd`: compute statistical summaries on one vector
+* `min, max`: minimum or maximum of values in a vector or of multiple variables, resulting in one number
+* `pmin, pmax`: parallel minimum and maximum for vectors, resulting in a vector.  Example: `pmin(x, 3)` returns a vector of the same length as `x`.  Each element is the minimum of the original value or 3.
+* `unique`: return vector of distinct values, in same order as original values
+* `union`, `intersect`, `setdiff`, `setequal`: set operations on two vectors (see below)
+* `a %in% b`, `a %nin% b`: set membership functions that determine whether each element in `a` is in `b` (for `%in%`) or is not in `b` (for `%nin%`, which is in the `Hmisc` package)
+
+Set operators are amazingly helpful.  Here are some examples.
+
+```{r setup,eval=FALSE}
+unique(x)       # vector of distinct values of x, including NA if occurred
+sort(unique(x)) # distinct values in ascending order
+setdiff(unique(x), NA)  # distinct values excluding NA if it occurred
+duplicated(x)   # returns TRUE for elements that are duplicated by
+                # values occurring EARLIER in the list
+union(x, y)     # find all distinct values in the union of x & y
+intersect(x, y) # find all distinct values in both x & y
+setdiff(x, y)   # find all distinct x that are not in y
+setequal(x, y)  # returns TRUE or FALSE depending on whether the distinct
+                # values of x and y are identical, ignoring how they
+                # are ordered
+# Find list of subject ids that are found in baseline but not
+# in follow-up datasets
+idn <- setdiff(baseline$id, followup$id) 
+# Don't do this:
+# if(animal == 'cat' | animal == 'dog') ....
+# But use %in% instead:
+# if(animal %in% c('cat', 'dog')) ...
+# Likewise don't say if(animal != 'cat' & animal != 'dog') but
+# use if(animal %nin% c('cat', 'dog')) ...
+```
+
+Even new R users can benefit from writing functions to reduce repetitive coding.  A function has _arguments_ and these can have default values for when the argument is not specified by the user when the function is called.  Here are some examples.  One line functions do not need to have their bodies enclosed in `{}`.
+
+```{r runex}
+cuberoot <- function(x) x ^ (1/3)
+cuberoot(8)
+g <- function(x, power=2) {
+  u <- abs(x - 0.5)
+  u / (1. + u ^ power)
+}
+g(3, power=2)
+g(3)
+# Function to make mean() drop missing values without our telling it
+mn <- function(x) mean(x, na.rm=TRUE)
+# Function to be used throughout the report to round fractional values 
+# by a default amount (here round to 0.001)
+rnd <- function(x) round(x, 3)
+# edit the 3 the change rounding anywhere in the report
+# The following simple function saves coding when you need to recode multiple
+# variables from 0/1 to no/yes.
+yn <- function(x) factor(x, 0:1, c('no', 'yes'))
+```
+
+:::
+
+# Report Formatting
+
+A state-of-the-art way to make reproducible reports is to use a statistical computing language such as R and its [`knitr`](https://cran.r-project.org/web/packages/knitr) package in conjunction with either [`RMarkdown`](https://rmarkdown.rstudio.com) or [`Quarto`](https://quarto.org), with the latter likely to replace the former.  Both of the report-making systems allow one to produce reports in a variety of formats including html, pdf, and Word.  Html is recommended because pages can be automatically resized to allow optimum viewing on devices of most sizes, and because html allows for interactive graphics and other interactive components.  Pdf is produced by converting `RMarkdown` or `Quarto`-produced markdown elements to $\LaTeX$.[Report formatting is very much enhanced by using variable attributes such as labels and units of measurement that are not considered in base R.  Methods for better annotating output using labels and units are given below.]{.aside}
+
+This document can serve as a template for using R with `Quarto`; one can see the raw script by clicking on `Code` at the top right of the report.  When one has only one output format target, things are fairly straightforward except some situations where mixed formats are rendered in the same code *chunk*. Click below for details.
+
+::: {.callout-note collapse="true"}
+# Notes on Printing Mixed Output in Chunks
+
+To make use of specialized functions that produce html or $\LaTeX$ markup, one often has to put `results='asis'` in the code chunk header to keep the system from disturbing the generated html or $\LaTeX$ markup so that it will be typeset correctly in the final document.  This process works smoothly but creates one complication: if you print an object that produces plain text in the same code chunk, the system will try to typeset it in html or $\LaTeX$.  To prevent this from happening you either need to split the chunks into multiple chunks (some with `results='asis'` and some not) or you need to make it clear that parts of the output are to be typeset verbatim.  To do that a simple function `pr` can sense if `results='asis'` is in effect for the current chunk.  If so, the object is surrounded by the `markdown` verbatim indicator---three consecutive back ticks.  If not the object is left alone.  `pr` is defined in the `marksupSpecs$markdown$pr` object, so you can bring it to your session by copying into a local function `pr` as shown below, which has a chunk option `results='asis'` to show that verbatim output appears anyway.  If the argument `obj` to `pr` is a data frame or data table, variables will be rounded to the value given in the argument `dec` (default `dec=3`) before printing.  If you specify `inline=x` the object `x` is printed with `cat()` instead of `print()`.  `inline` is more for printing character strings.
+
+An example of something that may not render correctly due to `results='asis'` being in the chunk header (needed for `html(...)`):
+
+```{r eval=FALSE}
+options(prType='html')
+f <- ols(y ~ rcs(x1, 5))
+f    # prints model summary in html format
+m <- matrix((1:10)/3, ncol=2)
+m
+# use pr(obj=m) to fix
+```
+
+Here are examples of `pr` usage.
+
+```{r,results='asis'}
+require(Hmisc)
+pr <- markupSpecs$markdown$pr
+x <- (1:5)/7
+pr('x:', x)
+pr(obj=x)
+pr(inline=paste(round(x,3), collapse=', '))
+```
+
+Instead of working to keep certain outputs verbatim you can use `knitr::kable()` to convert verbatim output to markdown.
+
+:::
+
+## `Quarto` Syntax for Figures
+
+One can specify sizes, layouts, captions, and more using `Quarto` markup.  Captions are ignored unless a figure is given a label.  Figure labels must begin with `fig-`.  The figure can be cross-referenced elsewhere in the document using for example `See \@fig-scatterplot`.  Here is example syntax.
+
+| ```{r}
+| #| label: fig-myplot
+| #| fig-cap: An example caption (use one long line for caption)
+| #| fig-scap: short caption (used only by addcap())
+| #| fig-height: 3
+| #| fig-width: 4
+| plot(1:7, abs(-3 : 3))
+| ```
+
+Other examples are in the next section.
+
+The `reptools` repository has helper functions for building a table of figures.  To use those, put `addCap()` or `addCap(scap="short caption for figure")` as the first line of code in the chunk.  If you don't specify `scap` the short caption will be taken as the `fig-scap:` markup, or if that is missing, the full caption you specified with the `fig-cap: ` markup.  At the end of the report you can print the table of figures using the following syntax (but surround the last line with back ticks).
+
+
+| # Figures
+|
+| r printCap()
+
+For chunks having `#| label: fig-` you can automatically have `knitr` call `addCap` at the start of a chunk, extracting the needed information, if you run the `reptools` function `hookaddcap()` in a chunk before the first chunk that produced a graph.  This procedure is used through this document.
+
+## `Quarto` Built-in Syntax for Enhancing R Output
+
+Helper functions described below allow one to enhance graphical and tabular R output by taking advantage of `Quarto` formatting features.  These functions allow one to produce different formats within one code chunk, e.g., a plot in the margin and a table in a collapsible note appearing after the code chunk.  But if you need only one output format within a chunk you can make use of built-in syntax as described [here](https://quarto.org/docs/authoring/article-layout.html).  The `yaml`-like syntax also allows you to specify heights and widths for figures, plus multi-figure layouts.
+
+Here is some example code with all the markup shown.
+
+| ```{r}
+| #| column: margin
+| #| fig-height: 1
+| #| fig-width: 3
+| par(mar=c(2, 2, 0, 0), mgp=c(2, .5, 0))
+| set.seed(1)
+| x <- rnorm(1000)
+| hist(x, nclass=40, main='')
+| x[1:3]               # ordinary output stays put
+| knitr::kable(x[1:3]) # html output put in margin
+| hist(x, main='')
+| ```
+
+This results follow.
+
+```{r}
+#| column: margin
+#| fig-height: 1
+#| fig-width: 3
+par(mar=c(2, 2, 0, 0), mgp=c(2, .5, 0))
+set.seed(1)
+x <- rnorm(1000)
+hist(x, nclass=40, main='')
+x[1:3]               # ordinary output stays put
+knitr::kable(x[1:3]) # html output put in margin
+hist(x, main='')
+```
+
+Here are a few markups for figure layout inside R chunks.
+
+Wide page (takes over the margins) and put multiple plots in 1 row:
+
+| #| column: screen-inset
+| #| layout-nrow: 1
+
+When plotting 3 figures put the first 2 in one row and the third in the second row and make it wide.
+
+| #| layout: [[1,1], [1]]
+
+Make the top left panel be wider than the top right one.
+
+| #| layout: [[70,30], [100]]
+
+Top left and top right panels have equal widths but devote 0.1 of the total width to an empty region between the two top panels.
+
+| #| layout: [[45, -10, 45], [100]]
+
+See [here](https://quarto.org/docs/authoring/figures.html) for details about figure specifications inside code chunks.
+
+## `Quarto` Report Writing Helper Functions
+
+Helper functions are defined when you run the `Hmisc` function `getRs` to retrieve them from [`Github`](https://github.com/harrelfe/rscripts/blob/master/reptools.r), i.e., `getRs('reptools.r')`.  You can get help on these functions by running `rsHelp(functionname)`.  Several of the functions construct `Quarto` _callouts_ which are fenced-off sections of markup that trigger special formatting, especially when producing html.  The special formatting includes collapsible sections and marginal notes.  Here is a summary of some of the `reptools` helper functions.
+
+| Function | Purpose |
+|------|---------|
+|`dataChk`    |run a series of logical expressions for checking data consistency, put results in separate tabs using `maketabs`, and optionally create two summary tabs|
+|`dataOverview`|runs a data overview report|
+|`missChk`    |creates a series of analyses of the extent and patterns of missing values in a data table or data frame, and puts graphical summaries in tabs|
+|`htmlList`   |print a named `list` using the names as headers|
+|`kabl`       |front-end to `knitr::kable` and `kables`.  If you run `kabl` on more than one object it will automatically call `kables`. |
+|`makecallout`|generic Quarto callout maker used by `makecnote`, `makecolmarg`|
+|`makecnote`  |print objects or run code and place output in an initially collapsed callout note|
+|`makecolmarg`|print objects or run code and place output in a marginal note|
+|`maketabs`   |print objects or run code placing output in separate tabs|
+|`makemermaid`|makes a `mermaid` diagram with R variable values included in the diagram|
+|`varType`    |classify variables in a data table/frame or a vector as continuous, discrete, or non-numeric non-discrete|
+|`conVars`    |use `varType` to extract list of continuous variables|
+|`disVars`    |use `varType` to extract list of discrete variables|
+|`vClus`      |run `Hmisc::varclus` on a dataset after reducing it|
+
+The input to `maketabs`, as will be demonstrated later, may be a named `list`, or more commonly, a series of formulas whose right-hand sides are executed and the result of each formula is placed in a separate tab.  The left side of the formula becomes the tab label.  For `makecolmarg` there should be no left side of the formula as marginal notes are not labeled.  For the named `list` option the `list` names become the tab names.  Examples of both approaches appear later in this report.  In formulas, a left side label must be enclosed in back ticks and not quotes if it is a multi-word string.  A `wide` argument is used to expand the width of the output outside the usual margins.  An `initblank` argument creates a first tab that is empty.  This allows one to show nothing until one of the other tabs is clicked. Alternately you can specify as the first formula \` \` ~ \` \`.
+
+The two approaches to using `maketabs` also apply to `makecnote` and `makecolmarg`.  Examples of the "print an object and place it inside a callout" are given later in the report for `makecnote` and `makecolmarg`.  Here is an example of the more general formula method that can render any object, including html widgets as produced by `plotly` graphics.  An interactive `plotly` graphic appears at the bottom of the plots in the right margin.  You can single click on elements in the legend to turn them off and on, and double click within the legend to restore to default values.
+
+```{r makecex,results='asis'}
+require(Hmisc)
+options(plotlyauto=TRUE)  # makes Hmisc use plotly's auto size option
+                          # rather than computing height, width
+getRs('reptools.r', put='source')
+set.seed(1)
+x <- round(rnorm(100, 100, 15))
+makecolmarg(~ table(x) + raw + hist(x) + plot(ecdf(x)) + histboxp(x=x))
+# or try makecnote(`makecnote example` ~ kabl(table(x)) + hist(x) + ...
+# Avoid raw by using kabl(table(x)) instead of table(x)
+```
+
+Adding `+ raw` to a formula in `makecnote`, `makecolmarg`, or `maketabs` forces printed results to be treated as raw verbatim R output.
+
+`makecallout` is a general `Quarto` callout maker that implements different combinations of the following: `list` or formula, `print` or run code, defer executing and only produce the code to execute vs. running the code now, and close the callout or leave it open for more calls.
+
+`reptools` also has helper functions for interactively accessing information to help in report and analysis building:
+
+| Function  | Purpose |
+|-----------|--------|
+|`htmlView`|view html-converted objects in `RStudio` `View` pane|
+|`htmlViewx`|view html-converted objects in external browser|
+
+
+## Multi-Output Format Reports
+
+To allow one report to be used to render multiple output formats, especially html and pdf, it is helpful to be able to sense which output format is currently in play, and to use different functions or options to render output explicitly for the current format.  Here is how to create variables that can be referenced simply in code throughout the report, and to invoke the `plotly` graphics package if output is in html to allow interactivity.  A small function `ggp` is defined so that if you run any `ggplot2` output through it, the result will be automatically converted to `plotly` using the `ggplotly` function, otherwise it is left at standard static `ggplot2` output if html is not the output target.[See [this](https://hbiostat.org/ordinal) for examples of articles rendered in both html and PDF from the same script.]{.aside}
+
+```{r senseformat}
+outfmt <- if(knitr::is_html_output ()) 'html'  else 'pdf'
+markup <- if(knitr::is_latex_output()) 'latex' else 'html'
+ishtml <- outfmt == 'html'
+if(ishtml) require(plotly)
+ggp <- if(ishtml) ggplotlyr else function(ggobject, ...) ggobject
+# See below for more about ggplotlyr (a front end for ggplotly that can
+# correct a formatting issue with hover text)
+```
+
+`Quarto` has a excellent facility for [conditionally including document sections](https://quarto.org/docs/authoring/conditional.html) depending on the currently chosen output format.
+
+::: {.callout-note collapse="true"}
+## Special Considerations For $\LaTeX$/PDF
+
+The `Hmisc`, `rms`, and `rmsb` packages have a good deal of support for creating $\LaTeX$ output in addition to html.  They require some special $\LaTeX$ packages to be accessed.  In addition, if using any of `Quarto`'s nice features for making marginal notes, there is another $\LaTeX$ package to attach.  Below you'll find what needs to be added to the `yaml` prologue at the top of your script if using `Quarto`.  You have to modify `pdf-engine` to suit your needs.  I use `luatex` because it handles special unicode characters.  In the future (approximately July 2022) a bug in `Pandoc` will be fixed and you can put `links-as-notes: true` in the `yaml` header instead of redefining `href` and linking in `hyperref`.
+
+```
+format:
+  html:
+    self-contained: true
+    . . .
+  pdf:
+    pdf-engine: lualatex
+    toc: false
+    number-sections: true
+    number-depth: 2
+    top-level-division: section
+    reference-location: document
+    listings: false
+    header-includes:
+      \usepackage{marginnote, here, relsize, needspace, setspace, hyperref}
+      \renewcommand{\href}[2]{#2\footnote{\url{#1}}}
+```
+
+The `href` redefinition above turns URLs into footnotes if running $\LaTeX$.
+
+There is one output element provided by `Quarto` that will not render correctly to $\LaTeX$: a marginal note using the markup `.column-margin`.  To automatically use an alternate in-body format, define a function that can be used for both typesetting formats.
+
+```{r eval=FALSE}
+mNote <- if(ishtml) '.column-margin'
+  else
+                    '.callout-note appearance="minimal"'
+```
+
+Then use <tt>r mNote</tt> enclosed in back ticks in place of the `.column-margin` callout for generality.
+
+:::
+
+::: {.callout-note collapse="true"}
+## Saving Graphics Images
+
+Even when producing only html, one may wish to save individual graphics for manuscript writing.  For non-interactive graphics you can right click on the image and download the `.png` file.  For interactive plots, `plotly` shows a "take a snapshot" icon when you hover over the image.  Clicking this icon will produce a static `.png` snapshot of the graph.  Some graphs are not appropriate for static documents, and the variables created in the code above can be checked so that, for example, an alternative graph can be produced when making a `.pdf` file.  But in other cases one just produces an additional static plot that is not shown in the html report.  See the margin note near @fig-survplotp for an example.
+
+:::
+
+::: {.callout-note collapse="true"}
+## Using `Hmisc` Formatting for Variable Labels in Tables
+
+As done with various `Hmisc` and `rms` package functions, one can capitalize on `Hmisc`'s special formatting of variable labels and units when constructing tables in $\LaTeX$ or html.  The basic constructs are shown in the code below.
+
+```{r labtab,eval=FALSE}
+# Retrieve a set of markup functions depending on typesetting format
+# See below for definition of ishtml
+specs    <- markupSpecs[[if(ishtml) 'html' else 'latex']]
+# Hmisc markupSpecs functions create plain text, html, latex,
+# markdown, or plotmath code
+varlabel <- specs$varlabel  # retrieve an individual function
+# Format text describing variable named x
+# hfill=TRUE typesets units to be right-justified in label
+# Use the following character string as a row label
+# Default specifies the string to use if there is not label
+# (usually taken as the variable name)
+varlabel(label(x, default='x'), units(x), hfill=TRUE)
+```
+
+:::
+
+
+::: {.callout-note collapse="true"}
+## Using Tooltips with `Mermaid`
+
+As exemplified in the Data Overview section, `Mermaid` provides an easy way to make many types of diagrams.  Diagrams are more valuable when they are dynamic.  `Mermaid` provides an easy way to include pop-up tooltips in diagram nodes, to provide deeper information about the node.  When the tooltips contain tables whose columns need to line up, you need to put the following in your document so that tooltips will used a fixed-width font and preserve white space.  The best way to include this is to put it in a `.css` file that is reference in the report's `yaml`, or to surround the four lines with `<style>` ... `</style>`.
+
+| mermaidTooltip {
+| 		font-family: courier;
+| 		white-space: pre;
+| }
+
+:::
+
+
+
+# File Directory Structure
+
+I have a directory for each major project, and put everything in that
+directory (including data files) except for graphics files for
+figures, which are placed in their own subdirectory underneath the
+project folder.[With `Quarto` I specify that `html` files are to be self-contained, so there are no separate graphics files.]{.aside}  The directory name for the project includes key
+identifying information, and files within that directory do not
+contain project information in their names, nor do they contain dates,
+unless I want to freeze an old version of an analysis script.
+
+For multi-analyst projects or ones in which you want to capture the entire code history, having the project on `github` is worthwhile.
+
+# Analysis File Creation
+
+I typically create a compact analysis file in a separate R script
+called `create.r` and have it produce compressed R binary `data.frame`
+or `data.table` `.rds` files using `saveRDS(name, 'name.rds', compress='xz')`.  Then I have an analysis script named for example `a.qmd` (for [Quarto](https://quarto.org) reports) or `a.Rmd` (for RMarkdown reports) that starts with `d <- readRDS('name.rds')`.  [Templates for analysis reports are [here](http://hbiostat.org/rr/index.html#template), and a comprehensive report example may be found [here](https://hbiostat.org/R/Hmisc/markov).]{.aside}
+
+When variables need to be recoded, have labels added or changed, or
+have units of 
+measurement added[Variable labels and units of measurement are used in special ways in my R packages.  This will show up in the `describe` and `contents` function outputs below and in axis labels for graphics.]{.aside}, I specify those using the `Hmisc` package [`upData`
+function](https://www.rdocumentation.org/packages/Hmisc/versions/4.7-0/topics/upData).
+
+To facilitate some operations requiring variable names to be quoted, define a function `.q` to quote them automatically. `.q` is like the `Hmisc` function `Cs` but also allows elements to be named.  It will be in `Hmisc` 4.7-1.
+
+```{r quote}
+.q <- function(...) {
+  s <- sys.call()[-1]
+  w <- as.character(s)
+  n <- names(s)
+  if(length(n)) names(w) <- n
+  w
+}
+
+.q(a, b, c, 'this and that')
+.q(dog=a, giraffe=b, cat=c)
+```
+
+Here is an `upData` example:
+
+```{r eval=FALSE}
+# Function to recode from atypical coding for yes/no in raw data
+yn <- function(x) factor(x, 0:1, c('yes', 'no'))
+d <-
+  upData(d,
+         rename = .q(gender=sex, any.event=anyEvent),
+         posSE    = yn(posSE),
+         newMI    = yn(newMI),
+         newPTCA  = yn(newPTCA),
+         newCABG  = yn(newCABG),
+         death    = yn(death),
+         hxofHT   = yn(hxofHT),
+         hxofDM   = yn(hxofDM),
+         hxofCig  = factor(hxofCig, c(0, 0.5, 1),
+                           c('heavy', 'moderate', 'non-smoker')), 
+         hxofMI   = yn(hxofMI),
+         hxofPTCA = yn(hxofPTCA),
+         hxofCABG = yn(hxofCABG),
+         chestpain= yn(chestpain),
+         anyEvent = yn(anyEvent),
+         drop=.q(event.no, phat, mics, deltaEF,
+                 newpkmphr, gdpkmphr, gdmaxmphr, gddpeakdp, gdmaxdp,
+                 hardness),
+         labels=c(
+           bhr       = 'Basal heart rate',
+           basebp    = 'Basal blood pressure',
+           basedp    = 'Basal Double Product bhr*basebp',
+           age       = 'Age',
+           pkhr      = 'Peak heart rate',
+           sbp       = 'Systolic blood pressure',
+           dp        = 'Double product pkhr*sbp',
+           dose      = 'Dose of dobutamine given',
+           maxhr     = 'Maximum heart rate',
+           pctMphr   = 'Percent maximum predicted heart rate achieved',
+           mbp       = 'Maximum blood pressure',
+           dpmaxdo   = 'Double product on max dobutamine dose',
+           dobdose   = 'Dobutamine dose at max double product',
+           baseEF    = 'Baseline cardiac ejection fraction',
+           dobEF     = 'Ejection fraction on dobutamine', 
+           chestpain = 'Chest pain', 
+           ecg       = 'Baseline electrocardiogram diagnosis',
+           restwma   = 'Resting wall motion abnormality on echocardiogram', 
+           posSE     = 'Positive stress echocardiogram',
+           newMI     = 'New myocardial infarction',
+           newPTCA   = 'Recent angioplasty',
+           newCABG   = 'Recent bypass surgery', 
+           hxofHT    = 'History of hypertension', 
+           hxofDM    = 'History of diabetes',
+           hxofMI    = 'History of myocardial infarction',
+           hxofCig   = 'History of smoking',
+           hxofPTCA  = 'History of angioplasty',
+           hxofCABG  = 'History of coronary artery bypass surgery',
+           anyEvent  = 'Death, newMI, newPTCA, or newCABG'),
+         units=.q(age=years, bhr=bpm, basebp=mmHg, basedp='bpm*mmHg',
+           pkhr=mmHg, sbp=mmHg, dp='bpm*mmHg', maxhr=bpm,
+           mbp=mmHg, dpmaxdo='bpm*mmHg', baseEF='%', dobEF='%',
+           pctMphr='%', dose=mg, dobdose=mg)
+         )
+
+saveRDS(d, 'stressEcho.rds', compress='xz')
+
+# Note that we could have automatically recoded all 0:1 variables
+# if they were all to be treated identically:
+
+for(x in names(d)) 
+  if(all(d[[x]] %in% c(0,1))) d[[x]] <- yn(d[[x]])
+```
+
+::: {.panel-tabset}
+
+##  
+
+
+
+## External Metadata
+
+Sometimes metadata comes from a separate source.  Suppose you imported a data frame `d` but have also imported a data frame `m` containing metadata: the same variable names in `d` (variable `name`) plus fields `label`, `units`, and `comment`.  Dataset `m` can contain variables not currently being used.  To add the labels and units into `d` and to store comments separately, use the following example.
+
+```{r eval=FALSE}
+n <- names(d)
+i <- n %nin% m$name
+if(any(i)) cat('The following variables have no metadata:',
+               paste(n[i], collapse=', '), '\n')
+vcomment        <- m$comment
+names(vcomment) <- m$name
+mn              <- subset(m, name %in% n)
+labs            <- mn$label
+un              <- mn$units
+names(labs)     <- names(un) <- mn$name
+d <- upData(d, labels=labs, units=un)
+```
+
+To look up the `comment` for a variable at any time use e.g. `vcomment['height']`.  All comments were saved in vector `vcomment` in case the metadata dictionary `m` defined variables that are not in `d` but were to be imported later in the script.  Comments for multiple variables can be looked up using e.g. `vcomment[.q(height, weight, age)]`.
+
+::: {.column-margin}
+If you want to look up a variable's comment without having to quote its name use the following:
+
+```{r vcom,eval=FALSE}
+vcom <- function(...)
+  vcomment[as.character(sys.call()[-1])]
+# Example usage: vcom(age,sbp,dbp)
+```
+
+:::
+
+## CSV
+
+The built-in function in R for reading `.csv` files is [`read.csv`](https://www.rdocumentation.org/packages/utils/versions/3.6.2/topics/read.table).  The `Hmisc` package has a function [`csv.get`](https://www.rdocumentation.org/packages/Hmisc/versions/4.7-0/topics/csv.get) which calls `read.csv` but offers some enhancements in variable naming, date handling, and reading variable labels from a specified row number.  Illegal characters in variable names are changed to periods, and by default underscores are also changed to periods.  If any variable names are changed and the `labels` argument is not given, original variable names are stored in the variable `label` attributes.
+
+The [`fread`](https://www.rdocumentation.org/packages/data.table/versions/1.14.2/topics/fread) function in the `data.table` package is blazing fast for reading large files and offers a number of options.  `csv.get` uses it if `data.table` is installed on the system.
+
+## REDCap
+
+If reading data exported from [`REDCap`](https://www.project-redcap.org) that are placed into the
+project directory I run the following to get rid of duplicate
+(`factor` and non-`factor` versions of variables `REDCap` produces)
+variables and automatically convert dates to `Date` variables:
+
+```
+require(Hmisc)
+getRs('importREDCap.r', put='source')  # source() code to define function
+mydata <- importREDCap()  # by default operates on last downloaded export
+saveRDS(mydata, 'mydata.rds', compress='xz')
+```
+
+When file names are not given to `importREDCap` the function looks for
+the latest created `.csv` file and `.R` file with same prefix and uses those.
+See [this](http://hbiostat.org/bbr/md/r.html) for more information.
+
+## SAS, Stata, SPSS
+
+SAS, Stata, and SPSS binary files are converted to R `data.frame`s using the R [haven package](https://haven.tidyverse.org).  Here's an example:
+
+```{r haven, eval=FALSE}
+require(haven)   # after you've installed the package
+d <- read_sas('mydata.sas7bdat')
+d <- read_xpt('mydata.xpt')        # SAS transport files
+d <- read_dta('mydata.dta')        # Stata
+d <- read_sav('mydata.sav')        # SPSS
+d <- read_por('mydata.por')        # Older SPSS files
+```
+
+These import functions carry variable labels into the data frame and convert dates and times appropriately.  Character vectors are not converted to factors.
+
+## Multiple Files
+
+One of the most important principles to following in programming data analyses is to not do the same thing more than once.  Repetitive code wastes time and is harder to maintain.  One example of avoiding repetition is in reading a large number of files in R.  If the files are stored in one directory and have a consistent file naming scheme (or you want to import every `.csv` file in the directory), one can avoid naming the individual files.  The results may be stored in an R `list` that has named elements, and there are many processing tasks that can be automated by looping over this list.
+
+In the following example assume that all the data files are `.csv` files in the current working directory, and they all have names of the form `xz*.csv`.  Let's read all of them and put each file into a data frame named by the characters in front of `.csv`.  These data frames are stuffed into a `list` named `X`.  The `Hmisc` `csv.get` function is used to read the files, automatically translating dates to `Date` variables, and because `lowernames=TRUE` is specified, variable names are translated to lower case.  There is an option to fetch variable labels from a certain row of each `.csv` file but we are not using that.
+
+```{r eval=FALSE}
+files <- list.files(pattern='xz.*.csv')  # vector of qualifying file names
+# Get base part of *.csv
+dnames <- sub('.csv', '', files)
+X <- list()
+i <- 0
+for(f in files) {
+  cat('Reading file', f, '\n')
+  i <- i + 1
+  d <- csv.get(f, lowernames=TRUE)
+  # To read SAS, Stata, SPSS binary files use a haven function instead
+  # To convert to data.table do setDT(d) here
+  X[[dnames[i]]] <- d
+}
+saveRDS(X, 'X.rds', compress='xz')  # Efficiently store all datasets together
+```
+
+To process one of the datasets one can do things like `summary(X[[3]])` or `summary(X$baseline)` where the third dataset stored was named `baseline` because it was imported from `baseline.csv`.
+
+Now there are many possibilities for processing all the datasets at once such as the following.
+
+```{r processmany,eval=FALSE}
+k   <- length(X)          # number of datasets
+nam <- lapply(X, names)   # list with k elements, each is a vector of names
+# Get the union of all variable names used in any dataset
+sort(unique(unlist(nam))) # all the variables appearing in any dataset
+# Get variable names contained in all datasets
+common <- names(X[[1]])
+for(i in 2 : k) {
+  common <- intersect(common, names(X[[i]]))
+  if(! length(common)) break  # intersection already empty
+}
+sort(common)
+# Compute number of variables across datasets
+nvar <- sapply(X, length)  # or ncol
+# Print number of observations per dataset
+sapply(X, nrow)
+# For each variable name count the number of datasets containing it
+w <- data.table(dsname=rep(names(X), nvar), vname=unlist(nam))
+w[, .N, keyby=vname]
+# For each variable create a comma-separated list of datasets
+# containing it
+w[, .(datasets=paste(sort(dsname), collapse=', ')), keyby=vname]
+# For datasets having a subject ID variable named id compute
+# the number of unique ids
+uid <- function(d) if('id' %in% names(d)) length(unique(d$id)) else NA
+sapply(X, uid)
+# To repeatedly analyze one of the datasets, extract it to a single data frame
+d <- X$baseline
+describe(d)
+```
+
+## Post Import
+
+The `Hmisc` package `cleanup.import` function improves imported data storage in a number of ways including converting double precision variables to `integer` when originally `double` but not containing fractional values (this halves the storage requirement).  `Hmisc::upData` is the go-to function for annotating data frames/tables, renaming variables, and dropping variables.  `Hmisc::dataframeReduced` removes problematic variables, e.g., those with a high fraction of missing values or that are binary with very small prevalence.
+
+:::
+
+## Variable Naming
+
+I prefer short but descriptive variable names.  As exemplified above, I use variable `label`s and `units` to provide more information.  For example I wouldn't name the age variable `age.at.enrollment.yrs` but would name it `age` with a label of `Age at Enrollment` and with `units` of `years`.  Short, clear names unclutter code, especially formulas in statistical models.  One can always fetch a variable label while writing a program (e.g., typing `label(d$age)` at the console) to check that you have the right variable (or put the data dictionary in a window for easy reference, as shown below).  `Hmisc` package graphics and table making functions such as `summaryM` and `summary.formula` specially typeset `units` in a smaller font.
+
+
+## Data Dictionary
+
+The `Hmisc` package `contents` function will provide a concise data dictionary.    Here is an example using the permanent version (which coded binary variables as 0/1 instead of N/Y) of the dataset created above, which can be accessed with the `Hmisc` `getHdata` function.  The top of the `contents` output has the number of levels for `factor` variables hyperlinked.  Click on the number to go directly to the list of levels for that variable.
+
+```{r getdat}
+require(Hmisc)
+getHdata(stressEcho)
+d <- stressEcho
+```
+
+::: {.callout-note collapse="true"}
+# Data Dictionary
+
+```{r ddict2,results='asis'}
+html(contents(d), levelType='table')
+```
+:::
+
+You can write the text output of `contents` into a text file in your current working directory, and click on that file in the `RStudio` `Files` window to create a new tab in the editor panel where you can view the data dictionary at any time.  This is especially helpful if you need a reminder of variable definitions that are stored in the variable labels.  Here is an example where the formatted data dictionary is saved.  [Users having the `xless` system command installed can pop up a `contents` window at any time by typing `xless(contents(d))` in the console. `xless` is in `Hmisc`.]{.aside}
+
+```{r,eval=FALSE}
+capture.output(contents(d), file='contents.txt')
+```
+
+Or put the html version of the data dictionary into a small browser window to which you can refer at any point in analysis coding.
+
+```{r eval=FALSE}
+cat(html(contents(d)), file='contents.html')
+browseURL('contents.html', browser='vivaldi -new-window')
+```
+
+
+`RStudio` provides a nice way to do this, facilitated by the `htmlView` helper function in `reptools`.  `htmlView` takes any number of objects for which an `html` method exists to render them.  They are rendered in the `RStudio` `Viewer` pane.  If you are running outside `RStudio`, your default browser will be launched instead.[Occasionally `RStudio Viewer` will drop its arrow button making it impossible to navigate back and forth to different `html` outputs.<br>Code for `htmlView` and `htmlViewx` may be viewed in [`reptools.r`](https://github.com/harrelfe/rscripts/blob/master/reptools.r).]{.aside}
+
+```{r eval=FALSE}
+getRs('reptools.r', put='source')
+# reptools.r defines htmlView, htmlViewx, kabl, maketabs, dataChk, ...
+htmlView(contents(d))
+```
+
+In some cases it is best to have a browser window open to the full descriptive statistics for a data table/frame (see below; the `describe` function also shows labels, units, and levels).  [For either approach it would be easy to have multiple tabs open, one tab for each of a series of data tables, or use `htmlView`.]{.aside}
+
+To be able to have multiple windows open to see information about datasets it is advantageous to open an external browser window.  The `htmlViewx` function will by default open a Vivaldi browser window with the first output put in a new window and all subsequent objects displayed as tabs within that same window.  This behavior can be controlled with the `tab` argument, and you can use a different browser by issuing for example `options(vbrowser='firefox')`.[In Windows you may have to specify a full path and `firefox.exe`.  The tab names will not be correct until `Hmisc` 4.7-1 appears.]{.aside}  As an example suppose that two datasets were read from the `hbiostat.org/data` data repository, and the data dictionary and descriptive statistics for both datasets were to be converted to `html` and placed in an external browser window for the duration of the R session.
+
+```{r vbrowse,eval=FALSE}
+getHdata(support)
+getHdata(support2)
+htmlViewx(contents(support ), describe(support ),
+          contents(support2), describe(support2))
+```
+
+A screenshot of the result is [here](https://hbiostat.org/img/htmlViewx.png).
+
+# Missing Data
+
+It is extremely important to understand the extent and patterns of missing data, starting with charting the marginal fraction of observations with `NA`s for each variable.  The occurrence of simultaneous missings on multiple variables makes multiple imputation and analysis more difficult, so it is important to correlate and quantify missingness in variables multiple ways.  The `Hmisc` package [`naclus`](https://www.rdocumentation.org/packages/Hmisc/versions/4.7-0/topics/varclus), `naplot`, and `combplotp` functions provide a number of graphics along these lines.  
+
+The `missChk` function in `reptools` uses these functions and others to produces a fairly comprehensive missingness report, placing each output in its own tab.  When the number of variables containing any `NA` is small, the `Hmisc` `na.pattern` function's simple output is by default all that is shown, and only one sentence is produced if there are no variables with `NA`s.  Here is an example using again the `support` dataset.   the 1000-patient `support` dataset on `hbiostat.org/data`, retrieved with the `Hmisc` function `getHdata`.  Variables with no missing values are excluded from the report (except for being used in the predictive model at the end) to save space.  The chart in the next-to-last tab is interactive.  We also use the `prednmiss` options to run an ordinal logistic regression model to predict the number of missing variables from the values of all the non-missing variables, omitting the predictor `dzclass` because it is redundant with the variable `dzgroup`.  The results of this analysis are in the last tab. 
+
+```{r misscheck,results='asis'}
+getRs('reptools.r', put='source')  # Define dataChk, missChk, maketabs
+require(data.table)
+getHdata(support)
+# Make it into a data table
+setDT(support)
+# Remove one variable we'll not be using
+support[, adlsc := NULL]
+missChk(support, prednmiss=TRUE, omitpred = ~ dzclass,
+        baselabel='misscheck')
+```
+
+The likelihood ratio $\chi^2$ test in the last tab is a test of whether any of a subject's non-missing variable values are associated with the number of missing variables on the subject.  It shows strong evidence for such associations.  From the dot chart we see that the strongest predictors of missing baseline variables are time to death/censoring and disease group.  This may be due to patients on ventilators not being able to provide as much baseline information such as activities of daily living (`adlp`), and being on a ventilator is a strong prognostic sign.   There is a possible sex effect worth investigating.
+
+# Data Checking
+
+Besides useful descriptive statistics exemplified below, it is important to flag suspicious values in an automated way.  Since checking multiple columns may involve a large number of R expressions to run to classify observations as suspicious, let's automate the process somewhat by specifying a vector of expressions.  Then we have R "compute on the language" to parse the expressions for finding observations to flag, and for printing.  This is done by the [`dataChk`](https://github.com/harrelfe/rscripts/blob/master/reptools.r) function in `Github`.
+
+The following code results in separate output for each individual data check, in separate `Quarto` tabs.  The dataset does not have a subject ID variable so let's create one, and also add a `site` variable to print.  Arguments are specified to `dataChk` so that no tab is produced for a condition that never occurred in the data, and a tab is produced showing all data flags, sorted by `id` and `site`.
+
+```{r dcheck,results='asis'}
+w <- d
+setDT(w)
+w[, id := 1 : .N]
+set.seed(1)
+w[, site := sample(LETTERS[1:6], .N, replace=TRUE)]
+checks <- expression(
+  age < 30 | age > 90,
+  gender == 'female' & maxhr > 170,
+  baseEF %between% c(72, 77),
+  baseEF > 77,
+  baseEF > 99,
+  sbp > 250 & maxhr < 160)
+dataChk(w, checks, id=c('id', 'site'),
+        omit0=TRUE, byid=TRUE, html=TRUE)
+```
+
+# Data Overview
+
+## Filtering of Observations
+
+When the number of subjects in the final analysis is less than the number of subjects initially entering the study, it is important to detail the observation filtering process.  This is often done with a [consort diagram](http://www.consort-statement.org/consort-statement/flow-diagram), and fortunately R has the [consort package](https://cran.r-project.org/web/packages/consort) by Alim Dayim for drawing data-driven diagrams.  To demonstrate its use let's simulate a two-treatment randomized clinical trial in which 1000 subjects were screened for participation.
+
+```{r simrct}
+N <- 1000
+set.seed(1)
+r <- data.table(id = 1 : N)
+r[, .q(id, age, pain, hxmed) :=
+      .(1 : N,
+        round(rnorm(N, 60, 15)),
+        sample(0 : 5, N, replace=TRUE),
+        sample(0 : 1, N, replace=TRUE, prob=c(0.95, 0.05)) ) ]
+# Set consent status to those not excluded at screening
+r[age >= 40 & pain > 0 & hxmed == 0,
+  consent := sample(0 : 1, .N, replace=TRUE, prob=c(0.1, 0.9))]
+# Set randomization status for those consenting
+r[consent == 1,
+  randomized := sample(0 : 1, .N, replace=TRUE, prob=c(0.15, 0.85))]
+# Add treatment and follow-up time to randomized subjects
+r[randomized == 1, tx     := sample(c('A', 'B'), .N, replace=TRUE)]
+r[randomized == 1, futime := pmin(runif(.N, 0, 10), 3)]
+# Add outcome status for those followed 3 years
+# Make a few of those followed 3 years missing
+r[futime == 3,
+  y := sample(c(0, 1, NA), .N, replace=TRUE, prob=c(0.75, 0.2, 0.05))]
+# Print first 15 subjects
+kabl(r[1 : 15, ])
+```
+
+Now show the flow of qualifications and exclusions in a consort diagram.  `consort_plot` wants multiple reasons for exclusions to be prioritized in a hierarchy, and `NA` to be used to denote "no exclusion".  Use the `reptools` function `seqFreq` that creates a `factor` variable whose first level is the most common exclusion, second level is the most common exclusion after excluding subjects based on the first exclusion, and so on.  `seqFreq` also returns an attribute `obs.per.numcond` with a frequency tabulation of the number of observations having a given number of conditions.
+
+::: {.column-margin}
+Had we wanted a non-data-dependent hierarchy we could have used
+
+```{r eval=FALSE}
+r[, exc := factor(fcase(pain  == 0, 1,
+                        hxmed == 1, 2,
+                        age < 40  , 3,
+                        default=NA),
+                  1:3, c('pain-free', 'Hx medication', 'age < 40'))]
+```
+
+:::
+
+Set up for automatic create of list of figures.
+
+```{r setuphook}
+# hookaddcap is in reptools
+hookaddcap()   # make knitr call a function at the end of each chunk
+               # to try to automatically add to list of figure
+```
+
+
+```{r consort}
+#| label: fig-consort
+#| fig-cap: Consort diagram produced with `consort_plot`
+r[, exc := seqFreq('pain-free'  = pain  == 0,
+                    'Hx med'    = hxmed == 1,
+                                  age < 40,
+                    noneNA=TRUE)]
+eo  <- attr(r[, exc], 'obs.per.numcond')
+mult <- paste0('1, 2, ≥3 exclusions: n=',
+                eo[2], ', ',
+                eo[3], ', ',
+                eo[-(1:3)]  )
+
+r[, .q(qual, consent, fin) :=
+    .(is.na(exc),
+      ifelse(consent == 1, 1, NA),
+      ifelse(futime  >= 3, 1, NA))]
+			
+require(consort)
+consort_plot(r,
+             orders = c(id      = 'Screened',
+                        exc     = 'Excluded',
+                        qual    = 'Qualified for Randomization',
+                        consent = 'Consented',
+                        tx      = 'Randomized',
+                        fin     = 'Finished',
+                        y       = 'Outcome\nassessed'),
+             side_box = 'exc',
+             allocation = 'tx',
+             labels=c('1'='Screening', '3'='Consent', '4'='Randomization', '6'='Follow-up'),
+             coords=c(0.4, 0.6), cex=0.65,
+)
+```
+
+`consort` allows provides another way to build the diagram that may be more flexible and intuitive after we define some helper functions.  The built-in R pipe operator `|>` is used.
+
+```{r consort2}
+#| label: fig-consort2
+#| fig-cap: Consort diagram using component functions
+#| fig-height: 5.5
+h <- function(n, label) paste0(label, ' (n=', n, ')')
+htab <- function(x, label=NULL, split=! length(label), br='\n') {
+  tab <- table(x)
+  w <- if(length(label)) paste0(h(sum(tab), label), ':', br)
+  f <- if(split) h(tab, names(tab)) 
+  else
+    paste(paste0('   ', h(tab, names(tab))), collapse=br)
+  if(split) return(f)
+  paste(w, f, sep=if(length(label))'' else br)
+}  
+count <- function(x, by=rep(1, length(x)))
+  tapply(x, by, sum, na.rm=TRUE)
+
+w <- r[, {
+ g <-
+   add_box(txt=h(nrow(r),       'Screened'))                    |>
+   add_side_box(htab(exc,       'Excluded'))                    |>
+   add_box(h(count(is.na(exc)), 'Qualified for Randomization')) |>
+   add_box(h(count(consent),    'Consented'))                   |>
+   add_box(h(count(randomized), 'Randomized'))                  |>
+   add_split(htab(tx))                                          |>
+   add_box(h(count(fin, tx),    'Finished'))                    |>
+   add_box(h(count(! is.na(y), tx), 'Outcome\nassessed'))       |>
+   add_label_box(c('1'='Screening',     '3'='Consent',
+                   '4'='Randomization', '6'='Follow-up'))
+ plot(g)
+}
+]
+```
+
+The [`mermaid`](https://mermaid-js.github.io/mermaid) natural diagramming language can be used to make `consort`-like flowcharts among many other types of diagrams.  `Quarto` has [built-in support for `mermaid`](https://quarto.org/docs/authoring/diagrams.html), and a `reptools` function `makemermaid` uses the capabilities of the `knit_expand` function in the `knitr` package to allow variable values to easily be inserted into `mermaid` specifications using the `{{variablename}}` notation.  Whole diagram elements can be inserted by having `{{x}}` in a separate `mermaid` input line, where `x` is a character string that R constructs.  `results='asis'` needs to be in the chunk header to use `makemermaid`, and any node labels that contain parentheses must be enclosed in quotes.  In the first example, exclusions are in one large node and a special output class (used to limited effect here) is used for this node.
+
+```{r results='asis'}
+cap <- 'Consort diagram produced by `mermaid`'
+addCap('fig-mermaid1', cap)
+# TD = top down
+x <- '%%| fig-cap: "{{cap}}"
+%%| label: fig-mermaid1
+flowchart TD
+  S["Screened (n={{N0}})"] --> E["{{excl}}"]
+  S   --> Q["Qualified for Randomization (n={{Nq}})"]
+  Q   --> C["Consented (n={{Nc}})"]
+  C   --> R["Randomized (n={{Nr}})"]
+  R   --> TxA["A (n={{Ntxa}})"]
+  R   --> TxB["B (n={{Ntxb}})"]
+  TxA --> FA["Finished (n={{Ntxaf}})"]
+  TxB --> FB["Finished (n={{Ntxbf}})"]
+  FA  --> OA["Outcome assessed (n={{Ntxao}})"]
+  FB  --> OB["Outcome assessed (n={{Ntxbo}})"]
+classDef largert fill:lightgray,width:1.5in,height:10em,text-align:right,font-size:0.8em
+class E largert;
+'
+
+w <- r[, 
+makemermaid(x,
+            cap  = cap,
+            N0   = nrow(r),
+            excl = htab(exc, 'Excluded', br='<br>'),
+            Nq   = count(is.na(exc)),
+            Nc   = count(consent),
+            Nr   = count(randomized),
+            Ntxa = count(tx == 'A'),
+            Ntxb = count(tx == 'B'),
+            Ntxaf= count(tx == 'A' & fin),
+            Ntxbf= count(tx == 'B' & fin),
+            Ntxao= count(tx == 'A' & ! is.na(y)),
+            Ntxbo= count(tx == 'B' & ! is.na(y))
+            )
+]
+```
+
+In the second `mermaid` example, each exclusion is a subnode to the overall count of exclusions, and a new node is added to inform us about multiple exclusions per subject.  To provide fuller information about multiple exclusions, the entire frequency distribution of the number of exclusions per subject appears as a hover text tooltip (thus the new node is not really needed).  Let's also remove the need for more error-prone manual coding of parallel treatment groups by creating a function `parNodes` to do this.
+
+::: {.column-margin}
+To make `mermaid` tooltips work the following needs to be placed in your script.  This will keep text in the tooltip as fixed-width font so columns will line up.
+
+```
+<style>
+  .mermaidTooltip {
+      font-family: courier;
+			white-space: pre;
+    }
+</style>
+```
+
+:::
+
+
+```{r}
+exclnodes <- function(x, from='E', root='E', seq=FALSE, remain=FALSE) {
+  # Create complete node specifications for individual exclusions, each
+  # linking to overall exclusion count assumed to be in node root.
+  # Set seq=TRUE to make use of the fact that the exclusions were
+  # done in frequency priority order so that each exclusion is in
+  # addition to the previous one.  Leave seq=FALSE to make all exclusions
+  # subservient to root.  Use remain=TRUE to include # obs remaining
+	# remain=TRUE assumes noneNA specified to seqFreq
+  tab <- table(x)
+  i <- 1 : length(tab)
+	rem <- if(remain) paste0(', ', length(x) - cumsum(tab), ' remain')
+  w <- paste0('["', names(tab), ' (n=', tab, rem, ')"]')
+  u <- if(seq) ifelse(i == 1, paste0(from, ' --> ', root, '1', w),
+                              paste0(root, i-1, '--> ', root, i, w))
+    else paste0(from, ' --> ', root, i, w)
+  paste(u, collapse='\n')
+}
+
+# Create parallel treatment nodes
+# Treatments are assumed to be in order by the tx variable
+# and will appear left to right in the diagram
+# Treatment node names correspond to that and are Tx1, Tx2, ...
+# root: root of new nodes, from: single node name to connect from
+# fromparallel: root of connected-from node name which is to be
+# expanded by adding the integers 1, 2, ... number of treatments.
+
+Txs <- r[, if(is.factor(tx)) levels(tx) else sort(unique(tx))]
+
+parNodes <- function(counts, root, from=NULL, fromparallel=NULL,
+                      label=Txs) {
+  if(! identical(names(counts), Txs)) stop('Txs not consistent')
+  k <- length(Txs)
+  ns <- paste0(' (n=', counts, ')')
+  nodes <- paste0(root, 1 : k, '["', label, ns, '"]')
+  w <- if(length(fromparallel))
+          paste0(fromparallel, 1 : k, ' --> ', nodes)
+	  else  paste0(from, ' --> ', paste(nodes, collapse=' & '))
+  paste(w, collapse='\n')
+	}
+
+# Create tooltip text from tabulation created by seqFreq earlier
+efreq <- data.frame('# Exclusions'= (1 : length(eo)) - 1,
+                    '# Subjects'  = eo, check.names=FALSE)
+efreq <- subset(efreq, `# Subjects` > 0)
+# Convert to text which will be wrapped by the html
+excltab <- paste(capture.output(print(efreq, row.names=FALSE)),
+                 collapse='\n')
+```
+
+```{r results='asis'}
+cap <- 'Consort diagram produced with `mermaid` with individual exclusions linked to the overall exclusions node, and with a tooltip to show more detail'
+addCap('fig-mermaid2', cap)
+x <- '%%| fig-cap: "{{cap}}"
+%%| label: fig-mermaid2
+
+flowchart TD
+  S["Screened (n={{N0}})"] --> E["Excluded (n={{Ne}})"]
+  {{exclsep}}
+  E1 & E2 & E3 --> M["{{mult}}"]
+  S   --> Q["Qualified for Randomization (n={{Nq}})"]
+  Q   --> C["Consented (n={{Nc}})"]
+  C   --> R["Randomized (n={{Nr}})"]
+  {{txcounts}}
+  {{finished}}
+  {{outcome}}
+click E callback "{{excltab}}"
+'
+
+w <- r[, 
+makemermaid(x,
+  cap      = cap,
+  N0       = nrow(r),
+  Ne       = count(! is.na(exc)),
+  exclsep  = exclnodes(exc),  # add seq=TRUE to put exclusions vertical
+  excltab  = excltab,         # tooltip text
+  mult     = mult,  # separate node: count multiple exclusions
+  Nq       = count(is.na(exc)),
+  Nc       = count(consent),
+  Nr       = count(randomized),
+  txcounts = parNodes(table(tx),         'Tx', from='R'),
+  finished = parNodes(count(fin, by=tx), 'F',  fromparallel='Tx',
+                      label='Finished'),
+  outcome  = parNodes(count(! is.na(y), by=tx), 'O',
+                      fromparallel='F', label='Outcome assessed'),
+  file='mermaid2.md'  # save generated code for another use
+)
+]
+```
+
+::: {.column-margin}
+
+Hover the mouse over `Excluded` to see details
+
+:::
+
+Use a similar approach for displaying missing data exclusions in `support` with respect to selected variables.  The `reptools` `missChk` function will automatically start with the variable having the highest number of `NA`s, then go to the variable that is most missing after removing observations that are missing on the first variable, etc.
+
+```{r results='asis'}
+cap <- 'Flowchart of sequential exclusion of observations due to missing values'
+addCap('fig-missflow', cap)
+vars <-  .q(age, sex, dzgroup, edu, income, meanbp, wblc,
+            alb, bili, crea, glucose, bun, urine)
+ex <- missChk(support, use=vars, type='seq') # seq: don't make report
+
+# Create tooltip text from tabulation created by seqFreq
+oc   <- attr(ex, 'obs.per.numcond')
+freq <- data.frame('# Exclusions'= (1 : length(oc)) - 1,
+                   '# Subjects'  = oc, check.names=FALSE)
+freq    <- subset(freq, `# Subjects` > 0)
+excltab <- paste(capture.output(print(freq, row.names=FALSE)),
+                 collapse='\n')
+
+x <- '%%| label: fig-missflow
+%%| fig-cap: "{{cap}}"
+flowchart TD
+  Enr["Enrolled (n={{N0}})"]
+	{{exclsep}}
+	click E1 callback "{{excltab}}"
+'
+
+makemermaid(x,
+  cap       = cap,
+  N0        = nrow(support),
+  exclsep   = exclnodes(ex, from='Enr', seq=TRUE, remain=TRUE),
+  excltab   = excltab
+)
+```
+
+::: {.column-margin}
+Hover over the second box to see more details.
+
+:::
+
+
+## Analyzing Data About the Data
+
+The `contents` function displays the data dictionary and number of missing values for each variable.  We can go deeper in summarizing a dataset as a whole.  The `reptools` `dataOverview` function first produces a brief overview of the dataset with regard to number of variables, observations, and unique subject identifiers (if present).  Then it provides a table, and a graphical report with one graph (in one report tab) per type of variable: continuous, discrete, or non-discrete non-numeric.  Variable characteristics summarized are the number of distinct values, number of `NA`s, information measure (see `describe`), symmetry, modal variable value (most frequent value), frequency of modal value, minimum frequency value, and frequency of that value.  When there are tied frequencies the first value is reported.  The default display is an interactive `plotly`  scatterplot with the number of distinct values on the x-axis and symmetry on the y-axis.  The other data characteristics are shown as hover text.  The points are color-coded for intervals of the number of `NA`s.[`Info` is the information in a variable relative to the information (1.0) in a variable having no tied values.  _Symmetry_ is defined as follows.  For non-numeric variables, symmetry is one minus the mean absolute difference between relative category frequencies and the reciprocal of the number of categories.  It has a value of 1.0 when the frequencies of all the categories are the same.  For continuous variables symmetry is the ratio of the 0.95 quantile minus the mean to the mean minus the 0.05 quantile.  This symmetry measure is < 1.0 when the left tail is heavy and > 1 when the right tail of the distribution is heavy.]{.aside}
+
+Again use the `support` dataset.
+
+```{r overview,results='asis'}
+dataOverview(support, baselabel='dataov')
+```
+
+# Descriptive Statistics
+
+The `Hmisc` `describe` function is my main tool for getting initial descriptive statistics and quality controlling the data in a univariate fashion.  Here is an example.  The `Info` index is a measure of the information content in a numeric variable relative to the information in a continuous numeric variable with no ties.  A very low value of `Info` will occur when a highly imbalanced variable is binary.  Clicking on `Glossary` on the right will pop up a browser window with a more in-depth glossary of terms used in `Hmisc` package output.  It links to `hbiostat.org/R/glossary.html` which you can link  from your reports that use `Hmisc`.[`Info` comes from the [approximate formula](http://hbiostat.org/bib/r2.html) for the variance of a log odds ratio for a proportional odds model/Wilcoxon test, due to Whitehead.<br><a href="https://hbiostat.org/R/glossary.html" target="popup" onclick="window.open('https://hbiostat.org/R/glossary.html#describe', 'popup', 'width=450,height=600'); return false;"><small>Glossary</small></a>]{.aside}
+
+`Gmd` in the output stands for Gini's mean difference---the mean absolute difference over all possible pairs of different observations.  It is a very interpretable measure of dispersion that is more robust than the standard deviation.
+
+::: {.callout-note .column-page collapse="true"}
+# `describe` Output
+```{r desc,results='asis'}
+# The callout was typed manually; could have run
+#  makecnote(~ html(describe(d)), wide=TRUE)
+w <- describe(d)
+html(w)
+```
+:::
+
+
+```{r eval=FALSE}
+# To create a separate browser window:
+cat(html(w), file='desc.html')
+browseURL('desc.html', browser='firefox -new-window')
+```
+
+Better, whether using `RStudio` or not:
+
+```{r eval=FALSE}
+htmlView(w, contents(d))  # or htmlView(describe(d1), describe(d2), ...)
+# Use htmlViewx to use an external browser window (see above)
+```
+
+There is also a `plot` method for `describe` output.  It produces two graphics objects: one for categorical variables and one for continuous variables.  The default is to use `ggplot2` to produce static graphics.  The result can be fed directly into `maketabs` described earlier.  `results='asis'` must appear in the chunk header.
+
+```{r pdesc,results='asis'}
+cap <- paste('Regular plot(describe) output for',
+             c('categorical', 'continuous'), 'variables')
+maketabs(plot(w, bvspace=2.5), baselabel='pdesc', cap=cap)
+```
+
+By specifying `grType` option you can instead get `plotly` graphics that use hover text to show more information, especially when hovering over the leftmost dot or tick mark for a variable.
+
+```{r pldesc,results='asis'}
+options(grType='plotly')
+cap <- paste('plotly plot(describe) output for', c('categorical', 'continuous'),
+             'variables')
+maketabs(plot(w, bvspace=2.5), wide=TRUE, baselabel='pldesc', cap=cap)
+```
+
+See [this](http://hbiostat.org/R/Hmisc/examples.html) for other `Hmisc` functions for descriptive graphics and tables, especially for stratified descriptive statistics for categorical variables.  The `summaryM` function prints a tabular summary of a mix of continuous and categorical variables.  Here is an example where stratification is by history of myocardial infarction (MI).
+
+```{r summaryM,results='asis'}
+require(data.table)
+setDT(d)   # turn d into a data table
+# tables() with no arguments will give a concise summary of all active data tables
+w <- d
+w[, hxofMI := factor(hxofMI, 0 : 1, c('No history of MI', 'History of MI'))]
+vars <- setdiff(names(d), 'hxofMI')
+form <- as.formula(paste(paste(vars, collapse='+'), '~ hxofMI'))
+print(form)
+s <- summaryM(form, data=d, test=TRUE)
+maketabs(
+  ` `                         ~ ` `,   # empty tab
+  `Table 1`                   ~ html(s, exclude1=TRUE, npct='both', digits=3, middle.bold=TRUE),
+  `Categorical Variable Plot` ~ plot(s, which='categorical', vars=1 : 4, height=600, width=1000),
+  `Continuous Variable Plot`  ~ plot(s, which='continuous',  vars=1 : 4),
+  wide=TRUE, baselabel='summarym', cap=c('', '', '-', '-'))
+```
+
+Semi-interactive stratified spike histograms are also useful descriptive plots.  These plots also contain a superset of the quantiles used in box plots, and the legend is clickable, allowing any of the statistical summaries to be turned off.
+
+```{r spikeh}
+#| label: fig-spikeh
+#| fig-cap: Spike histograms of heart rate stratified by ECG category
+#| fig-height: 2.5
+d[, histboxp(x=maxhr, group=ecg, bins=200)]
+```
+
+## Longitudinal Continuous Y
+
+For a continuous response variable measured longitudinally, two of the ways to display the data are
+
+* "spaghetti plots" showing all data for all individual subjects, if the number of subjects is not very large
+* finding clusters of individual subject curve characteristics and plotting a random sample of raw data curves within each cluster if the sample size is large
+
+The `Hmisc` package [`curveRep`](https://www.rdocumentation.org/packages/Hmisc/versions/4.7-0/topics/curveRep) function facilitates the latter approach using representative curves.  It considers per-subject sample sizes and measurement time gaps as these will not only limit how we look at the data but may be informative, e.g., subjects who are failing may start to get more frequent measurements.
+
+To demonstrate we simulate data in the following way.
+
+* Simulate 200 subjects (curves) with per-curve sample sizes ranging from 1 to 10
+* Make curves with odd-numbered IDs have a measurement time distribution that is random uniform [0,1] and those with even-numbered IDs have a time distribution that is half as wide but still centered at 0.5.  Shift y values higher with increasing IDs
+* Make 1/3 of subjects have a flat trajectory, 1/3 linear and not flat, and 1/3 quadratic
+
+Request `curveRep` to cluster the 200 curves on the following characteristics:
+
+* `kn=3` sample size groups (`curveRep` actually used one more than this)
+* `kxdist=2` time point distribution groups based here on the earliest and latest measurement times and the longest gap between any two measurements within a subject
+* `k=4` trajectory clusters.  Trajectories are determined by `loess`-smoothing each subject's curve and linearly interpolating the estimates to the same evenly-spaced grid of time points, then clustering on these 10 y-estimates.  This captures intercepts, slopes, and shapes.
+
+All subjects within each cluster are shown; we didn't need to take random samples for 200 subjects.  Results for the 4 per-curve sample size groups are placed in separate tabs.
+
+```{r long,results='asis'}
+set.seed(1)
+N <- 200
+nc <- sample(1:10, N, TRUE)
+id <- rep(1:N, nc)
+x  <- y <- id
+# Solve for coefficients of quadratic function such that it agrees with 
+# the linear function at x=0.25, 0.75 and is lower by -delta at x=0.5
+delta    <- -3
+cof      <- list(c(0, 0, 0), c(0, 10, 0), c(delta, 10, -2 * delta / (2 * 0.25^2)))
+
+for(i in 1 : N) {
+  x[id==i] <- if(i %% 2) runif(nc[i]) else runif(nc[i], c(.25, .75))
+  shape    <- sample(1:3, 1)
+  xc       <- x[id == i] - 0.5
+  k        <- cof[[shape]]
+  y[id == i] <- i/20 + k[1] + k[2] * xc + k[3] * xc ^ 2 +
+                    runif(nc[i], -2.5, 2.5)
+}
+require(cluster)
+w   <- curveRep(x, y, id, kn=3, kxdist=2, k=4, p=10)
+gg  <- vector('list', 4)
+nam <- rep('', 4)
+for(i in 1 : 4) {
+  z <- plot(w, i, method='data')  # method='data' available in Hmisc 4.7-1
+  z <- transform(z,
+                 distribution = paste('Time Distribution:', distribution),
+                 cluster      = paste('Trajectory Cluster:', cluster))
+  gg[[i]] <-
+    if(i == 1)
+      ggplot(z, aes(x, y, color=curve)) + geom_point() +
+        facet_grid(distribution ~ cluster) +
+        theme(legend.position='none')
+  else
+      ggplot(z, aes(x, y, color=curve)) + geom_line() +
+        facet_grid(distribution ~ cluster) +
+        theme(legend.position='none')
+  nam[i] <- z$ninterval[1]
+}
+names(gg) <- nam
+maketabs(gg, baselabel='curverep')
+```
+
+## Longitudinal Ordinal Y
+
+Continuous longitudinal Y may be analyzed flexibly [using semiparametric models](https://hbiostat.org/proj/covid19) while being described using representative curves as just discussed.  Now suppose that Y is discrete.  There are three primary ways of describing such data graphically.
+
+1. Show event occurrences/trajectories for a random sample of subjects (`Hmisc::multEventChart`) [Thanks to Lucy D'Agostino McGowan for writing most of the code for `multEventChart`]{.aside}
+1. Show all transition proportions if time is discrete (`Hmisc::propsTrans`)
+1. Show all state occupancy proportions if time is discrete (`Hmisc::propsPO`)
+
+Starting with a multiple event chart, simulate data on 5 patients, then display all the raw data.
+
+```{r multevent}
+#| label: fig-multevent
+#| fig-cap: "Multi-event chart for 4 patients"
+#| fig-height: 3.5
+pt1 <- data.frame(pt=1, day=0:3,
+         status=.q(well, well, sick, 'very sick'))
+pt2 <- data.frame(pt=2, day=c(1,2,4,6),
+         status=.q(sick, 'very sick', coma, death))
+pt3 <- data.frame(pt=3, day=1:5,
+         status=.q(sick, 'very sick', sick, 'very sick', 'discharged'))
+pt4 <- data.frame(pt=4, day=c(1:4, 10),
+         status=.q(well, sick, 'very sick', well, discharged))
+d <- rbind(pt1, pt2, pt3, pt4)
+d <- upData(d, 
+            status = factor(status, .q(discharged, well, sick,
+                            'very sick', coma, death)),
+            labels = c(day = 'Day'), print=FALSE)
+kabl(pt1, pt2, pt3, pt4)
+multEventChart(status ~ day + pt, data=d,
+               absorb=.q(death, discharged),
+               colorTitle='Status', sortbylast=TRUE) +
+  theme_classic() + theme(legend.position='bottom')
+```
+
+For an example of displaying transition proportions, whereby all the outcome information in the raw data is shown, simulate some random data.  The result is a `plotly` graphic over which you hover the pointer to see details.  The size of the bubbles is proportional to the proportion in that transition.
+
+```{r propsTrans}
+#| label: fig-strans
+#| fig-cap: State transition proportions
+set.seed(1)
+d <- expand.grid(id=1:30, time=1:7)
+setDT(d)   # convert to data.table
+d[, sex   := sample(c('female', 'male'), .N, replace=TRUE)]
+d[, state := sample(LETTERS[1:4], .N, replace=TRUE)]
+ggplotlyr(propsTrans(state ~ time + id, data=d))
+```
+
+The final display doesn't capture the within-subject correlation as done with the transition proportions, but is the most familiar display for longitudinal ordinal data as it shows proportions in the current states, which are cumulative incidence estimates for absorbing states. [Should absorbing states have occurred in the data you would need to carry these forward to the end of follow-up for `propsPO` to work properly, even though the real data file would terminate follow-up at an absorbing event.]{.aside}
+
+```{r propsPO}
+#| label: fig-sops
+#| fig-cap: State occupancy proportions by time and male/female
+#| fig-height: 3
+ggplotlyr(propsPO(state ~ time + sex, data=d))
+```
+
+## Adverse Event Chart
+
+When there is a potentially large number of event types, such as adverse events (AEs) in a clinical trial, and the event timing is not considered, a dot chart is an excellent way to present the proportion of subjects suffering each type of AE.  The AEs can be sorted in descending order by the difference in proportions between treatments, and `plotly` hover text can display more details.  Half-width confidence intervals are used (see @sec-confbands).  An AE chart is easily produced using the `aePlot` function in the `qreport` repository on [`github`](https://github.com/harrelfe/qreport/tree/master).  `aePlot` expects the dataset to have one record per subject per AE, so the dataset itself does not define the proper denominator and this must be specified by the user (see `denom` below).  The color coded needles in the right margin are guideposts to which denominators are being used in the analysis (details are [here](http://hbiostat.org/R/hreport/report.html)).
+
+```{r aeplot,results='asis'}
+#| fig-height: 7.5
+getRs('misc.r',   grepo='qreport')
+getRs('aePlot.r', grepo='qreport')
+getHdata(aeTestData)  # original data source: HH package
+# One record per subject per adverse event
+
+# For this example, the denominators for the two treatments in the
+# pop-up needles will be incorrect because the dataset did not have
+# subject IDs.
+
+ae <- aeTestData
+# qreport requires us to define official clinical trial counts and 
+# name of treatment variable
+denom <- c(enrolled   = 1000,
+           randomized =  400,
+           a=212, b=188)
+
+setqreportOption(tx.var='treat', denom=denom)
+aePlot(event ~ treat, data=ae, minincidence=.05, size='wide')
+```
+
+## Continuous Event Times
+
+For time-to-event data with possibly multiple types of events, an event chart is a good way to show the raw outcome data for a sample of up to perhaps 40 subjects.  The `Hmisc` package offers the `event.chart` function written by Jack Lee, Kenneth Hess, and Joel Dubin.  Here is an example they provided.  Patients are sorted by diagnosis date.
+
+```{r event.chart}
+#| label: fig-event.chart
+#| fig-cap: Event chart
+getHdata(cdcaids)
+event.chart(cdcaids,
+  subset.c=.q(infedate, diagdate, dethdate, censdate),
+  x.lab = 'Observation Dates',
+  y.lab='Patients',
+  titl='AIDS Data Calendar Event Chart',
+  point.pch=c(1,2,15,0), point.cex=c(1,1,0.8,0.8),
+  legend.plot=TRUE, legend.location='i', legend.cex=0.8,
+  legend.point.text=.q(transfusion,'AIDS diagnosis',death,censored),
+  legend.point.at = list(c(7210, 8100), c(35, 27)))
+```
+
+## Describing Variable Interrelationships
+
+A good descriptive analysis to help understand relationships among variables and redundancies/collinearities is variable clustering.  Here one clusters on variables instead of observations, and instead of a distance matrix we have a similarly matrix.  A good default similarity matrix is based on the square of pairwise Spearman's $\rho$ rank correlation coefficients.  In order to restrict ourselves to _unsupervised learning_, also called _data reduction_, we restrict attention to non-outcome variables.  The `vClus` function in `reptools` runs the dataset, after excluding some variables, through the `Hmisc` `dataframeReduce` function to eliminate variables that are missing more than 0.4 of the time and to ignore character or factor variables having more than 10 levels.  Binary variables having prevalence < 0.05 are dropped, and categorical variables having < 0.05 of their non-missing values in a category will have such low-frequency categories combined into an "other" category for purposes of variable clustering.[Normally one would omit the `fracmiss, maxlevels, minprev` arguments as the default values are reasonable.]{.aside}
+
+```{r varclus}
+#| label: fig-varclus
+#| fig-cap: Variable clustering in `support`
+#| fig-height: 4
+#| fig-width: 7.5
+outcomes <- .q(slos, charges, totcst, totmcst, avtisst,
+               d.time, death, hospdead, sfdm2)
+vClus(support, exclude=outcomes, fracmiss=0.4, maxlevels=10, minprev=0.05)
+```
+
+The most strongly related variables are competing indicator variables for categories from the same variable, `scoma` vs. `dzgroup` "Coma", and `dzgroup` "Cancer" vs. `dzclass` "Cancer".  The first type of relationship generates a strong negative correlation because if you're in one category you can't be in the other.
+
+
+# Data Manipulation and Aggregation
+
+The [`data.table`](https://hbiostat.org/R/data.table) package provides a concise, consistent syntax for managing simple and complex data manipulation tasks, and it is extremely efficient for large datasets.  One of the best organized tutorials is [this](https://riptutorial.com/data-table), and a cheatsheet for data transformation is [here](https://raw.githubusercontent.com/rstudio/cheatsheets/master/datatable.pdf).  A master cheatsheet for `data.table` is [here](https://rdrr.io/cran/data.table/man/data.table.html) from which the general syntax below is taken, where `DT` represents a data table.
+
+```
+   DT[ i,  j,  by ] # + extra arguments
+        |   |   |
+        |   |    -------> grouped by what?
+        |    -------> what to do?
+         ---> on which rows?
+```
+
+Data tables are also data frames so work on any method handling data frames.  But data tables do not contain `rownames`.
+
+Several `data.table` examples follow.  I like to hold the current dataset in `d` to save typing.  Some basic operations on data tables are:
+
+```{r eval=FALSE}
+d[2]                  # print 2nd row
+d[2:4]                # print rows 2,3,4
+d[y > 2 & z > 3]      # rows satisfying conditions
+d[, age]              # retrieve one variable
+d[, .(age, gender)]   # make a new table with two variables
+i <- 2; d[, ..i]      # get column 2
+v <- 'age'; d[, ..v]  # get variable named by contents of v
+d[, (v)]              # another way; these return data tables
+d[.N]                 # last row
+d[, .N, keyby=age]    # number of rows for each age, sorted
+d[1:10, bhr:pkhr]     # first 10 rows, variables bhr - pkhr
+d[1:10, !(bhr:pkhr)]  # all but those variables
+d[, 2:4]              # get columns 2-4
+d[, {...}]            # run any number of lines of code in ...
+                      # that reference variables inside d
+```
+
+`data.table` does many of its operations _by reference_ to avoid the overhead of having multiple copies of data tables.  This idea carries over to _apparent_ copies of data tables.  Here is an example.
+
+```{r dfcopy}
+a <- data.table(x1=1:3, x2=letters[1:3])
+a
+b <- a                  # no copy; b is just a pointer to a
+b[, x2 := toupper(x2)]  # changes a
+a
+a <- data.table(x1=1:3, x2=letters[1:3])
+a2 <- copy(a)           # fresh copy with its own memory space
+a2[, x2 := toupper(x2)] # doesn't change a
+a
+```
+
+## Analyzing Selected Variables and Subsets
+```{r dtsimple,results='asis'}
+d <- stressEcho
+d[, html(describe(age))]
+d[, html(describe(~ age + gender))]
+d[gender == 'female', html(describe(age))]   # analyze age for females
+html(describe(d[, .(age, gender)], 'Age and Gender Stats'))
+```
+
+```{r dtsimple2}
+# Separate analysis by female, male.  Use keyby instead of by to sort the usual way.
+d[, print(describe(age, descript=gender)), by=gender]
+
+# Compute mean and median age by gender
+d[, .(Mean=mean(age), Median=median(age)), by=gender]
+# To create a new subset
+w <- d[gender == 'female' & age < 70, ]
+```
+
+## Adding or Changing Variables
+
+With `data.table` you can create a new data table with added variables, or you can add or redefine variables in a data table in place.  The latter has major speed and memory efficiency implications when processing massive data tables.  Here `d` refers to a different data table from the one used above.
+
+```{r eval=FALSE}
+# Rename a variable
+setnames(d, c('gender', 'height'),
+            c(  'sex',      'ht'))
+# Easier:
+setnames(d, .q(gender, height),
+            .q(   sex,     ht))
+
+# Or
+ren <- .q(gender=sex, height=ht)
+setnames(d, names(ren), ren)
+
+# Or
+rename <- function(x, n) setnames(x, names(n), n)
+rename(d, .q(gender=sex, height=ht))
+
+# For all variables having baseline_ at the start of their names, remove it
+n <- names(d)
+setnames(d, n, sub('^baseline_', '', n))   # ^ = at start; use $ for at end
+
+# For all variables having baseline_ at the start of their names, remove it
+# and add Baseline to start of variable label
+n    <- names(d)
+n    <- n[grepl('^baseline_', n)]
+ren  <- sub('^baseline_', '', n); names(ren) <- n
+# Fetch vector of labels for variables whose names start with baseline_
+labs <- sapply(d, label)[n]   # label() result is "" if no label
+labs <- paste('Baseline', labs)
+d    <- updata(d, rename=ren, labels=labs)
+
+# Change all names to lower case
+n <- names(d)
+setnames(d, n, tolower(n))
+
+# Abbreviate names of all variables longer than 10 characters
+# abbreviate() will ensure that all names are unique
+n <- names(d)
+setnames(d, n, abbreviate(n, minlength=10))
+
+# For any variables having [...] or (...) in their labels, assume these
+# are units of measurement and move them from the label to the units
+# attribute
+d <- upData(d, moveUnits=TRUE)
+
+# Add two new variables, storing
+result in a new data table
+z <- d[, .(bmi=wt / ht ^ 2, bsa=0.016667 * sqrt(wt * ht))]
+
+# Add one new variable in place
+d[, bmi := wt / ht ^ 2]
+
+# Add two new variables in place
+d[, `:=`(bmi = wt / ht ^ 2, bas=0.016667 * sqrt(wt * ht))]
+d[, .q(bmi, bsa) := .(wt / ht ^ 2, 0.016667 * sqrt(wt * ht))]
+
+# Compute something requiring a different formula for different types
+# of observations
+d[, htAdj := ifelse(sex == 'male', ht, ht * 1.07)]  # better" use fifelse in data.table
+d[, htAdj := ht * ifelse(sex == 'male', 1, 1.07)]
+d[, htAdj := (sex == 'male') * ht + (sex == 'female') * ht * 1.07]
+d[sex == 'male',   htAdj := ht]
+d[sex == 'female', htAdj := ht * 1.07]
+d[, htAdj := fcase(sex == 'male',   ht,          # fcase is in dta.table
+                   sex == 'female', ht * 1.07)]
+d[, htAdj := fcase(sex = 'female', ht * 1.07, default = ht)]
+
+# Add label & optional units (better to use upData which works on data tables)
+adlab <- function(x, lab, un='') {
+  label(x) <- lab
+  if(un != '') units(x) <- un
+  x
+}
+d[, maxhr := adlab(maxhr, 'Maximum Heart Rate', '/m')]
+
+# Delete a variable (or use upData)
+d[, bsa := NULL]
+
+# Delete two variables
+d[, `:=`(bsa=NULL, bmi=NULL)]
+d[, .q(bsa, bmi) := NULL]
+```
+
+## Recoding Variables
+
+```{r, eval=FALSE}
+# Group levels a1, a2 as a & b1,b2,b3 as b
+d[, x := factor(x, .q(a1,a2,b1,b2,b3),
+                   .q( a, a, b, b, b))]
+# Regroup an existing factor variable
+levels(d$x) <- list(a=.q(a1,a2), b=.q(b1,b2,b3))
+# or
+d <- upData(d, levels=list(x=list(a=.q(a1,a2), b=.q(b1,b2,b3))))
+# Or manipulate character strings
+d[, x := substring(x, 1, 1)]   # replace x with first character of levels
+# or
+levels(d$x) <- substring(levels(d$x), 1, 1)
+
+# Recode a numeric variable with values 0, 1, 2, 3, 4 to 0, 1, 1, 1, 2
+d[, x := 1 * (x %in% 1:3) + 2 * (x == 4)]
+d[, x := fcase(x %in% 1:3, 1,          # fcase is in data.table
+               x == 4,     2)]
+d[, x := fcase(x %between% c(1,3), 1,
+               x    ==       4,    2)]  # %between% is in data.table
+
+# Recode a series of conditions to a factor variable whose value is taken
+# from the last condition that is TRUE using Hmisc::score.binary
+# Result is a factor variable unless you add retfactor=FALSE
+d[, x := score.binary(x1 == 'symptomatic',
+                      x2 %in% .q(stroke, MI),
+                      death)]
+# Same but code with numeric points
+d[, x := score.binary(x1 == 'symptomatic',
+                      x2 %in% .q(stroke, MI),
+                      death,  # TRUE/FALSE or 1/0 variable
+                      points=c(1,2,10))]
+# Or just reverse the conditions and use fcase which stops at the first
+# condition met
+d[, x := fcase(death,                  'death',        # takes precedence
+               x2 %in% .q(stroke, MI), 'stroke/MI',    # takes next precedence
+               x1 == 'symptomatic',    'symptomatic',
+               default =               'none')]
+
+# Recode from one set of character strings to another using named vector
+# A named vector can be subscripted with character strings as well as integers
+states <- c(AL='Alabama', AK='Alaska', AZ='Arizona', ...)
+# Could also do:
+#  states <- .q(AL=Alabama, AK=Alaska, AZ=Arizona, ..., NM='New Mexico', ...) 
+# or do a merge for table lookup (see later)
+d[, State := states[state]]
+# states are unique, state can have duplicates and all are recoded
+d[, State := fcase(state == 'AL', 'Alabama',  state='AK', 'Alaska', ...)]
+
+# Recode from integers 1, 2, ..., to character strings
+labs <- .q(elephant, giraffe, dog, cat)
+d[, x := labs[x]]
+
+# Recode from character strings to integers
+d[, x := match(x, labs)]
+d[, x := fcase(x == 'elephant', 1, 
+               x == 'giraffe',  2,
+               x == 'dog',      3,
+               x == 'cat',      4)]
+```
+
+As an example of more complex hierarchical recoding let's define codes in a nested `list`.
+
+```{r hrecode}
+a <- list(plant =
+            list(vegetable = .q(spinach, lettuce, potato),
+                 fruit     = .q(apple, orange, banana, pear)), 
+          animal =
+            list(domestic  = .q(dog, cat, horse),
+                 wild      = .q(giraffe, elephant, lion, tiger)) )
+a
+a <- unlist(a)
+a
+# Pick names of unlist'ed elements apart to define kingdom and type
+n <- sub('[0-9]*$', '', names(a))  # remove sequence numbers from ends of names
+# Names are of the form kingdom.type; split at .
+s       <- strsplit(n, '.', fixed=TRUE) 
+kingdom <- sapply(s, function(x) x[1])
+type    <- sapply(s, function(x) x[2])
+# or:   (note \\. is escaped . meaning not to use as wild card)
+#        .* = wild card: any number of characters
+# kingdom <- sub('\\..*', '', n)  # in xxx.yyy remove .yyy
+# type    <- sub('.*\\.', '', n)  # in xxx.yyy remove xxx.
+names(kingdom) <- names(type) <- a
+w <- data.table(kingdom, type, item=a, key=c('kingdom', 'item'))
+w
+# Example table lookups
+cat(kingdom['dog'], ':', type['dog'], '\n')
+kingdom[.q(dog, cat, spinach)]
+type   [.q(dog, cat, giraffe, spinach)]
+# But what if there is a plant named the same as an animal?
+# Then look up on two keys
+w[.('animal', 'lion'), type]
+```
+
+# Computing Summary Statistics
+
+Many applications can use the automatically created `data.table` object `.SD` which stands for the data table for the current group being processed.  If `.SDcols` were not specified, all variables would be attempted to be analyzed.  Specify a vector of variable names as `.SDcols` to restrict the analysis.  If there were no `by` variable(s), `.SD` stands for the whole data table.
+
+```{r ss}
+# Compute the number of distinct values for all variables
+nd <- function(x) length(unique(x))
+d[, sapply(.SD, nd)]
+# Same but only for variables whose names contain hx and either D or M
+d[, sapply(.SD, nd), .SDcols=patterns('hx', 'D|M')]
+
+# Compute means on all numeric variables
+mn <- function(x) mean(x, na.rm=TRUE)
+d[, lapply(.SD, mn), .SDcols=is.numeric]
+# Compute means on all numeric non-binary variables
+nnb <- function(x) is.numeric(x) && length(unique(x)) > 2
+d[, lapply(.SD, mn), .SDcols=nnb]
+
+# Print frequency tables of all categorical variables with > 2 levels
+cmult <- function(x) ! is.numeric(x) && length(unique(x)) > 2
+tab <- function(x) {
+  z <- table(x, useNA='ifany')
+  paste(paste0(names(z), ': ', z), collapse=', ')
+}
+d[, lapply(.SD, tab), .SDcols=cmult]
+```
+
+Tabulate all variables having between 3 and 10 distinct values and create a side effect when `data.table` is running that makes the summarization function `tab` store all values and frequencies in a growing list `Z` so that `kable` can render a `markdown` table after we pad columns to the maximum length of all columns (maximum number of distinct values). 
+
+```{r diffreq}
+# Using <<- makes data.table have a side effect of augmenting Z and
+# Align in the global environment
+tab <- function(x) {
+  z <- table(x, useNA='ifany')
+  i <- length(Z)
+  Z[[i+1]] <<- names(z)
+  Z[[i+2]] <<- as.vector(z)
+  Align <<- c(Align, if(is.numeric(x)) 'r' else 'l', 'r')
+  length(z)
+}
+discr <- function(x) { i <- length(unique(x)); i > 2 & i < 11 }
+#                                       or i %between% c(2,11)
+Z    <- list(); Align <- character(0)
+w    <- d[, lapply(.SD, tab), .SDcols=discr]
+maxl <- max(w)
+# Pad shorter vectors with blanks
+Z <- lapply(Z, function(x) c(x, rep('', maxl - length(x))))
+Z <- do.call('cbind', Z)  # combine all into columns of a matrix
+colnames(Z) <- rep(names(w), each=2)
+colnames(Z)[seq(2, ncol(Z), by=2)] <- 'Freq'
+knitr::kable(Z, align=Align)
+```
+
+A better approach is to let the `kables` function put together a series of separate `markdown` tables of different sizes.  By using the "updating `Z` in the global environment" side effect we are able to let `data.table` output any type of objects of non-conformable dimensions over variables (such as frequency tabulations).
+
+```{r tabalt}
+tab <- function(x) {
+  z <- table(x, useNA='ifany')
+  i <- length(Z)
+  w <- matrix(cbind(names(z), z), ncol=2,
+              dimnames=list(NULL, c(vnames[i+1], 'Freq')))
+  Z[[i+1]] <<- knitr::kable(w, align=c(if(is.numeric(x)) 'r' else 'l', 'r'))
+  length(z)
+}
+discr <- function(x) { i <- length(unique(x)); i > 2 & i < 11 }
+Z      <- list()
+vnames <- names(d[, .SD, .SDcols=discr])
+w      <- d[, lapply(.SD, tab), .SDcols=discr]
+knitr::kables(Z)
+```
+
+Use a similar side-effect approach to get separate `html` `describe` output by `gender`.
+
+```{r bydesc,results='asis'}
+g <- function(x, by) {
+  Z[[length(Z) + 1]] <<- describe(x, descript=paste('age for', by))
+  by
+}
+Z <- list()
+by <- d[, g(age, gender), by=gender]
+# Make Z look like describe() output for multiple variables
+class(Z) <- 'describe'
+attr(Z, 'dimensions') <- c(nrow(d), nrow(by))
+attr(Z, 'descript') <- 'Age by Gender'
+html(Z)
+```
+
+```{r morestats}
+# Compute a 1-valued statistic on multiple variables, by cross-classification
+# of two variables.  Do this on a subset.  .SDcols=a:b uses variables in order
+# Use keyby instead of by to order output the usual way
+d[age < 70, lapply(.SD, mean), keyby=.(gender, newMI), .SDcols=pkhr:dp]
+
+# Compute multiple statistics on one variable
+# Note: .N is a special variable: count of obs for current group
+d[, .(Max=max(bhr), Min=min(bhr), Mean=mean(bhr), N=.N), by=.(gender, newMI)]
+# Same result another way
+g <- function(x) list(Max=max(x), Min=min(x), Mean=mean(x), N=length(x))
+d[, g(bhr), by=.(gender, newMI)]  # if g returned a vector instead, use as.list(g(bhr))
+
+d[, as.list(quantile(bhr)), by=gender]
+
+# Compute mean bhr by quintiles of age using Hmisc::cut2
+# Bad statistical practice; use scatterplot + smoother instead
+d[, .(Mean=mean(bhr)), keyby=.(fifth=cut2(age, g=5))]
+
+# Compute multiple statistics on multiple variables
+d[, lapply(.SD, quantile), by=gender, .SDcols=.q(bhr, pkhr, sbp)]
+# Similar but put percentile number in front of statistic value
+# Do only quartiles
+g <- function(x) {
+  z <- quantile(x, (1:3)/4, na.rm=TRUE)
+  paste(format(names(z)), format(round(z)))
+}
+d[, lapply(.SD, g), by=gender, .SDcols=.q(bhr, pkhr, sbp)]
+# To have more control over labeling and to have one row per sex:
+g <- function(x) {
+  s <- sapply(x, quantile, na.rm=TRUE)  # compute quantiles for all variables -> matrix
+  h <- as.list(s)  # vectorizes first
+  # Cross row names (percentile names) with column (variable) names
+  # paste(b, a) puts variable name in front of percentile
+  names(h) <- outer(rownames(s), colnames(s), function(a, b) paste(b, a))
+  h
+}
+d[, g(.SD), by=gender, .SDcols=.q(bhr, pkhr, sbp)]
+# Restrict to variables bhr - basedp in order columns created in data table
+d[, g(.SD), by=gender, .SDcols=bhr : basedp]
+# Can put ! in front of a sequence of variables to do the opposite
+
+# To add duplicated means to raw data use e.g.
+# d[, Mean := mean(x), by=sex]
+```
+
+## Summary Statistics With Marginal Summaries
+
+The `cube` function in the `data.table` package will compute all possible marginal statistics.  When there is only one `by` variable, the overall statistic is computed in addition to compute stratified values.  When a dimension is being marginalized over, the value of the `by` variable for that dimension will be `NA`.
+
+```{r cube}
+mn  <- function(x) as.double(mean(x, na.rm=TRUE))
+# as.double ensures consistency of numeric type across groups
+Nna <- function(x) sum(! is.na(x))
+cube(d, .(Meanbhr = mn(bhr), N = Nna(bhr)), by='gender', id=TRUE)
+cube(d, .(Meanbhr = mn(bhr), N = Nna(bhr)), by=.q(gender, hxofMI), id=TRUE)
+# id=TRUE creates output variable grouping to detail level of marginalization
+# It is a binary representation, e.g. if by has 3 variables and a row
+# is marginalizing over the first and third variables,
+# grouping=binary 101 = 5
+# Use groupingsets() to control the marginalizations
+# Example: marginalize only one variable at a time
+groupingsets(d, .(Meanbhr = mn(bhr), N=Nna(bhr)), by=.q(gender, hxofMI),
+             sets=list('gender', 'hxofMI'), id=TRUE)
+```
+
+# Merging Data
+
+Consider a baseline dataset `b` and a longitudinal dataset `L`, with subject ID of `id`. [For more information see [this](https://hbiostat.org/R/data.table), [this](https://rdrr.io/cran/data.table/man/data.table.html), [this](https://medium.com/analytics-vidhya/r-data-table-joins-48f00b46ce29), [this](https://stackoverflow.com/questions/15170741) and [this](https://stackoverflow.com/questions/13493124).  To merge any number of datasets at once and obtain a printed report of how the merge went, use the `Hmisc` `Merge` function.]{.aside}
+
+```{r two}
+b <- data.table(id=1:4, age=c(21, 28, 32, 23), key='id')
+L <- data.table(id  = c(2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 5),
+                day = c(1, 2, 3, 1, 2, 3, 4, 1, 2, 1, 2, 3),
+                y    =  1 : 12, key='id')
+b
+L
+# Merge b and L to look up baseline age and associate it with all follow-ups
+b[L, on=.(id)]   # Keeps all ids in L (left inner join)
+L[b, on=.(id)]   # Keeps all ids in b (right inner join)
+L[b, on=.(id), nomatch=NULL]  # Keeps only ids in both b and L (right outer join)
+uid <- unique(c(b[, id], L[, id]))
+L[b[.(uid), on=.(id)]]         # Keeps ids in either b or c (full outer join)
+merge(b, L, by='id', all=TRUE) # also full outer join; calls merge.data.table
+```
+
+For very large data tables, giving the data tables _keys_ will speed execution, e.g.:
+
+```
+setkey(d, id)
+setkey(d, state, city)
+```
+
+Join/merge can be used for data lookups:
+
+```{r lookup}
+s <- data.table(st=.q(AL, AK, AZ, CA, OK), y=5:1)
+stateAbbrevs <- data.table(state=state.abb, State=state.name)
+s[stateAbbrevs, , on=.(st=state), nomatch=NULL]
+```
+
+# Reshaping Data
+
+To reshape data from long to wide format, take the `L` data table above as an example.
+
+```{r l2w}
+w <- dcast(L, id ~ day, value.var='y')
+w
+# Now reverse the procedure  (see also meltData in reptools)
+m <- melt(w, id.vars='id', variable.name='day', value.name='y')
+m
+setkey(m, id, day)   # sorts
+m[! is.na(y)]
+```
+
+# Other Manipulations of Longitudinal Data
+
+For the longitudinal data table `L` carry forward to 4 days the subject's last observation on `y` if it was assessed earlier than day 4.
+
+```{r}
+w <- copy(L)   # fresh start with no propagation of changes back to L
+# Only needed if will be using := to compute variables in-place and
+# you don't want the new variables also added to L
+# This is related to data.table doing things by reference instead of 
+# making copies.  w <- L does not create new memory for w.
+# Compute each day's within-subject record number and last record number
+# Feed this directly into a data.table operation to save last records 
+# when the last is on a day < 4
+u <- w[, .q(seq, maxseq) := .(1 : .N, .N), by=id][seq == maxseq & day < 4,]
+# Extra observations to fill out to day 4
+u <- u[, .(day = (day + 1) : 4, y = y), by=id]
+u
+w <- rbind(L, u, fill=TRUE)
+setkey(w, id, day)  # sort and index
+w
+```
+
+Find the first time at which y >= 3 and at which y >= 7.  [`day[y >= 3]` is read as "the value of `day` when `y >= 3`".  It is a standard subscripting operation in R for two parallel vectors `day` and `y`.  Taking the minimum value of `day` satisfying the condition gives us the first qualifying day.]{.aside}
+
+```{r firstt}
+L[, .(first3 = min(day[y >= 3]),
+      first7 = min(day[y >= 7])), by=id]
+```
+
+Same but instead of resulting in an infinite value if no observations for a subject meet the condition, make the result `NA`.
+
+```{r firstna}
+mn <- function(x) if(length(x)) min(x) else as.double(NA)
+# as.double needed because day is stored as double precision
+# (type contents(L) to see this) and data.table requires
+# consistent storage types
+L[, .(first3 = mn(day[y >= 3]),
+      first7 = mn(day[y >= 7])), by=id]
+```
+
+Add a new variable `z` and compute the first day at which `z` is above 0.5 for two days in a row for the subject.  Note that the logic below looks for consecutive days _for which records exist for a subject_.  To also require the days to be one day apart add the clause `day == shift(day) + 1` after `shift(z) > 0.5`.
+
+```{r}
+set.seed(1)
+w <- copy(L)
+w[, z := round(runif(.N), 3)]
+u <- copy(w)
+u
+mn <- function(x)
+  if(! length(x) || all(is.na(x))) as.double(NA) else min(x, na.rm=TRUE)
+u[, consecutive := z > 0.5 & shift(z) > 0.5, by=id][, 
+    firstday    := mn(day[consecutive]),     by=id]
+u
+```
+
+In general, using methods that involve counters makes logic more clear, easier to incrementally debug, and easier to extend the condition to any number of consecutive times.  Create a function that computes the number of consecutive `TRUE` values or ones such that whenever the sequence is interrupted by `FALSE` or 0 the counting starts over.
+As before we compute the first `day` at which two consecutive `z` values exceed 0.5. [`nconsec` is modified from code found [here](https://stackoverflow.com/questions/19998836).]{.aside}
+
+
+```{r nconsec}
+nconsec <- function(x) x * sequence(rle(x)$lengths)
+# rle in base R: run length encoding
+# Example:
+x <- c(0,0,1,1,0,1,1,0,1,1,1,1)
+nconsec(x)
+# To require that the time gap between measurements must be <= 2 time
+# units use the following example
+t <- c(1:9, 11, 14, 15)
+rbind(t=t, x=x)
+nconsec(x & t <= shift(t) + 2)
+
+u <- copy(w)
+# nconsec(z > 0.5) = number of consecutive days (counting current
+# day) for which the subject had z > 0.5
+u[, firstday := mn(day[nconsec(z > 0.5) == 2]), by=id] 
+#               |  |  |                    |
+#         minimum  |  |                    |
+#                day  |                    |
+#             such that                    |
+#  it's the 2nd consecutive day with z > 0.5
+u
+```
+
+## Overlap Joins
+
+The `foverlaps` function in `data.table` provides an amazingly fast way to do complex overlap joins.  Our first example is modified from an example in the help file for `foverlaps`.  An annotation column is added to describe what happened.
+
+```{r overlap}
+d1 <- data.table(w     =.q(a, a, b, b, b),
+                 start = c( 5, 10, 1, 25, 50),
+                 end   = c(11, 20, 4, 52, 60))
+d2 <- data.table(w     =.q(a, a, b),
+                 start = c(1, 15,  1),
+                 end   = c(4, 18, 55),
+                 name  = .q(dog, cat, giraffe),
+                 key   = .q(w, start, end))
+f <- foverlaps(d1, d2, type="any")
+ann <- c('no a overlap with d1 5-11 & d2 interval',
+         'a 10-20 overlaps with a 16-18',
+         'b 1-4 overlaps with b 1-55',
+         'b 25-62 overlaps with b 1-55',
+         'b 50-60 overlaps with b 1-55')
+f[, annotation := ann]
+f
+# Don't include record for non-match
+foverlaps(d1, d2, type='any', nomatch=NULL)
+# Require the d1 interval to be within the d2 interval
+foverlaps(d1, d2, type="within")
+# Require the intervals to have the same starting point
+foverlaps(d1, d2, type="start")
+```
+
+Now consider an example where there is an "events" dataset `e` with 0 or more rows per
+subject containing start (`s`) and end (`e`) times and a measurement `x`
+representing a daily dose of something given to the subject from `s` to `e`.
+The base dataset `b` has one record per subject with times `c` and `d`.  Compute the total dose of drug received between `c` and `d` for the
+subject.  This is done by finding all records in `e` for the subject
+such that the interval `[c,d]` has any overlap with the interval `[s,e]`.
+For each match compute the number of days in the interval `[s,e]` that are
+also in `[c,d]`.  This is given by `min(e,d) + 1 - max(c,s)`.  Multiply this
+duration by `x` to get the total dose given in `[c,d]`.  For multiple records
+with intervals touching `[c,d]` add these products.
+
+```{r totaldose}
+base   <- data.table(id    = .q(a,b,c), low=10, hi=20)
+events <- data.table(id    = .q(a,b,b,b,k),
+                     start = c( 8,  7, 12, 19, 99),
+                     end   = c( 9,  8, 14, 88, 99),
+                     dose  = c(13, 17, 19, 23, 29))
+setkey(base,   id, low,   hi)
+setkey(events, id, start, end)
+w <- foverlaps(base, events,
+               by.x = .q(id, low,   hi),
+               by.y = .q(id, start, end ),
+               type = 'any', mult='all', nomatch=NA)
+
+w[, elapsed := pmin(end, hi) + 1 - pmax(start, low)]
+w[, .(total.dose = sum(dose * elapsed, na.rm=TRUE)), by=id]
+```
+
+Similar things are can be done with _non-equi merges_.  For those you can require exact subject matches but allow inexact matches on other variables.  The following example is modified from [here](https://www.scitilab.com/post_data/non_equi_joins/2020_11_17_non_equi_merge). A `medication` dataset holds the start and end dates for a patient being on a treatment, and a second dataset `visit` has one record per subject ID per doctor visit.  For each visit look up the drug in effect if there was one.
+
+```{r noneq}
+medication <-
+  data.table(ID         = c( 1, 1, 2, 3, 3),
+             medication = .q(a, b, a, a, b),
+             start      = as.Date(c("2003-03-25","2006-04-27","2008-12-05",
+                                    "2004-01-03","2005-09-18")),
+             stop       = as.Date(c("2006-04-02","2012-02-03","2011-05-03",
+                                    "2005-06-30","2010-07-12")),
+             key        = 'ID')
+medication
+set.seed(123)
+visit <- data.table(
+  ID   = rep(1:3, 4),
+  date = sample(seq(as.Date('2003-01-01'), as.Date('2013-01-01'), 1), 12),
+  sbp  = round(rnorm(12, 120, 15)),
+  key  = c('ID', 'date'))
+visit
+# Variables named in inequalities need to have variables in
+# medication listed first
+m <- medication[visit, on = .(ID, start <= date, stop > date)]
+m
+# start and stop dates are replaced with actual date of visit
+# drop one of them and rename the other
+m[, stop := NULL]
+setnames(m, 'start', 'date')
+m
+```
+
+# Graphics
+
+I make heavy use of [ggplot2](https://ggplot2.tidyverse.org), [plotly](https://plotly.com/r) and [R base graphics](https://bookdown.org/rdpeng/exdata/the-base-plotting-system-1.html).  `plotly` is used for interactive graphics, and the [R plotly](https://cran.r-project.org/web/packages/plotly/index.html) package provides an amazing function `ggplotly` to convert a static `ggplot2` graphics object to an interactive `plotly` one.  If the user goes to the trouble of adding labels for graphics entities (usually points, lines, curves, rectangles, and circles) those labels can become hover text in `plotly` without disturbing anything in static graphics.[With `ggplotly` extra text appears in front of labels, but the result of `ggplotly` can be run through `Hmisc::ggplotlyr` to remove this as shown in the example.]{.aside}  As shown [here](https://hbiostat.org/R/simMarkov/sim.html) you can sense whether an `html` or `pdf` report is being produced, and for `html` all `ggplot2` objects can be automatically transformed to `plotly`.
+
+Many types of graphs can be created with base graphics, e.g. `hist(age, nclass=50)` or `Ecdf(age)` but using `ggplot2` for even simple graphics makes it easy to add handle multiple groups on one graph or to create multiple panels for strata using faceting.  `ggplot2` has excellent default font sizes and axis labeling that works for most sizes of plots.
+
+Here is a prototypical `ggplot2` example illustrating many of the features I most often use.  Ignore the `ggplot2` `label` attribute if not using `plotly`.  Options are given to the `Hmisc` `label` function so that it will retrieve the variable `label` and `units` (if present) and format them for axis labels or tables.  The formatting takes into account whether html output is being created and `plotly` is being used.
+
+```{r ggplot2ex}
+#| label: fig-ggplot2ex
+#| fig-cap: "`plotly` translation of a `ggplot2` graph making use of variable labels from a data table that are translated to use within-string html font changes"
+# Create a vector of formatted labels for all variables in data
+# For variables without labels or units use the variable name
+# as the label.  If html and plotly are not in effect use R's
+# regular plotmath notation to typeset labels/units
+nam   <- names(d)
+nv    <- length(nam)
+vlabs <- structure(character(nv), names=nam)
+for(n in nam)
+  vlabs[n] <- label(d[[n]], plot=TRUE, html=ishtml, default=n)
+
+# Define substitutes for xlab and ylab that look up our
+# constructed labels.
+# Could instead directly use xlab(vlabs['age'])
+labx <- function(v) xlab(vlabs[[as.character(substitute(v))]])
+laby <- function(v) ylab(vlabs[[as.character(substitute(v))]])
+g <-
+  ggplot(d, aes(x=age, y=bhr, color=gender, label=paste0('dose:', dose))) +
+         geom_point() + geom_smooth() +
+         guides(color=guide_legend(title='')) +
+         theme(legend.position='bottom') +  # not respected by ggplotly
+         labs(caption='Scatterplot of age by basal heart rate stratified by sex') +
+         labx(age) + laby(bhr)
+# or just xlab('Age in years') + ylab('Basal heart rate')
+# To put the caption in a different font or size use e.g.
+#   theme(plot.caption=element_text(family='mono', size=7))
+
+ggplotlyr(g, remove='.*): ')  # removes paste0("dose:", dose): 
+# dose is in hover text for each point
+```
+
+For large datasets the `Hmisc` package has a function `ggfreqScatter` that makes it easy to see overlapping points by color coding the frequency of points in each small bin.  That way scatterplots scale to very large datasets.  Here is an example:[`html=TRUE` was needed because otherwise axis labels are formatted using R's `plotmath` and `plotly` doesn't like that.]{.aside}
+
+```{r ggfreq}
+#| label: fig-ggfreq
+#| fig-cap: "`ggfreqScatter` example, making use of color coded frequencies of points that will work for any size dataset and any number of coincident points"
+set.seed(1)
+x <- round(rnorm(2000), 1)
+y <- 2 * (x > 1.5) + round(rnorm(2000), 1)
+z <- sample(c('a', 'b'), 2000, replace=TRUE)
+label(x) <- 'X Variable'   # could use xlab() &
+label(y) <- 'Y Variable'   # ylab() in ggfreqScatter()
+g <- ggfreqScatter(x, y, by=z, html=ishtml)
+# If variables were inside a data table use
+# g <- d[, ggfreqScatter(x, y, by=z, html=ishtml)]
+g
+```
+
+Now convert the graphic to `plotly` if html is in effect otherwise stay with `ggplot2` output.
+
+```{r ggfreqp}
+#| label: fig-ggfreqp
+#| fig-cap: "`plotly` version of @fig-ggfreq"
+ggp(g)
+```
+
+When you hover the mouse over a point, its frequency pops up.
+
+Many functions in the `Hmisc` and `rms` packages produce `plotly` graphics directly.  One of the most unique functions is [dotchartpl](https://www.rdocumentation.org/packages/Hmisc/versions/4.6-0/topics/dotchartpl).  These two package's functions using `plotly` try to compute optimal figure heights and widths, but it is usually better to let `plotly` auto-size the plots.  Putting `options(plotlyauto=TRUE)` will override the computed dimensions and force `plotly` to auto-size.  Putting this command in your `.Rprofile` file in the home directory makes this easy.
+
+
+# Analysis
+
+## Big Picture
+
+For analysis the sky is the limit, but [statistical principles](https://www.fharrell.com/post/principles) should guide every step.  Some of the general principles are
+
+* If there is to be a pivotal analysis there should be a statistical analysis plan (SAP) for this analysis that does not allow for many "statistician degrees of freedom."  The plan should be completed before doing any analysis that might inform analysis choices in a way that would bias the results (e.g., bias the estimate of treatment effect or bias standard errors of effects in a model).
+* All analyses should be completely [reproducible](https://hbiostat.org/bbr/md/repro.html).  Explicitly state random number seeds if any random processes (bootstrap, simulation, Bayesian posterior sampling) are involved.
+* Exploratory analysis can take place after any needed SAP is completed.
+* [Stay close to the raw data](https://stackoverflow.blog/2022/03/03/stop-aggregating-away-the-signal-in-your-data). Analyze the rawest form of the data when possible.  Don't convert inherently longitudinal data into time-to--event data.
+* Continuous or ordinal variables should never be dichotomized even for purely descriptive exploratory analysis.  For example, computing proportions of patients with disease stratified by quintiles of weight will be both inefficient and misleading.
+* Descriptive and inferential statistics should respect the study design.  For parallel-group studies, it is [not appropriate](http://hbiostat.org/bbr/md/change.html#whats-wrong-with-change-in-general) to compute change from baseline.
+* Question whether unadjusted estimates should be presented.  If females in the study are older and age is a risk factor for the outcome, what is the meaning of female - male differences unadjusted for age?
+* For observational group comparisons, make sure that experts are consulted about which variables are needed to capture selection processes (e.g., confounding by indication) _before_ data acquisition.  If data are already collected and do not contain the variables that capture reasons for decisions such as treatment selection, you may do well to find a different project.
+* If the study is a parallel-group randomized clinical trial (RCT), presenting descriptive statistics stratified by treatment ("Table 1") [is not helpful](https://discourse.datamethods.org/t/should-we-ignore-covariate-imbalance-and-stop-presenting-a-stratified-table-one-for-randomized-trials), and it is more informative to describe the overall distribution of subjects.  Even more helpful is to show how all baseline variables relate to the **outcome** variable.
+* An RCT is designed to estimate relative treatment effectiveness, and since it does not incorporate random sampling from the population, it cannot provide outcome estimates for a single treatment arm that reference the population.  Hence uncertainty intervals for per-treatment outcomes are not meaningful, and uncertainty intervals should be presented only for treatment differences.  This is facilitated by "half confidence intervals" described below.
+* Above the tendency to interchange the roles of independent and dependent variables by presenting a "Table 2" in such a way that stratifies by the outcome.  Stratifying (conditioning) on the outcome is placing it in the role of a baseline variable.  Instead, show relationships of baseline variables to outcomes as mentioned in the previous point.
+* Nonparametric smoothers and estimating in overlapping moving windows are excellent tools for relating individual continuous variables to an outcome.
+* Models are often the best descriptive tools because they can account for multiple variables simultaneously.  For example, instead of computing proportions of missing values of a variable Y stratified by age groups and sex, use a binary logistic regression model to relate smooth nonlinear age and sex to the probability Y is missing.
+
+## Replacement for Table 1
+
+Analyses should shed light on the unknown and not dwell on the known.  In a randomized trial, the distributions of baseline variables are expected to be the same across treatments, and will be the same once $N$ is large.  When _apparent_ imbalances are found, they lead to inappropriate decisions and ignore the fact that [apparently counterbalancing factors are not hard to find](https://discourse.datamethods.org/t/should-we-ignore-covariate-imbalance-and-stop-presenting-a-stratified-table-one-for-randomized-trials).  What is unknown and new is how the subject characteristics (and treatment) relate to the outcomes under study.  While displaying this trend with a nonparametric smoother, one can simultaneously display the marginal distribution of the characteristic using an extended box plot, spike histogram, or rug plot.
+
+A useful approach to replicating the same analysis for multiple variables is to "melt" the data table into a tall and thin one, with a single variable (here `value`) holding the original variable values, and another variable (here `variable`) holding the name of the variable whose values are currently contained in `value`.  Thanks to `ggplot2` having a wide variety of summarization functions built-in, the melted data table can be passed to `ggplot2` and the `variable` easily used to create multiple panels (facets).
+Here is an example using the `meltData` and `addggLayers` functions from `reptools`.  Extended box plots at the top show the mean (blue dot), median, and quantiles that cover 0.25, 0.5, 0.75, and 0.9 of the distribution.  In addition to standard extended box plot quantiles, we show the 0.01 and 0.99 quantiles as dots.  At the bottom is a spike histogram.[For more examples see [this](http://hbiostat.org/R/Hmisc/summaryFuns.pdf)]{.aside}
+
+
+```{r table1}
+#| label: fig-table1
+#| fig-cap: "`ggplot2` nonparametric smooth estimated relationships between continuous baseline variables and the probability that a patient in the ICU will die in the hospital.  Extended box plots are added to the top of the panels, with points added for 0.01 and 0.99 quantiles.  Spike histograms are at the bottom.  Unlike box plots, spike histograms do not hide the bimodality of mean blood pressure."
+#| fig-scap: "Nonparametric smooth estimated relationships between several baseline variables and hospital mortality"
+#| fig-height: 4.5
+#| fig-width: 6.25
+m <- meltData(hospdead ~ age + crea + meanbp + wblc, data=support)
+g <- ggplot(m, aes(x=value, y=hospdead)) + geom_smooth() + 
+  facet_wrap(~ variable, scales='free_x') +
+  xlab('') + ylab('Probability of Death in Hospital') + ylim(0,1)
+g <- addggLayers(g, m, pos='top')
+addggLayers(g, m, type='spike')
+```
+
+Here is a prototype extended box plot to assist interpretation.
+
+```{r ebpp}
+#| label: fig-ebpp
+#| fig-cap: "Prototype extended box plot"
+#| fig-width: 6.5
+#| fig-height: 5
+bpplt()
+```
+
+Here are more examples of extended box plots for showing distributions of continuous variables, stratified by disease group.
+
+```{r bpplotM}
+#| label: fig-bpplotm
+#| fig-cap: "`bpplotM` extended box plot examples with stratification by disease group"
+bpplotM(age + crea + meanbp + wblc ~ dzgroup,
+        data=support, cex.strip=0.4, cex.means=0.3, cex.n=0.45)
+```
+
+This is better done with interactive plots so that one can for example hover over a corner of a box plot and see which quantile that corner represents.
+
+```{r bpplotMp}
+#| label: fig-bpplotMP
+#| fig-cap: "`summaryM` `plotly` graphic with interactive extended box plots"
+s <- summaryM(age + crea + meanbp + wblc ~ dzgroup,
+              data=support)
+options(grType='plotly')
+plot(s)
+```
+
+## Descriptively Relating One Variable to Another
+
+To understand the relationship between a continuous variable X and an outcome or another variable Y we may estimate the mean, median, and other quantities as a smooth function of X[For binary Y the mean is the proportion of ones, which estimates the probability that Y=1]{.aside}.  There are many ways to do this, including
+
+* making a scatter plot if Y is continuous or almost continuous
+* stratifying by fixed or variable intervals of X, e.g., summarizing Y by quintiles of X.  This is [arbitrary, inefficient, and misleading](https://discourse.datamethods.org/t/categorizing-continuous-variables) and should never be done.
+* using a nonparametric smoother such as `loess`
+* parametrically estimating the mean Y as a function of X using an ordinary linear least squares (OLS) model with a regression spline in X so as to not assume linearity
+* likewise but with a logistic regression model if Y is binary
+* semiparametrically estimating quantiles of Y as a function of X using quantile regression and a regression spline for X
+* semiparametrically estimating the mean, quantiles, and exceedance probabilities of Y as a function of X using an ordinal regression model and a spline in X
+* nonparametrically using overlapping moving windows of X that advance by a small amount each time.  For each window compute the estimate of the property of Y using ordinary sample estimators (means, quantiles, Kaplan-Meier estimates, etc.).  This approach has the fewest assumptions and is very general in the sense that all types of Y are accommodated.  The moving estimates need to be smoothed; the R `supsmu` function is well suited for this.
+
+The estimated trend curves depend on the window width and amount of smoothing, but this problem is tiny in comparison with the huge effect of changing how a continuous predictor is binned when the usual non-overlapping strata are created.  The idea is assume smooth relationships and get close to the data.
+
+In the following several of the above methods are illustrated to study how serum creatinine of critically ill patients relates to age.  Start with a scatterplot that has no problems with ties in the data.
+
+```{r ggfcr}
+#| label: fig-ggfcr
+#| fig-cap: "`ggfreqAcatter` plot showing all raw data for two continuous variables with only slight binning"
+with(support, ggfreqScatter(age, crea))
+```
+
+Now consider moving estimates, least squares (OLS), ordinal regression (ORM), and quantile regression (QR) estimates, nonparametric `loess` estimates, and a flexible adaptive survival model.  Moving estimates computed on overlapping x-variable windows, moving averages being the oldest example, have the advantage of great flexibility.  As long as one has an estimator (mean, median, Kaplan-Meier estimate, etc.) that can be applied to a relatively homogeneous (with respect to x) sample, moving statistics can estimate smooth trends over x.  Unless the windows are wide or the sample size is very large so that one can afford to use narrow x windows, the moving statistics will be noisy and need to be further smoothed.  The smaller the windows, the larger the amount of smoothing will be needed.  To control bias it is generally better to have smaller windows and more after-estimation smoothing.
+
+The function  `movStats` on [Github](https://github.com/harrelfe/rscripts/blob/master/movStats.r)    provides two methods for creating moving overlapping windows from x.  The default used here creates varying-width intervals in the data space but fixed-width in terms of sample size.  It includes by default 15 observations to the left of the target point and 15 to the right, and moves up $\max(\frac{n}{200}, 1)$ observations for each evaluation of the statistics.  These may be overridden by specifying `eps` and `xinc`.  If the user does not provide a statistical estimation function `stat`, the mean and all three quartiles are estimated for each window.  `movStats` makes heavy use of the `data.table`, `rms`, and other packages.  For ordinal regression estimates of the mean and quantiles the log-log link is used in the example below.  Moving estimates are shown with and without [`supsmu`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/supsmu)-smoothing them.
+
+```{r moving,results='asis'}
+#| label: fig-moving
+#| fig-cap: "`movStats` moving estimates of mean and quantiles of `crea` as a function of `age` using small overlapping windows, with and without smoothing of the moving estimates"
+#| fig-scap: "`movStats` moving estimates of mean and quantiles"
+#| fig-height: 5
+#| fig-width: 7
+getRs('movStats.r', put='source')
+u <- movStats(crea ~ age,
+              loess=TRUE, ols=TRUE, qreg=TRUE,
+              orm=TRUE, family='loglog', msmooth='both',
+              melt=TRUE, data=support, pr='margin')
+# pr='margin' causes window information to be put in margin
+ggplot(u, aes(x=age, y=crea, col=Type)) + geom_line() +
+  facet_wrap(~ Statistic) +
+  xlab('Age') + ylab('Serum Creatinine')
+```
+
+Recommended practice for relating a continuous variable to another continuous variable, especially for replacing parts of Table 1 or Table 2, is to use smoothed moving statistics or (1) a spline OLS model to estimate the mean and (2) a spline quantile regression model for estimating quantiles.  Here is an example best practice that shows a preferred subset of the estimates from the last plot. `melt=TRUE` is omitted so we can draw a ribbon to depict the outer quartiles.
+
+```{r creapref}
+#| label: fig-creapref
+#| fig-cap: "Moving mean and quantile estimates of effect of `age` with interquartile bands"
+u <- movStats(crea ~ age, bass=9, data=support)
+ggplot(u, aes(x=age, y=`Moving Median`)) + geom_line() +
+  geom_ribbon(aes(ymin=`Moving Q1`, ymax=`Moving Q3`), alpha=0.2) +
+  geom_line(aes(x=age, y=`Moving Mean`, col=I('blue'))) +
+  xlab('Age') + ylab('Serum Creatinine') +
+  labs(caption='Black line: median\nBlue line: mean\nBand: Q1 & Q3')
+```
+
+`r cwbc <- '$\\sqrt[3]{\\mathrm{WBC}}$'`
+Let's describe how white blood count relates to the probability of hospital death, using a binary logistic regression model and moving proportions.
+The cube root transformation in regression fits is used because of the extreme skewness of WBC.  Use 6 knots at default locations on `r cwbc`.  The `r cwbc` transformation affects moving statistics only in that mean x-values for plotting are cubes of mean `r cwbc` instead of means on the original WBC scale.
+
+```{r wbc,results='asis'}
+#| label: fig-wbc
+#| fig-cap: "Moving estimates of the relationship between white blood count and hospital mortality, using a $\\sqrt[3]{}$ transformation to make the WBC distribution more symmetric"
+#| fig-scap: "Moving estimates of WBC vs. hospital mortality"
+u <- movStats(hospdead ~ wblc, k=6, eps=20, bass=3,
+              trans  = function(x) x ^ (1/3),
+              itrans = function(x) x ^ 3,
+              loess=TRUE, lrm=TRUE, msmooth='both',
+              melt=TRUE, pr='margin', data=support)
+ggplot(u, aes(x=wblc, y=hospdead, col=Type)) + geom_line() +
+  guides(color=guide_legend(title='')) +
+  theme(legend.position='bottom')
+```
+
+The flexibility of the moving statistic method is demonstrated by estimating how age relates to probabilities of death within 1y and within 2y using Kaplan-Meier estimates in overlapping moving windows.  Assumptions other than smoothness (e.g., proportional hazards) are avoided in this approach.  Here is an example that also uses an flexible parametric method, [hazard regression](https://www.tandfonline.com/doi/abs/10.1080/01621459.1995.10476491), implemented in the R [`polspline`](https://cran.r-project.org/web/packages/polspline/index.html) package, that adaptively finds knots (points of slope change) in the covariate and in time, and products of piecewise linear terms so as to allow for non-proportional hazards.  We use far less penalization than is the default for the `hare` function for demonstration purposes.  For this dataset the default settings of `penalty` and `maxdim` result in straight lines.
+
+```{r km}
+#| label: fig-km
+#| fig-cap: "Moving one minus Kaplan-Meier and HARE estimates estimating the relationship between `age` and the probability of dying by 1y and by 2y"
+#| fig-scap: "Moving nonparametric and flexible parametric estimates of mortality by age"
+u <- movStats(Surv(d.time / 365.25, death) ~ age, times=1:2,
+              eps=30, bass=9,
+              hare=TRUE, penalty=0.5, maxdim=30,
+              melt=TRUE, data=support)
+ggplot(u, aes(x=age, y=incidence, col=Statistic)) + geom_line() +
+  facet_wrap(~ Type) +
+  ylab(label(u$incidence)) +
+  guides(color=guide_legend(title='')) +
+  theme(legend.position='bottom')
+```
+
+`movStats` can also compute stratified non-smoothed estimates when x is discrete.  After computing 1- and 2y Kaplan-Meier incidence probability estimates, order disease groups by ascending order of 1-year mortality before plotting.
+
+```{r movdisc}
+#| label: fig-movdisc
+#| fig-cap: "Ordinary incidence estimates stratified by disease group, with groups ordered by 1-year mortality estimates"
+#| fig-scap: "1-year mortality stratified by disease group"
+u <- movStats(Surv(d.time / 365.25, death) ~ dzgroup, times=1:2,
+              discrete=TRUE,
+              melt=TRUE, data=support)
+m1 <- u[Statistic == '1-year', .(dzgroup, incidence)]
+i  <- m1[, order(incidence)]
+u[, dzgroup := factor(dzgroup, levels=m1[i, dzgroup])]
+ggplot(u, aes(x=incidence, y=dzgroup, col=Statistic)) + geom_point() +
+  xlab(label(u$incidence)) + ylab('') +
+  guides(color=guide_legend(title='')) +
+  theme(legend.position='bottom')
+```
+
+## One Continuous and One Categorical Predictor
+
+It is possible to descriptively estimate trends against more than one independent variables when the effective sample size is sufficient.  Trends can be estimated nonparametrically through stratification (when the third variable is categorical) or with flexible regression models allowing the two predictors to interact.  In the graphical displays it is useful to keep sample size limitations in certain regions of the space defined by the two predictors in mind, by superimposing spike histograms on trend curves.
+
+Repeat the last example but stratified by disease class.  The window is widened a bit because of the reduced sample size upon stratification.  Default smoothing is used for hazard regression.
+
+```{r km2,results='asis'}
+#| label: fig-km2
+#| fig-cap: "Moving Kaplan-Meier (smoothed and unsmoothed) and HARE estimates of the age effect on time to death, stratified by disease class"
+#| fig-scap: "Moving Kaplan-Meier and HARE estimates"
+# The Coma stratum has only n=60 so is not compatible with eps=75
+# Use varyeps options
+u <- movStats(Surv(d.time / 365.25, death) ~ age + dzclass, times=1:2,
+              eps=30,
+              msmooth='both', bass=8, hare=TRUE,
+              melt=TRUE, data=support, pr='margin')
+ggplot(u, aes(x=age, y=incidence, col=dzclass)) + geom_line() +
+  facet_grid(Type ~ Statistic) +
+  ylab(label(u$incidence)) +
+  guides(color=guide_legend(title='')) +
+  theme(legend.position='bottom')
+```
+
+`r hba1c <- 'HbA$_{\\mathrm{1c}}$'`
+Consider another example with a continuous dependent variable.  Use the NHANES dataset that was created for analyzing glycohemoglobin (`r hba1c`) for diabetes screening.  Stratify by race/ethnicity
+
+```{r nhanes,results='asis'}
+#| label: fig-nhanes
+#| fig-cap: "Moving estimates of effect of age on glycohemoglobin stratified by race/ethnicity"
+getHdata(nhgh)
+u <- movStats(gh ~ age + re,
+              melt=TRUE, data=nhgh, pr='margin')
+ggplot(u, aes(x=age, y=gh, col=re)) + geom_line() +
+  facet_wrap( ~ Statistic) +
+  ylab(label(nhgh$gh)) +
+  guides(color=guide_legend(title='', nrow=2)) +
+  theme(legend.position='bottom')
+```
+
+Mimic these results using flexible regression with interaction.  Start by estimating the mean.  Add spike histograms to estimated trend curves.  Spike heights are proportional to the sample size in age/race-ethnicity groups after binning age into 100 bins.  Direct `plotly` plotting is used.  The user can click on elements of the legend (including the histograms) to turn their display off and on.
+
+```{r ghols,results='asis'}
+#| label: fig-ghols
+#| fig-cap: "Predicted mean glycohemoglobin as a function of age and race/ethnicity, with age modeled as a restricted cubic spline with 5 default knots, and allowing the shape of the age effect to be arbitrarily different for the race/ethnicity groups"
+#| fig-scap: "Predicted mean glycohemoglobin vs. age using a parametric model"
+require(rms)
+options(prType='html')  # needed to use special formatting (can use prType='latex')
+dd <- datadist(nhgh); options(datadist='dd')
+f <- ols(gh ~ rcs(age, 5) * re, data=nhgh)
+# fontsize will be available for print(anova()) in rms 6.3-1
+makecolmarg(anova(f), dec.ms=2, dec.ss=2, fontsize=0.6)
+# Normal printing: anova(f) or anova(f, dec.ms=2, dec.ss=2)
+hso <- list(frac=function(f) 0.1 * f / max(f),
+            side=1, nint=100)
+# Plot with plotly directly
+plotp(Predict(f, age, re), rdata=nhgh, histSpike.opts=hso)
+```
+
+Now use quantile regression to estimate quartiles of glycohemoglobin as a function of age and race/ethnicity.
+
+```{r nhghq}
+#| label: fig-nhghq
+#| fig-cap: "Smooth age effects on three quartiles of `r hba1c`"
+f1 <- Rq(gh ~ rcs(age, 5) * re, tau=0.25, data=nhgh)
+f2 <- Rq(gh ~ rcs(age, 5) * re, tau=0.5,  data=nhgh)
+f3 <- Rq(gh ~ rcs(age, 5) * re, tau=0.75, data=nhgh)
+p  <- rbind(Q1     = Predict(f1, age, re, conf.int=FALSE),
+            Median = Predict(f2, age, re, conf.int=FALSE),
+            Q3     = Predict(f3, age, re, conf.int=FALSE))
+ggplot(p, histSpike.opts=hso)
+```
+
+## Another Replacement for Table 1
+
+We can create a matrix of plots that respect continuous baseline variables while staying close to the data through the use of overlapping moving windows.  In the following example we compute moving 1y and 2y mortality for selected continuous baseline variables in `support` and stack them together.  Flexible HARE hazard regression estimates are also included.
+
+`reptools` includes a function `varType` to determine the continuous/discrete nature of each variable, and other functions that make it easy to extract the list of either continuous variables (`conVars`) or discrete variables (`disVars`).  `varType` also has a third classification: non-numeric variables that have too many (by default > 20) distinct values to be considered discrete.
+
+```{r}
+# Exclude outcome variables from consideration (see earlier)
+types <- varType(support, exclude=outcomes)
+print(types, quote=FALSE)
+```
+
+Let's use only the first 9 continuous variables.
+In addition to showing all the estimated relationships with the outcome, put covariate distributions in collapsed note.  Note the bimodality of some of the measurements, and true zero blood pressures for patients having cardiac arrest.
+
+```{r movall,results='asis'}
+#| label: fig-movall
+#| fig-cap: "Moving Kaplan-Meier and HARE estimates of a series of continuous covariate effects stacked into one `ggplot2` graphic"
+#| column: page-inset-left
+#| fig-height: 5.5
+#| fig-width: 8
+V <- types$continuous[1:9]
+U <- list()
+for(v in V) {
+  x <- support[[v]]
+  u <- movStats(Surv(d.time / 365.25, death) ~ x, times=1:2,
+              eps=30, hare=TRUE, penalty=0.25, maxdim=10,
+              msmooth='smoothed', bass=8,
+              melt=TRUE, data=support)
+  U[[label(x, default=v)]] <- u  # stuffs u in an element of list U
+                                 # & names the element w/ var label/name
+}
+w <- rbindlist(U, idcol='vname')   # stack all the data tables
+ggplot(w, aes(x, y=incidence, col=Statistic, linetype=Type)) + geom_line() +
+  facet_wrap(~ vname, scales='free_x') +
+  ylab(label(u$incidence)) + xlab('') +
+  guides(color=guide_legend(title='')) +
+  theme(legend.position='bottom',
+        strip.text = element_text(size=8))
+makecnote(`Covariate Distributions` ~ plot(describe(support[, ..V])))
+```
+
+::: {.column-margin}
+If we were not showing main graphs in wide format (using a 
+`Quarto` callout) we could have put the marginal distributions in
+the right margin using the following, which shrinks the plotly output.
+
+```{r eval=FALSE}
+require(plotly)   # for %>%
+pl <- plot(describe(support[, ..V])) %>%
+        layout(autosize=FALSE, width=350, height=325)
+makecolmarg(~ pl)
+```
+
+:::
+
+Likewise we can produce a graph summarizing how categorical baseline variables relate to the study outcome variable.
+
+```{r allcat}
+#| label: fig-allcat
+#| fig-cap: "Kaplan-Meier estimates of 1y and 2y incidence stratified separately by a series of discrete predictors"
+#| column: page-inset-left
+#| fig-height: 5.5
+#| fig-width: 9
+V <- types$discrete   # or disVars(support, exclude=...)
+U <- list()
+for(v in V) {
+  x <- support[[v]]
+  u <- movStats(Surv(d.time / 365.25, death) ~ x, times=1:2,
+                discrete=TRUE, melt=TRUE, data=support)
+  U[[label(x, default=v)]] <- u
+}
+w <- rbindlist(U, idcol='vname')   # stack the tables
+ggplot(w, aes(x=incidence, y=x, col=Statistic)) + geom_point() +
+  facet_wrap(~ vname, scales='free_y') +
+  xlab(label(u$incidence)) + ylab('') +
+  guides(color=guide_legend(title='')) +
+  theme(legend.position='bottom')
+```
+
+Alternatively we can put each variable in a separate tab:
+
+```{r catkmtabs,results='asis'}
+gg <- function(data)
+  ggplot(data, aes(x=incidence, y=x, col=Statistic)) + geom_point() +
+    xlab('Mortality') + ylab('') +
+    guides(color=guide_legend(title='')) +
+    theme(legend.position='bottom')
+g <- lapply(U, gg)       # one ggplot per element (a data table) in U
+maketabs(g, baselabel='catkmtabs')
+```
+
+## Confidence Bands for Differences {#sec-confbands}
+
+Studies almost never randomly sample from a population, hence inference to the population for a single treatment's outcome should seldom be attempted.  The uncertainty intervals and bands that should be presented are ones having inferential meaning and are based on treatment differences.  One can easily construct a graph that shows differences and confidence intervals for them, but it is useful to be able to show the individual group estimates along with CIs for the differences.  Fortunately, Maarten Boers had the idea of a [_null bar_ or _null zone_](https://www.jclinepi.com/article/S0895-4356(04)00080-0/fulltext).  When a confidence interval for a difference is symmetric, the confidence interval includes 0.0 if and only if the  midpoint of the two outcome estimates $\pm \frac{1}{4} \times w$ touches the individual group estimates, where $w$ is the width of the confidence interval.  Null zone/half-width CIs can be put to especially good use in avoiding clutter when displaying Kaplan-Meier plots, and can be graphed using the `rms` package `survplot` (static plot) and `survplotp` (`plotly` interactive graphic) functions.  The latter has the additional advantage of providing continuous data on number of subjects still at risk by hovering over the survival curve for one group.  Here is an example using `support`.  Estimate survival differences between patients who were or were not able to be interviewed for determining their baseline activities of daily living. [The primary reason for not being interviewed was the patient needing to be on a ventilator.<br><br>Cumulative incidence are recommended over cumulative survival probabilities, principally because many journals will force you to scale the $y$-axis for survival probability as $[0,1]$ even in a very low-risk sample, whereas journals do not have silly scaling conventions for cumulative incidence.]{.aside}
+
+```{r}
+#| label: fig-survplotp
+#| fig-cap: "Interactive survival curves with half-width confidence bands"
+#| fig-height: 3.75
+require(rms)
+s <- support[, .(d.time      = d.time / 365.25,
+                 death,
+                 interviewed = ifelse(is.na(adlp), 'not interviewed',
+                                                   'interviewed'))]
+units(s$d.time) <- 'year' 
+# Compute nonparametric Kaplan-Meier estimates (uses survival::survfit)
+f <- npsurv(Surv(d.time, death) ~ interviewed, data=s)
+survplotp(f, fun=function(y) 1. - y)
+```
+
+Hovering over the curves reveals the continuous number at risk.  Non-recommended individual survival curves can be turned on by clicking in the legend, and the null zone bands can be turned off.  Note strong evidence for a difference in mortality early but not as much late.
+
+::: {.column-margin}
+To produce an additional `.pdf` graphic in a separate file, with the number of risk shown below the graph, run the following.  Add `include=FALSE` in the chunk header if you want to show no trace of this chunk in the report.
+
+```{r sp,eval=FALSE}
+pdf('survplot.pdf')
+survplot(f, fun=function(y) 1. - y, conf='diffbands',
+         ylab='Cumulative Mortality', levels.only=TRUE,
+         n.risk=TRUE, time.inc=1, label.curves=list(keys='lines'))
+dev.off()
+```
+
+:::
+
+The adverse event chart in @fig-aeplot is another example using half-width confidence intervals.
+
+## Formatting
+
+I take advantage of special formatting for model fit objects from the `rms` package by using `html` or `latex` methods and putting `results='asis'` in the chunk header to preserve the formatting.
+
+```{r lrm,results='asis'}
+require(rms)
+options(prType='html')  # needed to use special formatting (can use prType='latex')
+dd <- datadist(support); options(datadist='dd') # rms needs for summaries, plotting
+cr <- function(x) x ^ (1/3)
+f <- lrm(hospdead ~ rcs(meanbp, 5) + rcs(age, 5) + rcs(cr(crea), 4), data=support)
+f
+makecnote(anova(f))   # in collapsible note
+```
+
+Write a function to compute several `rms` package model summaries and put them in tabs.  `raw` in a formula makes the generated R chunk include output in raw format.
+
+```{r lrmtabs,results='asis'}
+rmsdisplay <- function(f) 
+  maketabs(
+    ` `              ~ ` `,
+    Model            ~ f,
+    Specs            ~ specs(f, long=TRUE) + raw,
+    Equation         ~ latex(f),
+    ANOVA            ~ anova(f) + plot(anova(f)),
+    ORs              ~ plot(summary(f), log=TRUE, declim=2),
+   `Partial Effects` ~ ggplot(Predict(f)),
+    Nomogram         ~ plot(nomogram(f, fun=plogis, funlabel='P(death)')),
+    baselabel='lrmtabs', cap=c('', '', '', '', '-', '-', '-', '-'))
+
+rmsdisplay(f)
+```
+
+# Caching
+
+The workhorse behind `Rmarkdown` and `Quarto` (besides [`Pandoc`](https://pandoc.org)) is [knitr](https://www.r-project.org/nosvn/pandoc/knitr.html), which processes the code chunks and properly mingles code and tabular and graphical output.  `knitr` has a built-in caching mechanism to make it so that code is not needlessly executed when the code inputs have not changed. This easy-to-use process does have two disadvantages: the dependencies are not transparent, and the stored cache files may be quite large.  I like to take control of caching.  To that end, the [runifChanged](https://github.com/harrelfe/rscripts/blob/master/hashCheck.r) function was written.  Here is an example of its use.  First a function with no arguments must be composed.  This is the (usually slow) function that will be conditionally run if any of a group of listed objects has changed since the last time it was run.  This function when needed to be run produces an object that is stored in binary form in a user-specified file (the default file name is the name of the current R code chunk with `.rds` appended).
+
+```{r runifch}
+# Read the source code for the hashCheck and runifChanged functions from
+# https://github.com/harrelfe/rscripts/blob/master/hashCheck.r
+getRs('hashCheck.r', put='source')
+g <- function() {
+  # Fit a logistic regression model and bootstrap it 500 times, saving
+  # the matrix of bootstrapped coefficients
+  f <- lrm(y ~ x1 + x2, x=TRUE, y=TRUE, data=dat)
+  bootcov(f, B=500)
+}
+set.seed(3)
+n   <- 2000
+dat <- data.table(x1=runif(n), x2=runif(n),
+                  y=sample(0:1, n, replace=TRUE))
+# runifChanged will write runifch.rds if needed (chunk name.rds)
+# Will run if dat or source code for lrm or bootcov change
+b <- runifChanged(g, dat, lrm, bootcov)
+dim(b$boot.Coef)
+head(b$boot.Coef)
+```
+
+# Parallel Computing
+
+The `runParallel` function makes it easy to use available multiprocessor cores to speed up parallel computations especially for simulations.  By default it runs the number of available cores, less one.  `runParallel` makes the `parallel` package easier to use and does recombinations over per-core batches.  The user writes a function that does the work on one core, and the same function is run on all cores.  This function has set arguments and must return a named list.  A base random number `seed` is given, and the seed is set to this plus `i` for core number `i`.  The total number of repetitions is given, and this most balanced possible number of repetitions is run on each core to sum to the total desired number of iterations.  `runifChanged` is again used, to avoid running the simulations if no inputs have changed.
+
+```{r rflowpar}
+# Load runParallel function from github
+getRs('runParallel.r', put='source')
+
+# Function to do simulations on one core
+run1 <- function(reps, showprogress, core) {
+  cof <- matrix(NA, nrow=reps, ncol=3,
+                dimnames=list(NULL, .q(a, b1, b2)))
+  for(i in 1 : reps) {
+    y <- sample(0:1, n, replace=TRUE)
+    f <- lrm(y ~ X)
+    cof[i, ] <- coef(f)
+  }
+  list(coef=cof)
+}
+# Debug one core run, with only 3 iterations
+n    <- 300
+seed <- 3
+set.seed(seed)
+X    <- cbind(x1=runif(n), x2=runif(n))  # condition on covariates
+run1(3)
+
+nsim <- 5000
+g <- function() runParallel(run1, reps=nsim, seed=seed)
+Coefs <- runifChanged(g, X, run1, nsim, seed)
+dim(Coefs)
+apply(Coefs, 2, mean)
+```
+
+# Simulation
+
+Some of the best ways to validate an analysis are
+
+* If using any model/feature selection methods use the bootstrap to check whether the selection process is volatile, e.g., your sample size isn't large enough too support making hard-and-fast selections of predictors/features
+* Use Monte Carlo simulation to check if the correct model or correct predictors are usually selected
+* Simulate a large dataset under a known model and known parameter values and make sure the estimation process you use can recover the true parameter values
+* Simulate the statistical performance of a method under a variety of conditions
+
+Unlike static papers in the literature, simulation can study the performance of a method under conditions that mimic your situation.
+
+When simulating performance of various quantities under various conditions, creating a large number of variables makes the code long and tedious.  It is better to to use data frames/tables or arrays to hold everything together.  Data frames and arrays also lead to efficient graphics code for summarization.
+
+## Data Table Approach
+
+The `expand.grid` function is useful for generating all combinations of simulation conditions.  Suppose we wanted to simulate statistical properties of the maximum absolute value of the sample correlation coefficient from a matrix of all pairwise correlations from truly uncorrelated variables.  We do this while varying the sample size `n`, the number of variables `p`, and the `type` of correlation (Pearson's or Spearman's, denoted by `r` and `rho`). With `expand.grid` we don't need a lot of nested `for` loops.  Run 500 simulations for each condition.
+
+```{r simd}
+nsim <- 500
+R <- expand.grid(n=c(10, 20, 50, 100),
+                 p=c(2, 5, 10, 20),
+                 sim=1 : nsim)
+setDT(R)
+set.seed(1)
+for(i in 1 : nrow(R)) {  # took 4s
+  w <- R[i, ]
+  n <- w$n
+  p <- w$p
+  X <- matrix(rnorm(n * p), ncol=p)
+  cors    <- cor(X)
+  maxr    <- max(abs(cors[row(cors) < col(cors)])) # use upper triangle
+  cors    <- cor(X, method='spearman')
+  maxrho  <- max(abs(cors[row(cors) < col(cors)]))
+  set(R, i, 'maxr',   maxr)    # set is in data.table & is very fast
+  set(R, i, 'maxrho', maxrho)  # set will create the variable if needed
+  # If not using data.table use this slower approach:
+  # R[i, 'maxr'] <- maxr   etc.
+}
+```
+
+The simulations could have been cached or parallelized as discussed above.
+
+Compute the mean (over simulations) maximum correlation (over variables) and plot the results.
+
+```{r simdpp}
+#| label: fig-simdpp
+#| fig-cap: "Simulation results for estimating the expected value of the maximum absolute correlation coefficient for a varying number $p$ of variables and varying sample size when all true correlations are zero"
+#| fig-scap: "Simulation results for absolute correlation coefficient"
+w <- R[, .(maxr = mean(maxr), maxrho=mean(maxrho)), by=.(n, p)]
+# Make data table taller and thinner to put r, rho as different observations
+u <- melt(w, id.vars=c('n', 'p'), variable.name='type', value.name='r')
+u[, type := substring(type, 4)]   # remove "max"
+ps <- c(2, 5, 10, 20)
+u[, p := factor(p, ps, paste0('p:', ps))]
+g <- ggplot(u, aes(x=n, y=r, col=type)) + geom_jitter(height=0, width=2) +
+      ylim(0, 1) +
+      facet_wrap(~ p) +
+      guides(color=guide_legend(title='')) +
+      ylab('Mean Maximum Correlation Coefficient')
+plotly::ggplotly(g)
+```
+
+## Array Approach
+
+For large problems, storing results in R `array`s is more efficient and doesn't require duplication of values of `n` and `p` over simulations.  Once the `array` is created it can be converted into a data table for graphing.
+
+```{r sima}
+nsim <- 500
+ns   <- c(10, 20, 50, 100)
+ps   <- c(2, 5, 10, 20)
+R <- array(NA, dim=c(nsim, length(ns), length(ps), 2),
+               dimnames=list(NULL,
+                             n    = as.character(ns),
+                             p    = as.character(ps),
+                             type = c('r', 'rho')))
+dim(R)
+dimnames(R)
+set.seed(1)
+```
+
+Note the elegance below in how current simulation results are inserted into the simulation results object `R`, making use of dimension names as subscripts, except for subscript `i` for the simulation number, which is a ordinary sequential integer subscript.  Were the simulated values vectors instead of a scalar (`maxr` below), we would have used a statement such as `R[i, as.character(n), as.character(p), type, ] <- calculated.vector`. 
+
+```{r simb}
+for(i in 1 : nsim) {   # took 1s
+  for(n in ns) {
+    for(p in ps) {
+      X <- matrix(rnorm(n * p), ncol=p)
+      for(type in c('r', 'rho')) {
+        cors <- cor(X,
+                    method=switch(type, r = 'pearson', rho = 'spearman'))
+        maxr <- max(abs(cors[row(cors) < col(cors)]))
+        R[i, as.character(n), as.character(p), type] <- maxr
+      }
+    }
+  }
+}
+```
+
+::: {.column-margin}
+There are many other ways to specify `cor(X, method=...)`.  Here are several other codings for `method` that will yield equivalent result.
+
+```{r othercodes,eval=FALSE}
+fcase(type == 'r', 'pearson', type == 'rho', 'spearman')
+fcase(type == 'r', 'pearson', default='spearman')
+c(r='pearson', rho='spearman')[type]
+.q(r=pearson, rho=spearman)[type]
+if(type == 'r') 'pearson' else 'spearman'
+ifelse(type == 'r', 'pearson', 'spearman')
+```
+
+:::
+
+```{r simc}
+# Compute mean (over simulations) maximum correlation for each condition
+m <- apply(R, 2:4, mean)   # preserve dimensions 2,3,4 summarize over 1
+# Convert the 3-dimensional array to a tall and thin data table
+# Generalizations of row() and col() used for 2-dimensional matrices
+# comes in handy: slice.index
+dn <- dimnames(m)
+u <- data.table(r    = as.vector(m),
+                n    = as.numeric(dn[[1]])[as.vector(slice.index(m, 1))],
+                p    = as.numeric(dn[[2]])[as.vector(slice.index(m, 2))],
+                type = dn[[3]][as.vector(slice.index(m, 3))])
+# If doing this a lot you may want to write a dimension expander function
+slice <- function(a, i) {
+  dn <- all.is.numeric(dimnames(a)[[i]], 'vector')   # all.is.numeric in Hmisc
+  dn[as.vector(slice.index(a, i))]
+}
+u <- data.table(r    = as.vector(m),
+                n    = slice(m, 1),
+                p    = slice(m, 2),
+                type = slice(m, 3))
+  
+# Plot u using same ggplot code as above
+```
+
+The result is the same as in @fig-simdpp.
+
+# Figures
+
+`r printCap()`
+
+
+# Other Resources
+
+* [Software development resources for data scientists](https://www.rstudio.com/blog/software-development-resources-for-data-scientists) by ISABELLA VELÁSQUEZ
+
+# Computing Environment
+
+The following output is created by the command `markupSpecs$html$session()`, where `markupSpecs` is defined in the `Hmisc` package.
+
+`r markupSpecs$html$session()`

@@ -1,0 +1,166 @@
+# Merging Data {#sec-merge}
+
+```{mermaid}
+flowchart LR
+SM[Merge One Record/Subject Data Table With Longitudinal Data]
+HM[Hmisc::Merge<br>Monitors Merging Process]
+tlu[Merging for Table Look-up]
+close[Merging on Closest Matches]
+```
+
+Consider a baseline dataset `b` and a longitudinal dataset `L`, with subject ID of `id`. [For more information see [this](https://hbiostat.org/R/data.table), [this](https://rdrr.io/cran/data.table/man/data.table.html), [this](https://medium.com/analytics-vidhya/r-data-table-joins-48f00b46ce29), [this](https://stackoverflow.com/questions/15170741) and [this](https://stackoverflow.com/questions/13493124).  See [this](https://stackoverflow.com/questions/77819512) for how to do merging with conditions. To merge any number of datasets at once and obtain a printed report of how the merge went, use the `Hmisc` `Merge` function.]{.aside}
+
+```{r two}
+require(Hmisc)
+require(data.table)
+b <- data.table(id=1:4, age=c(21, 28, 32, 23), key='id')
+L <- data.table(id  = c(2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 5),
+                day = c(1, 2, 3, 1, 2, 3, 4, 1, 2, 1, 2, 3),
+                y    =  1 : 12, key='id')
+b
+L
+# Merge b and L to look up baseline age and associate it with all follow-ups
+b[L, on=.(id)]   # Keeps all ids in L (left inner join)
+L[b, on=.(id)]   # Keeps all ids in b (right inner join)
+L[b, on=.(id), nomatch=NULL]  # Keeps only ids in both b and L (right outer join)
+uid <- unique(c(b[, id], L[, id]))
+L[b[.(uid), on=.(id)]]         # Keeps ids in either b or c (full outer join)
+merge(b, L, by='id', all=TRUE) # also full outer join; calls merge.data.table
+# Use the Hmisc Merge function which reports on how the merge went
+# Merge operates on both data.tables and data.frames and can handle
+# any number of them.  In details printed by Merge below, #1
+# refers to the first data table (b).
+Merge(b, L, id= ~ id)
+```
+
+To help in remembering the order of data tables when joining them, think about how R does subscripting.  `a[b]` for vectors `a` and `b` results in `length(b)` observations when `b` is a vector of positive integers or is a character vector corresponding to `names(a)`.  Likewise, for two data tables `a`, `b`, `a[b]` results in a data table with the number of rows equal to the number of rows in `b`.
+
+For very large data tables, giving the data tables _keys_ may speed execution, e.g.:[See @sec-manip-keys and [this](https://stackoverflow.com/questions/20039335) highly useful information, including a recommendation to be explicit with `on=` instead of relying on somewhat hidden `keys`.]{.aside}
+
+```
+setkey(d, id)
+setkey(d, state, city)
+```
+
+Join/merge can be used for data lookups:
+
+```{r lookup}
+s <- data.table(st=.q(AL, AK, AZ, CA, OK), y=5:1)
+stateAbbrevs <- data.table(state=state.abb, State=state.name)
+s[stateAbbrevs, , on=.(st=state), nomatch=NULL]
+```
+
+## Lookup Participant Disposition {#sec-merge-disp}
+
+In most situations it is useful to permanently hold certain subject-level variables inside the primary analysis file.  In others it is more useful to have a separate dataset that defines categories to which a subject belongs, and to look up those categories by matching on ID.  This is particularly useful when there are many analysis tables and we wish to defer calculation of some of the derived variables.  The following example shows how to do this.
+
+Suppose that multiple clinical trials are being run together, and some participants may be part of more than one trial.  A participant disposition data table `pd` will have one row per trial in which the participant is taking part.  In a given row the participant's treatment assignment is defined (variable `tx`) and we also designate whether the participant belongs to the modified intent-to-treat (`mitt`) sample.  For analysis data table `d` for trial 1 we want to look up its participants' treatment assignments.  Then we look up their assignments but make `tx` equal to `NA` if `mitt` is `FALSE`.
+
+```{r}
+# Create pd data table
+pd <- data.table(id   = .q(a, a, b, c, d, e),
+                 trial= .q( trial1, trial2,  trial2,  trial1, trial1, trial1),
+                 tx   = .q(placebo, placebo, active, placebo, active, active),
+                 mitt = c(    TRUE,    TRUE,   TRUE,   FALSE,   TRUE,  FALSE),
+                 key='id')
+pd
+# Create analysis file
+d <- data.table(id=.q(a, b, d, e, f), u=c(.1, .3, .2, 0, .4), key='id')
+d
+pd[trial == 'trial1'][d]
+pd[trial == 'trial1' & mitt][d]
+```
+
+| ID | What Happened |
+|-|------------------|
+|a|assigned to `placebo` and counted as mitt|
+|b|in `trial2` only, so `pd` variables `NA`|
+|d|assigned to `active` and counted as mitt|
+|e|assigned to `active` when mitt ignored, to `NA` when required mitt|
+|f|not in `pd` so `pd` variables `NA`|
+
+
+
+## Non-equi Joins: Closest Matches {#sec-merge-closest}
+
+Suppose that we wished to merge records without requiring an exact match, i.e., we want to get closest matches to records on a numeric variable (including dates, times, etc.).  Consider the following example in which we create two data tables containing a numeric matching variable that is named differently in the two datasets.  For data table `a` the matching variable is named `ax` and for `b` it is `bx`. [See [this](https://www.r-bloggers.com/2016/06/understanding-data-table-rolling-joins) for nice examples of rolling joins.]{.aside}
+
+```{r}
+s1 <- c(1, 3, 7, 12, 18, 25, 33, 42, 52)
+s2 <- c(1, 4, 8,  9, 23, 27, 31, 50, 70)
+a <- data.table(ax=s1, u=s1/100)
+a
+b <- data.table(bx=s2, v=s2/100)
+b
+# on=.(var from first data table listed (b), var from second listed (a))
+# x.bx means the variable bx from the first table listed (b)
+# bx=bx will not work because in that context bx has already been
+# replaced with nearest ax
+m <- b[a, .(ax=ax, bx=x.bx, u=u, v=v), on=.(bx=ax), roll='nearest']
+# If omit .(ax=....,v=v) result only has columns bx, v, u
+m
+# Drop matches that even though were closest were more than 3 apart
+m[abs(ax - bx) <= 3]
+```
+
+Alternatively we can set `v` to `NA` if the match was not close enough.
+
+```{r}
+m[abs(ax - bx) > 3, v := NA]
+m
+```
+
+To check the speed of `data.table` for nearest matching, let's run an example like the above on two 1,000,000 row data tables that are not sorted by the matching variables.  Use the `qreport` function `timeMar` to put run times in the right margin.
+
+```{r results='asis'}
+require(qreport)
+set.seed(1)
+n <- 1000000
+a <- data.table(u=sample(letters, n, TRUE), ax=runif(n))
+b <- data.table(v=sample(LETTERS, n, TRUE), bx=runif(n))
+# sapply runs the data.table function uniqueN separately on each column, and stores
+# the result compactly (here in an integer vector)
+# Below we see a few ties in the random uniform draws
+c(sapply(a, uniqueN), sapply(b, uniqueN))
+m <- timeMar(b[a, .(ax=ax, bx=x.bx, u=u, v=v),
+               on=.(bx=ax), roll='nearest'])
+```
+
+```{r}
+m
+sapply(m, uniqueN)    # compute number of distinct values in all 4 variables
+```
+
+The elapsed time was `r .systime.['elapsed']` seconds.  From the above counts of the numbers of distinct values, an observation from `b` tended to be the closest match to two observations in `a`.
+
+Let's key each data table (which sorts) and check the speed again.
+
+```{r results='asis'}
+setkey(a, ax)   # took 0.05s
+setkey(b, bx)   # " "
+timeMar(b[a, .(ax=ax, bx=x.bx, u=u, v=v),
+          on=.(bx=ax), roll='nearest'])
+```
+
+See also @sec-long-overlap and [here](https://stackoverflow.com/questions/74176606) for more complex non-equi joins and considerations of overlapping intervals from each of two data tables.
+
+### Closest Match Within Groups
+
+What if you wanted to find the closest match on a numeric variable `x` but to do this separately by groups defined by a discrete variable `grp`?  Here is an example showing how.  [This is taken from [here](https://stackoverflow.com/questions/74606073)]{.aside}
+
+```{r}
+A <- data.table(
+  grp = c("a", "a", "b", "b"),
+  val = 1:4,
+  x = c(2.1, 2.2, 1.9, 3)
+)
+
+B <- data.table(
+  x = c(2, 2.3),
+  z = c("foo", "bar")
+)
+
+A
+B
+A[, .SD[B, on='x', roll='nearest'], by=grp]
+```

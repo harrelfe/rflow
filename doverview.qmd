@@ -1,0 +1,419 @@
+# Data Overview {#sec-doverview}
+
+```{mermaid}
+flowchart LR
+Fil[Observation Filtering] --> Di[Diagram With Insertion<br>Of Computed Counts]
+Di --> Con[Consort]
+Di --> Mer[Mermaid]
+dd[Data about Data] --> mvs[Missing Value Snapshot]
+dd --> dc[Data Characteristics]
+dc --> dcs["discrete vs. continuous<br>ties<br>information content<br>symmetry<br>rare values<br>common values"]
+```
+
+## Filtering of Observations {#sec-doverview-filter}
+
+When the number of subjects in the final analysis is less than the number of subjects initially entering the study, it is important to detail the observation filtering process.  This is often done with a [consort diagram](http://www.consort-statement.org/consort-statement/flow-diagram), and fortunately R has the [consort package](https://cran.r-project.org/web/packages/consort) by Alim Dayim for drawing data-driven diagrams.  To demonstrate its use let's simulate a two-treatment randomized clinical trial in which 1000 subjects were screened for participation. [See [this](https://cic-tours.fr/timeline-cluster) for a nice interactive tool for constructing clinical trial flow diagrams.]{.aside}
+
+```{r simrct}
+require(Hmisc)
+require(data.table)
+require(qreport)
+hookaddcap()   # make knitr call a function at the end of each chunk
+               # to try to automatically add to list of figure
+```
+
+```{r}
+N <- 1000
+set.seed(1)
+r <- data.table(
+  id    = 1 : N,
+  age   = round(rnorm(N, 60, 15)),
+  pain  = sample(0 : 5, N, replace=TRUE),
+  hxmed = sample(0 : 1, N, replace=TRUE, prob=c(0.95, 0.05))   )
+# Set consent status to those not excluded at screening
+r[age >= 40 & pain > 0 & hxmed == 0,
+  consent := sample(0 : 1, .N, replace=TRUE, prob=c(0.1, 0.9))]
+# Set randomization status for those consenting
+r[consent == 1,
+  randomized := sample(0 : 1, .N, replace=TRUE, prob=c(0.15, 0.85))]
+# Add treatment and follow-up time to randomized subjects
+r[randomized == 1, tx     := sample(c('A', 'B'), .N, replace=TRUE)]
+r[randomized == 1, futime := pmin(runif(.N, 0, 10), 3)]
+# Add outcome status for those followed 3 years
+# Make a few of those followed 3 years missing
+r[futime == 3,
+  y := sample(c(0, 1, NA), .N, replace=TRUE, prob=c(0.75, 0.2, 0.05))]
+# Print first 15 subjects
+kabl(r[1 : 15, ])
+```
+
+Now show the flow of qualifications and exclusions in a consort diagram.  `consort_plot` wants multiple reasons for exclusions to be prioritized in a hierarchy, and `NA` to be used to denote "no exclusion".  Use the `Hmisc` function `seqFreq` that creates a `factor` variable whose first level is the most common exclusion, second level is the most common exclusion after excluding subjects based on the first exclusion, and so on.  `seqFreq` also returns an attribute `obs.per.numcond` with a frequency tabulation of the number of observations having a given number of conditions.
+
+::: {.column-margin}
+Had we wanted a non-data-dependent hierarchy we could have used
+
+```{r eval=FALSE}
+r[, exc := factor(fcase(pain  == 0, 1,
+                        hxmed == 1, 2,
+                        age < 40  , 3,
+                        default=NA),
+                  1:3, c('pain-free', 'Hx medication', 'age < 40'))]
+```
+
+:::
+
+```{r}
+#| label: fig-doverview-consort
+#| fig-cap: Consort diagram produced with `consort_plot`
+r[, exc := seqFreq('pain-free'  = pain  == 0,
+                    'Hx med'    = hxmed == 1,
+                                  age < 40,
+                    noneNA=TRUE)]
+eo  <- attr(r[, exc], 'obs.per.numcond')
+mult <- paste0('1, 2, ≥3 exclusions: n=',
+                eo[2], ', ',
+                eo[3], ', ',
+                eo[-(1:3)]  )
+
+r[, .q(qual, consent, fin) :=
+    .(is.na(exc),
+      ifelse(consent == 1, 1, NA),
+      ifelse(futime  >= 3, 1, NA))]
+			
+require(consort)
+# consort_plot used to take a coords=c(0.4, 0.6) argument that prevented
+# the collision you see here
+consort_plot(r,
+             orders = c(id      = 'Screened',
+                        exc     = 'Excluded',
+                        qual    = 'Qualified for Randomization',
+                        consent = 'Consented',
+                        tx      = 'Randomized',
+                        fin     = 'Finished',
+                        y       = 'Outcome\nassessed'),
+             side_box = 'exc',
+             allocation = 'tx',
+             labels=c('1'='Screening', '3'='Consent', '4'='Randomization', '6'='Follow-up'))
+```
+
+`consort` provides another way to build the diagram that may be more flexible and intuitive after we define some helper functions.  The built-in R pipe operator `|>` is used.
+
+```{r}
+#| label: fig-doverview-consort2
+#| fig-cap: Consort diagram using component functions
+#| fig-height: 5.5
+h <- function(n, label) paste0(label, ' (n=', n, ')')
+htab <- function(x, label=NULL, split=! length(label), br='\n') {
+  tab <- table(x)
+  w <- if(length(label)) paste0(h(sum(tab), label), ':', br)
+  f <- if(split) h(tab, names(tab)) 
+  else
+    paste(paste0('   ', h(tab, names(tab))), collapse=br)
+  if(split) return(f)
+  paste(w, f, sep=if(length(label))'' else br)
+}  
+count <- function(x, by=rep(1, length(x)))
+  tapply(x, by, sum, na.rm=TRUE)
+
+w <- r[, {
+ g <-
+   add_box(txt=h(nrow(r),       'Screened'))                    |>
+   add_side_box(htab(exc,       'Excluded'))                    |>
+   add_box(h(count(is.na(exc)), 'Qualified for Randomization')) |>
+   add_box(h(count(consent),    'Consented'))                   |>
+   add_box(h(count(randomized), 'Randomized'))                  |>
+   add_split(htab(tx))                                          |>
+   add_box(h(count(fin, tx),    'Finished'))                    |>
+   add_box(h(count(! is.na(y), tx), 'Outcome\nassessed'))       |>
+   add_label_box(c('1'='Screening',     '3'='Consent',
+                   '4'='Randomization', '6'='Follow-up'))
+ plot(g)
+}
+]
+```
+
+The [`mermaid`](https://mermaid-js.github.io/mermaid) natural diagramming language can be used to make `consort`-like flowcharts among many other types of diagrams.  `Quarto` has [built-in support for `mermaid`](https://quarto.org/docs/authoring/diagrams.html), and a `qreport` function `makemermaid` uses the capabilities of the `knit_expand` function in the `knitr` package to allow variable values to easily be inserted into `mermaid` specifications using the `{{variablename}}` notation.  Whole diagram elements can be inserted by having `{{x}}` in a separate `mermaid` input line, where `x` is a character string that R constructs.  Any node labels that contain parentheses must be enclosed in quotes.  In the first example, exclusions are in one large node and a special output class (used to limited effect here) is used for this node.
+
+```{r}
+addCap('fig-doverview-mermaid1', 'Consort diagram produced by `mermaid`')
+x <- 'flowchart TD
+  S["Screened (n={{N0}})"] --> E["{{excl}}"]
+  S   --> Q["Qualified for Randomization (n={{Nq}})"]
+  Q   --> C["Consented (n={{Nc}})"]
+  C   --> R["Randomized (n={{Nr}})"]
+  R   --> TxA["A (n={{Ntxa}})"]
+  R   --> TxB["B (n={{Ntxb}})"]
+  TxA --> FA["Finished (n={{Ntxaf}})"]
+  TxB --> FB["Finished (n={{Ntxbf}})"]
+  FA  --> OA["Outcome assessed (n={{Ntxao}})"]
+  FB  --> OB["Outcome assessed (n={{Ntxbo}})"]
+classDef largert fill:lightgray,width:1.5in,height:10em,text-align:right,font-size:0.8em;
+class E largert;
+'
+
+w <- r[, 
+makemermaid(x,
+            N0   = nrow(r),
+            excl = htab(exc, 'Excluded', br='<br>'),
+            Nq   = count(is.na(exc)),
+            Nc   = count(consent),
+            Nr   = count(randomized),
+            Ntxa = count(tx == 'A'),
+            Ntxb = count(tx == 'B'),
+            Ntxaf= count(tx == 'A' & fin),
+            Ntxbf= count(tx == 'B' & fin),
+            Ntxao= count(tx == 'A' & ! is.na(y)),
+            Ntxbo= count(tx == 'B' & ! is.na(y)),
+            file = 'mermaid1.mer'
+            )
+]
+```
+
+```{mermaid}
+%%| fig-cap: "Consort diagram produced by `mermaid`"
+%%| label: fig-doverview-mermaid1
+%%| file: mermaid1.mer
+```
+
+In the second `mermaid` example, each exclusion is a subnode to the overall count of exclusions, and a new node is added to inform us about multiple exclusions per subject.  To provide fuller information about multiple exclusions, the entire frequency distribution of the number of exclusions per subject appears as a hover text tooltip (thus the new node is not really needed).  Let's also remove the need for more error-prone manual coding of parallel treatment groups by creating a function `parNodes` to do this.
+[As of 2022-11-28 `mermaid` and `quarto` have withdrawn support for tooltips.  This page will be updated if that changes.]{.aside}
+
+```{r}
+# Create some service functions so later it will be easy to change from
+# mermaid to graphviz
+makenode       <- function(name, label) paste0(name, '["', label, '"]')
+makeconnection <- function(from, to)    paste0(from, ' --> ', to)
+
+exclnodes <- function(x, from='E', root='E', seq=FALSE, remain=FALSE) {
+  # Create complete node specifications for individual exclusions, each
+  # linking to overall exclusion count assumed to be in node root.
+  # Set seq=TRUE to make use of the fact that the exclusions were
+  # done in frequency priority order so that each exclusion is in
+  # addition to the previous one.  Leave seq=FALSE to make all exclusions
+  # subservient to root.  Use remain=TRUE to include # obs remaining
+	# remain=TRUE assumes noneNA specified to seqFreq
+  tab <- table(x)
+  i <- 1 : length(tab)
+	rem <- if(remain) paste0(', ', length(x) - cumsum(tab), ' remain')
+  labels <- paste0(names(tab), ' (n=', tab, rem, ')')
+  nodes  <- if(seq) makenode(ifelse(i == 1, paste0(root, '1'), paste0(root, i)),
+                             labels)
+            else    makenode(paste0(root, i), labels)
+  connects <- if(seq) makeconnection(ifelse(i == 1, from, paste0(root, i - 1)),
+                                     paste0(root, i))
+              else makeconnection(from, paste0(root, i))
+   paste(c(nodes, connects), collapse='\n')
+}
+
+# Create parallel treatment nodes
+# Treatments are assumed to be in order by the tx variable
+# and will appear left to right in the diagram
+# Treatment node names correspond to that and are Tx1, Tx2, ...
+# root: root of new nodes, from: single node name to connect from
+# fromparallel: root of connected-from node name which is to be
+# expanded by adding the integers 1, 2, ... number of treatments.
+
+Txs <- r[, if(is.factor(tx)) levels(tx) else sort(unique(tx))]
+
+parNodes <- function(counts, root, from=NULL, fromparallel=NULL,
+                      label=Txs) {
+  if(! identical(names(counts), Txs)) stop('Txs not consistent')
+  k <- length(Txs)
+  ns <- paste0(' (n=', counts, ')')
+   nodenames <- paste0(root, 1 : k)
+  nodes <- makenode(nodenames, paste0(label, ns))
+  connects <- if(length(fromparallel)) makeconnection(paste0(fromparallel, 1 : k), nodenames)
+              else                     makeconnection(from,                        nodenames)
+  paste(c(nodes, connects), collapse='\n')
+	}
+
+# Create tooltip text from tabulation created by seqFreq earlier
+efreq <- data.frame('# Exclusions'= (1 : length(eo)) - 1,
+                    '# Subjects'  = eo, check.names=FALSE)
+efreq <- subset(efreq, `# Subjects` > 0)
+# Convert to text which will be wrapped by the html
+excltab <- paste(capture.output(print(efreq, row.names=FALSE)),
+                 collapse='\n')
+```
+
+
+```{r}
+addCap('fig-doverview-mermaid2', 'Consort diagram produced with `mermaid` with individual exclusions linked to the overall exclusions node, and with a tooltip to show more detail')
+
+x <- '
+flowchart TD
+  S["Screened (n={{N0}})"] --> E["Excluded (n={{Ne}})"]
+  {{exclsep}}
+  E1 & E2 & E3 --> M["{{mult}}"]
+  S   --> Q["Qualified for Randomization (n={{Nq}})"]
+  Q   --> C["Consented (n={{Nc}})"]
+  C   --> R["Randomized (n={{Nr}})"]
+  {{txcounts}}
+  {{finished}}
+  {{outcome}}
+click E callback "{{excltab}}"
+'
+
+w <- r[, 
+makemermaid(x,
+  N0       = nrow(r),
+  Ne       = count(! is.na(exc)),
+  exclsep  = exclnodes(exc),  # add seq=TRUE to put exclusions vertical
+  excltab  = excltab,         # tooltip text
+  mult     = mult,  # separate node: count multiple exclusions
+  Nq       = count(is.na(exc)),
+  Nc       = count(consent),
+  Nr       = count(randomized),
+  txcounts = parNodes(table(tx),         'Tx', from='R'),
+  finished = parNodes(count(fin, by=tx), 'F',  fromparallel='Tx',
+                      label='Finished'),
+  outcome  = parNodes(count(! is.na(y), by=tx), 'O',
+                      fromparallel='F', label='Outcome assessed'),
+  file='mermaid2.mer'  # save generated code for another use
+)
+]
+```
+
+```{mermaid}
+%%| fig-cap: "Consort diagram produced with `mermaid` with individual exclusions linked to the overall exclusions node, and with a tooltip to show more detail"
+%%| label: fig-doverview-mermaid2
+%%| file: mermaid2.mer
+```
+
+<!--
+::: {.column-margin}
+
+Hover the mouse over `Excluded` to see details
+
+:::
+-->
+
+Let's repeat this example using `graphviz`, and instead of relying on a tooltip (which is no longer working anyway) put the exclusion frequencies in a remote node as a table.
+
+
+```{r}
+makenode       <- function(name, label) paste0(name, ' [label="', label, '"];')
+makeconnection <- function(from, to)    paste0(from, ' -> ', to, ';')
+
+# Create data frame from tabulation created by seqFreq earlier
+efreq <- data.frame('# Exclusions'= (1 : length(eo)) - 1,
+                    '# Subjects'  = eo, check.names=FALSE)
+efreq <- subset(efreq, `# Subjects` > 0)
+```
+
+
+```{r}
+x <- 'digraph {
+  graph [pad="0.5", nodesep="0.5", ranksep="2", splines=ortho]
+  //  splines=ortho for square connections
+  node  [shape=box, fontsize="30"]
+  rankdir=TD;
+  S [label="Screened (n={{N0}})"];
+  E [label="Excluded (n={{Ne}})"];
+  S -> E;
+  {{exclsep}}
+  M [label="{{mult}}"];
+  E1 -> M;
+  E2 -> M;
+  E3 -> M;
+  Q [label="Qualified for Randomization (n={{Nq}})"];
+  C [label="Consented (n={{Nc}})"];
+  R [label="Randomized (n={{Nr}})"];
+  S -> Q;
+  Q -> C;
+  C -> R;
+  {{txcounts}}
+  {{finished}}
+  {{outcome}}
+  efreq [label=<{{efreq}}>];
+  M -> efreq [dir=none, style=dotted];
+}
+'
+
+w <- r[, 
+makegraphviz(x,
+  N0       = nrow(r),
+  Ne       = count(! is.na(exc)),
+  exclsep  = exclnodes(exc),  # add seq=TRUE to put exclusions vertical
+  efreq    = efreq,
+  mult     = mult,  # separate node: count multiple exclusions
+  Nq       = count(is.na(exc)),
+  Nc       = count(consent),
+  Nr       = count(randomized),
+  txcounts = parNodes(table(tx),         'Tx', from='R'),
+  finished = parNodes(count(fin, by=tx), 'F',  fromparallel='Tx',
+                      label='Finished'),
+  outcome  = parNodes(count(! is.na(y), by=tx), 'O',
+                      fromparallel='F', label='Outcome assessed'),
+  file='graphviz.dot'
+)
+]
+#  addCap('fig-doverview-graphviza', 'Consort diagram produced with `graphviz` with detailed exclusion frequencies in a separate node', scap='Consort diagram produced with `graphviz`')
+```
+
+```{dot}
+//| label: fig-doverview-graphviz
+//| fig-height: 4
+//| fig-cap: "Consort diagram produced with `graphviz` with detailed exclusion frequencies in a separate node"
+//| file: graphviz.dot
+```
+
+Use `graphviz` to display missing data exclusions in `support` with respect to selected variables.  The `qreport` `missChk` function will automatically start with the variable having the highest number of `NA`s, then go to the variable that is most missing after removing observations that are missing on the first variable, etc.
+
+```{r results='asis'}
+getHdata(support)
+setDT(support)
+# addCap('fig-doverview-missflow', 'Flowchart of sequential exclusion of observations due to missing values')
+vars <-  .q(age, sex, dzgroup, edu, income, meanbp, wblc,
+            alb, bili, crea, glucose, bun, urine)
+ex <- missChk(support, use=vars, type='seq') # seq: don't make report
+
+# Create tooltip text from tabulation created by seqFreq
+oc   <- attr(ex, 'obs.per.numcond')
+freq <- data.frame('# Exclusions'= (1 : length(oc)) - 1,
+                   '# Subjects'  = oc, check.names=FALSE)
+freq <- subset(freq, `# Subjects` > 0)
+
+x <- '
+digraph {
+  graph [pad="0.5", nodesep="0.5", ranksep="2", splines=ortho]
+  //  splines=ortho for square connections
+  node  [shape=box, fontsize="30"]
+  rankdir=TD;
+  Enr [label="Enrolled (n={{N0}})"];
+  Enr;
+  {{exclsep}}
+	Extab [label=<{{excltab}}>];
+  Enr:e -> Extab [dir=none];
+}
+'
+makegraphviz(x,
+  N0        = nrow(support),
+  exclsep   = exclnodes(ex, from='Enr', seq=TRUE, remain=TRUE),
+  excltab   = freq,
+  file      = 'support.dot'
+)
+```
+
+```{dot}
+//| label: fig-doverview-missflow
+//| fig-cap: "Flowchart of sequential exclusion of observations due to missing values"
+//| file: support.dot
+```
+
+See @sec-rformat-diagrams for more about the `graphviz` diagramming language.
+
+## Analyzing Data About the Data {#sec-doverview-data}
+
+The `contents` function displays the data dictionary and number of missing values for each variable.  We can go deeper in summarizing a dataset as a whole.  The `qreport` `dataOverview` function first produces a brief overview of the dataset with regard to number of variables, observations, and unique subject identifiers (if present).  Then it provides a table, and a graphical report with one graph (in one report tab) per type of variable: continuous, discrete, or non-discrete non-numeric.  Variable characteristics summarized are the number of distinct values, number of `NA`s, information measure (see `describe`), symmetry, modal variable value (most frequent value), frequency of modal value, minimum frequency value, and frequency of that value.  When there are tied frequencies the first value is reported.  The default display is an interactive `plotly`  scatterplot with the number of distinct values on the x-axis and symmetry on the y-axis.  The other data characteristics are shown as hover text.  The points are color-coded for intervals of the number of `NA`s.[`Info` is the information in a variable relative to the information (1.0) in a variable having no tied values.  _Symmetry_ is defined as follows.  For non-numeric variables, symmetry is one minus the mean absolute difference between relative category frequencies and the reciprocal of the number of categories.  It has a value of 1.0 when the frequencies of all the categories are the same.  For continuous variables symmetry is the ratio of the 0.95 quantile minus the mean to the mean minus the 0.05 quantile.  This symmetry measure is < 1.0 when the left tail is heavy and > 1 when the right tail of the distribution is heavy.]{.aside}
+
+Again use the `support`  dataset.
+
+```{r overview,results='asis'}
+dataOverview(support)
+```
+
+```{r echo=FALSE}
+saveCap('08')
+```
+

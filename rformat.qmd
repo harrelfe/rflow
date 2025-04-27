@@ -1,0 +1,865 @@
+# Report Formatting {#sec-rformat}
+
+```{mermaid}
+flowchart LR
+Fig[Figures] --> Lay[Layout<br>Size]
+Tab[HTML Tables]
+Place[Placement] --> places[Margin<br>Tabs<br>Expand/Hide<br>Mixing Tables and Graphics]
+rept[qreport] --> rhf[Report Writing<br>Helper Functions]
+OF[Overall Format] --> ofs[HTML]
+OF --> ltx[LaTeX] --> pdf[pdf]
+OF --> mfd[Multi-Format<br>Reports]
+MD[Metadata<br>Report<br>Annotations] --> mds[Variable Labels<br>and Units]
+```
+
+A state-of-the-art way to make reproducible reports is to use a statistical computing language such as R and its [`knitr`](https://cran.r-project.org/web/packages/knitr) package in conjunction with either [`RMarkdown`](https://rmarkdown.rstudio.com) or [`Quarto`](https://quarto.org), with the latter likely to replace the former.  Both of the report-making systems allow one to produce reports in a variety of formats including html, pdf, and Word.  Html is recommended because pages can be automatically resized to allow optimum viewing on devices of most sizes, and because html allows for interactive graphics and other interactive components.  Pdf is produced by converting `RMarkdown` or `Quarto`-produced markdown elements to $\LaTeX$.[Report formatting is very much enhanced by using variable attributes such as labels and units of measurement that are not considered in base R.  Methods for better annotating output using labels and units are given below.]{.aside}
+
+This document can serve as a template for using R with `Quarto`; one can see the raw script by clicking on `Code` at the top right of the report.  A recommended template for typical statistical reports is [here](../R/reportTemplate.qmd) with [html](../R/reportTemplate.html) and [pdf](../R/reportTemplate.pdf) output.
+
+## General Formatting 
+
+When one has only one output format target, things are fairly straightforward except some situations where mixed formats are rendered in the same code *chunk*. Click below for details.
+
+::: {.callout-note collapse="true"}
+# Notes on Printing Mixed Tabular Output in Chunks
+
+With `Hmisc` package version 4.8 and later and `rms` package 6.5-0 and later, rendering in html no longer requires `results='asis'` in chunk headers, and a chunk can mix plain text and html without any problems.  The following applies to earlier versions.
+
+To make use of specialized functions that produce html or $\LaTeX$ markup, one often has to put `results='asis'` in the code chunk header to keep the system from disturbing the generated html or $\LaTeX$ markup so that it will be typeset correctly in the final document.  This process works smoothly but creates one complication: if you print an object that produces plain text in the same code chunk, the system will try to typeset it in html or $\LaTeX$.  To prevent this from happening you either need to split the chunks into multiple chunks (some with `results='asis'` and some not) or you need to make it clear that parts of the output are to be typeset verbatim.  To do that a simple function `pr` can sense if `results='asis'` is in effect for the current chunk.  If so, the object is surrounded by the `markdown` verbatim indicator---three consecutive back ticks.  If not the object is left alone.  `pr` is defined in the `marksupSpecs$markdown$pr` object, so you can bring it to your session by copying into a local function `pr` as shown below, which has a chunk option `results='asis'` to show that verbatim output appears anyway.  If the argument `obj` to `pr` is a data frame or data table, variables will be rounded to the value given in the argument `dec` (default `dec=3`) before printing.  If you specify `inline=x` the object `x` is printed with `cat()` instead of `print()`.  `inline` is more for printing character strings.
+
+An example of something that may not render correctly due to `results='asis'` being in the chunk header (needed for `html(...)`):
+
+```{r eval=FALSE}
+options(prType='html')
+f <- ols(y ~ rcs(x1, 5))
+f    # prints model summary in html format
+m <- matrix((1:10)/3, ncol=2)
+m
+# use pr(obj=m) to fix
+```
+
+Here are examples of `pr` usage.
+
+```{r,results='asis'}
+require(Hmisc)
+pr <- markupSpecs$markdown$pr
+x <- (1:5)/7
+pr('x:', x)
+pr(obj=x)
+pr(inline=paste(round(x,3), collapse=', '))
+```
+
+Instead of working to keep certain outputs verbatim you can use `knitr::kable()` to convert verbatim output to markdown.  Also see the `yaml` [`df-print`](https://quarto.org/docs/computations/r.html#data-frames) html option, for which you may want to set `df-print: kable`.
+
+:::
+
+`knitr/Quarto` will by default print data frames and other simple tables using html.  Even though this is seldom needed, you can make `knitr` use plain text printing by putting this code at the top of the report to redefine the default `knitr` printing function.
+
+```{r eval=FALSE}
+knit_print <- knitr::normal_print
+```
+
+### Annotating Simple Output {#sec-rformat-printl}
+
+We frequently have a mixture of computations and printing within a single R chunk.  But sometimes
+
+* `Quarto` splits up chunk code and output in a hard-to-read way
+* the object or calculation being printed is not easy to identify when the user has folded the code to make it currently invisible
+
+The `Hmisc` package `prn` function will print the name of an object and its contents.  Starting with `Hmisc` version 5.1-3, the `printL` function can help one create easy-to-read basic output whether the code is folded or not.  `printL` allows you to specify multiple objects with labels to print for them.  It also makes it easy to round scalars, vectors, or columns of data frame/tables before printing.  Here are some examples.
+
+```{r}
+w <- pi + 1 : 2
+printL(w=w)
+printL(w, dec=3)
+printL(w=w, 'Some calculation'=exp(1), dec=5)
+d <- data.frame(x=pi+1:2, y=3:4, z=.q(a, b))
+printL('this is it'=c(pi, pi, 1, 2),
+       yyy=pi,
+       d=d,
+       'Consecutive integers\nup to 10'=1:10,
+       dec=4)
+```
+
+## `Quarto` Syntax for Figures {#sec-rformat-figs}
+
+One can specify sizes, layouts, captions, and more using `Quarto` markup.  Captions are ignored unless a figure is given a label.  Figure labels must begin with `fig-`.  The figure can be cross-referenced elsewhere in the document using for example `See \@fig-scatterplot`.  `Figure` will be placed in front of the figure number automatically.  Here is example syntax.[[This](https://github.com/quarto-dev/quarto-cli/discussions/8354) explains how to cross-reference subfigures.]{.aside}
+
+| ```{r}
+| #| label: fig-myplot
+| #| fig-cap: "An example caption (use one long line for caption)"
+| #| fig-height: 3
+| #| fig-width: 4
+| plot(1:7, abs(-3 : 3))
+| ```
+
+If the code produces multiple plots you can combine them into one with a single overall caption and include subcaptions for the individual panels:
+
+| ```{r}
+| #| label: fig-myplot
+| #| fig-cap: "Overall caption ..."
+| #| fig-height: 3
+| #| fig-width: 4
+| #| layout-ncol: 2
+| #| fig-subcap:
+| #|   - "Subcaption for panel (a)"
+| #|   - "Subcaption for panel (b)"
+| plot(1:7, abs(-3 : 3))
+| hist(x)
+| ```
+
+To include an existing image while making use of `Quarto` for sizing and captioning etc. use this example.
+
+| ```{r out.width="600px"}
+| #| label: fig-mylabel
+| #| fig-cap: "..."
+| knitr::include_graphics('my.png')
+| ```
+
+If you don't need to caption or cross-reference the figure use e.g.
+
+| <src image="my.png" width=80%>
+
+Other examples are in the next section.
+
+The `qreport` package has helper functions for building a table of figures.  To use those, put `addCap()` or `addCap(scap="short caption for figure")` as the first line of code in the chunk.  The full caption is taken as the `fig-cap:` markup.  If you don't specify `scap` too `addCap` the short caption will be taken as the `fig-scap:` markup, or if that is missing, the full caption.  At the end of the report you can print the table of figures using the following syntax (but surround the last line with back ticks).
+
+| # Figures
+|
+| r printCap()
+
+For chunks having `#| label: fig-` you can automatically have `knitr` call `addCap` at the start of a chunk, extracting the needed information, if you run the `qreport` function `hookaddcap()` in a chunk before the first chunk that produced a graph.  This procedure is used through this book.  `addCap` makes use of `fig-scap:` for short captions.
+
+
+## `Quarto` Built-in Syntax for Enhancing R Output {#sec-rformat-quarto}
+
+Helper functions described below allow one to enhance graphical and tabular R output by taking advantage of `Quarto` formatting features.  These functions allow one to produce different formats within one code chunk, e.g., a plot in the margin and a table in a collapsible note appearing after the code chunk.  But if you need only one output format within a chunk you can make use of built-in syntax as described [here](https://quarto.org/docs/authoring/article-layout.html).  The `yaml`-like syntax also allows you to specify heights and widths for figures, plus multi-figure layouts.
+
+Here is some example code with all the markup shown.
+
+| ```{r}
+| #| column: margin
+| #| fig-height: 1
+| #| fig-width: 3
+| par(mar=c(2, 2, 0, 0), mgp=c(2, .5, 0))
+| set.seed(1)
+| x <- rnorm(1000)
+| hist(x, nclass=40, main='')
+| x[1:3]               # ordinary output stays put
+| knitr::kable(x[1:3]) # html output put in margin
+| hist(x, main='')
+| ```
+
+This results follow.
+
+```{r}
+#| column: margin
+#| fig-height: 1
+#| fig-width: 3
+par(mar=c(2, 2, 0, 0), mgp=c(2, .5, 0))
+set.seed(1)
+x <- rnorm(1000)
+hist(x, nclass=40, main='')
+x[1:3]               # ordinary output stays put
+knitr::kable(x[1:3]) # html output put in margin
+hist(x, main='')
+```
+
+Here are a few markups for figure layout inside R chunks.
+
+Wide page (takes over the margins) and put multiple plots in 1 row:
+
+| #| column: screen-inset
+| #| layout-nrow: 1
+
+What I use the most: a wide column that just expands a little into the right margin, especially appropriate when the table of contents is on the right:
+
+| #| column: screen-right
+
+When plotting 3 figures put the first 2 in one row and the third in the second row and make it wide.
+
+| #| layout: [[1,1], [1]]
+
+Make the top left panel be wider than the top right one.
+
+| #| layout: [[70,30], [100]]
+
+Top left and top right panels have equal widths but devote 0.1 of the total width to an empty region between the two top panels.
+
+| #| layout: [[45, -10, 45], [100]]
+
+See [here](https://quarto.org/docs/authoring/figures.html) for details about figure specifications inside code chunks.
+
+You can put some `.aside` information [to the right of R output](https://github.com/quarto-dev/quarto-cli/discussions/2895).
+
+[Tab sets](https://quarto.org/docs/output-formats/html-basics.html#tabsets) and [collapsible text](https://quarto.org/docs/authoring/callouts.html#customizing-appearance) are frequently helpful in report writing.  [Tricks can be used](https://stackoverflow.com/questions/76783896) to flip all tabs with a single button.  For example, if a series of analyses were done in parallel using both parametric and nonparametric methods, one can use CSS so that when clicking a `Nonparametric` tab all the nonparametric analysis results will show throughout the document.
+
+## `Quarto` Report Writing Helper Functions
+
+Helper functions are defined when you activate the `qreport` package.  You can get help on these functions by the usual way of typing `?functionname` at the console.  Several of the functions construct `Quarto` _callouts_ which are fenced-off sections of markup that trigger special formatting, especially when producing html.  The special formatting includes collapsible sections and marginal notes.  Here is a summary of some of the `qreport` (plus a few from `Hmisc`) helper functions.  For most of these functions you have to put `results='asis'` in the chunk header.
+
+| Function | Purpose |
+|------|---------|
+|`dataChk`    |run a series of logical expressions for checking data consistency, put results in separate tabs using `maketabs`, and optionally create two summary tabs|
+|`dataOverview`|runs a data overview report|
+|`missChk`    |creates a series of analyses of the extent and patterns of missing values in a data table or data frame, and puts graphical summaries in tabs|
+|`hookaddcap` |makes `knitr` automatically extract figure labels, captions, short captions for use in list of figures|
+|`htmlList`   |print a named `list` using the names as headers|
+|`kabl`       |front-end to `knitr::kable` and `kables`.  If you run `kabl` on more than one object it will automatically call `kables`. |
+|`makecallout`|generic Quarto callout maker used by `makecnote`, `makecolmarg`|
+|`makecnote`  |print objects or run code and place output in an initially collapsed callout note|
+|`makecolmarg`|print objects or run code and place output in a marginal note|
+|`maketabs`   |print objects or run code placing output in separate tabs|
+|`makemermaid`|makes a `mermaid` diagram with R variable values included in the diagram|
+|`makegraphviz`|similar to `makemermaid` but using `graphviz`|
+|`varType`    |classify variables in a data table/frame or a vector as continuous, discrete, or non-numeric non-discrete|
+|`conVars`    |use `varType` to extract list of continuous variables|
+|`disVars`    |use `varType` to extract list of discrete variables|
+|`vClus`      |run `Hmisc::varclus` on a dataset after reducing it|
+
+The input to `maketabs`, as will be demonstrated later, may be a named `list`, or more commonly, a series of formulas whose right-hand sides are executed and the result of each formula is placed in a separate tab.  The left side of the formula becomes the tab label.  For `makecolmarg` there should be no left side of the formula as marginal notes are not labeled.  For the named `list` option the `list` names become the tab names.  Examples of both approaches appear later in this report.  In formulas, a left side label must be enclosed in back ticks and not quotes if it is a multi-word string.  A `wide` argument is used to expand the width of the output outside the usual margins.  An `initblank` argument creates a first tab that is empty.  This allows one to show nothing until one of the other tabs is clicked. Alternately you can specify as the first formula \` \` ~ \` \`. [See [this](https://stackoverflow.com/questions/74707808) for another way to generate tabs. See [this](https://github.com/quarto-dev/quarto-cli/discussions/7887) for more information about dynamic generation of markdown text and `knitr` components with R.]{.aside}
+
+The two approaches to using `maketabs` also apply to `makecnote` and `makecolmarg`.  Examples of the "print an object and place it inside a callout" are given later in the report for `makecnote` and `makecolmarg`.  Here is an example of the more general formula method that can render any object, including html widgets as produced by `plotly` graphics.  An interactive `plotly` graphic appears at the bottom of the plots in the right margin.  You can single click on elements in the legend to turn them off and on, and double click within the legend to restore to default values.
+
+```{r makecex,results='asis'}
+require(Hmisc)
+require(qreport)
+options(plotlyauto=TRUE)  # makes Hmisc use plotly's auto size option
+                          # rather than computing height, width
+set.seed(1)
+x <- round(rnorm(100, 100, 15))
+makecolmarg(~ table(x) + raw + hist(x) + plot(ecdf(x)) + histboxp(x=x))
+# or try makecnote(`makecnote example` ~ kabl(table(x)) + hist(x) + ...
+# Avoid raw by using kabl(table(x)) instead of table(x)
+```
+
+Adding `+ raw` to a formula in `makecnote`, `makecolmarg`, or `maketabs` forces printed results to be treated as raw verbatim R output.
+
+`makecallout` is a general `Quarto` callout maker that implements different combinations of the following: `list` or formula, `print` or run code, defer executing and only produce the code to execute vs. running the code now, and close the callout or leave it open for more calls.
+
+`qreport` also has helper functions for interactively accessing information to help in report and analysis building:
+
+| Function  | Purpose |
+|-----------|--------|
+|`htmlView`|view html-converted objects in `RStudio` `View` pane|
+|`htmlViewx`|view html-converted objects in external browser|
+
+However the automatic viewing of html objects in the `RStudio` `Viewer` will satisfy most needs.
+
+## Multi-Output Format Reports {#sec-rformat-multi}
+
+To allow one report to be used to render multiple output formats, especially html and pdf, it is helpful to be able to sense which output format is currently in play, and to use different functions or options to render output explicitly for the current format.  Here is how to create variables that can be referenced simply in code throughout the report, and to invoke the `plotly` graphics package if output is in html to allow interactivity.  A small function `ggp` is defined so that if you run any `ggplot2` output through it, the result will be automatically converted to `plotly` using the `ggplotly` function, otherwise it is left at standard static `ggplot2` output if html is not the output target.[See [this](https://hbiostat.org/ordinal) for examples of articles rendered in both html and PDF from the same script.]{.aside}
+
+```{r senseformat}
+outfmt <- if(knitr::is_html_output ()) 'html'  else 'pdf'
+markup <- if(knitr::is_latex_output()) 'latex' else 'html'
+ishtml <- outfmt == 'html'
+if(ishtml) require(plotly)
+ggp <- if(ishtml) ggplotlyr else function(ggobject, ...) ggobject
+# See below for more about ggplotlyr (a front end for ggplotly that can
+# correct a formatting issue with hover text)
+```
+
+`Quarto` has a excellent facility for [conditionally including document sections](https://quarto.org/docs/authoring/conditional.html) depending on the currently chosen output format.
+
+::: {.callout-note collapse="true"}
+## Special Considerations For $\LaTeX$/PDF
+
+The `Hmisc`, `rms`, and `rmsb` packages have a good deal of support for creating $\LaTeX$ output in addition to html.  They require some special $\LaTeX$ packages to be accessed.  In addition, if using any of `Quarto`'s nice features for making marginal notes, there is another $\LaTeX$ package to attach.  Below you'll find what needs to be added to the `yaml` prologue at the top of your script if using `Quarto`.  You have to modify `pdf-engine` to suit your needs.  I use `luatex` because it handles special unicode characters.  In the future (approximately July 2022) a bug in `Pandoc` will be fixed and you can put `links-as-notes: true` in the `yaml` header instead of redefining `href` and linking in `hyperref`.
+
+```
+format:
+  html:
+    self-contained: true
+    . . .
+  pdf:
+    pdf-engine: lualatex
+    toc: false
+    number-sections: true
+    number-depth: 2
+    top-level-division: section
+    reference-location: document
+    listings: false
+    header-includes:
+      \usepackage{marginnote, here, relsize, needspace, setspace, hyperref}
+      \renewcommand{\href}[2]{#2\footnote{\url{#1}}}
+```
+
+The `href` redefinition above turns URLs into footnotes if running $\LaTeX$.
+
+There is one output element provided by `Quarto` that will not render correctly to $\LaTeX$: a marginal note using the markup `.column-margin`.  To automatically use an alternate in-body format, define a function that can be used for both typesetting formats.
+
+```{r eval=FALSE}
+mNote <- if(ishtml) '.column-margin'
+  else
+                    '.callout-note appearance="minimal"'
+```
+
+Then use <tt>r mNote</tt> enclosed in back ticks in place of the `.column-margin` callout for generality.
+
+:::
+
+::: {.callout-note collapse="true"}
+## Special Considerations For Microsoft Word
+
+`Quarto` and its workhorse `Pandoc` now are quite good at creating Word `.docx` files, even allowing $\LaTeX$ math expressions to render well and be editable in Word.  Missing is the ability to handle marginal notes including `.aside`s.  
+
+When collaborating with a Word user by sending her a `.docx` file whenever a report is updated, it is hard but necessary to discourage her from editing the `docx` file instead of communicating changes back to you to make in the primary `.qmd` file.  But often the collaborator is using parts of your report to build another Word document.  In that case it is important for the collaborator to be able to see what changed since the last report.  The minimal-effort way to do this is to save the last version of the `.docx` file and send both the last and current versions to the collaborator.  She can then [compare the two versions in Word](https://zapier.com/blog/compare-two-word-documents) to see exactly what has changed.
+
+:::
+
+::: {.callout-note collapse="true"}
+## Saving Graphics Images
+
+Even when producing only html, one may wish to save individual graphics for manuscript writing.  For non-interactive graphics you can right click on the image and download the `.png` file.  For interactive plots, `plotly` shows a "take a snapshot" icon when you hover over the image.  Clicking this icon will produce a static `.png` snapshot of the graph.  Some graphs are not appropriate for static documents, and the variables created in the code above can be checked so that, for example, an alternative graph can be produced when making a `.pdf` file.  But in other cases one just produces an additional static plot that is not shown in the html report.  See the margin note near @fig-survplotp for an example.
+
+:::
+
+::: {.callout-note collapse="true"}
+## Using `Hmisc` Formatting for Variable Labels in Tables
+
+As done with various `Hmisc` and `rms` package functions, one can capitalize on `Hmisc`'s special formatting of variable labels and units when constructing tables in $\LaTeX$ or html.  The basic constructs are shown in the code below.
+
+```{r labtab,eval=FALSE}
+# Retrieve a set of markup functions depending on typesetting format
+# See below for definition of ishtml
+specs    <- markupSpecs[[if(ishtml) 'html' else 'latex']]
+# Hmisc markupSpecs functions create plain text, html, latex,
+# markdown, or plotmath code
+varlabel <- specs$varlabel  # retrieve an individual function
+# Format text describing variable named x
+# hfill=TRUE typesets units to be right-justified in label
+# Use the following character string as a row label
+# Default specifies the string to use if there is no label
+# (usually taken as the variable name)
+varlabel(label(x, default='x'), units(x), hfill=TRUE)
+```
+
+For plotting and sometimes for html, the `Hmisc` `hlab` function is used.  It makes label and units lookups easy.  For plain text formatting of labels/units, the `Hmisc` `vlab` function is easy to use.
+
+:::
+
+## HTML Tables {#sec-rformat-html}
+
+Nicely formatted tables can be created in multiple ways:
+
+* using customized code that directly writes html markup
+* using customized code that directly writes $\LaTeX$ markup
+* using customized code that writes markdown markup (e.g., "pipe" tables)
+* hand coding markdown (usually pipe tables)
+
+The latter two provide less flexibility but have the advantage of being automatically converted to html or $\LaTeX$ depending on your destination format.
+
+Here is an example of a hand coded markdown pipe table.  Note (1) the second line of the markup indicates that the first column is to be left-justified and the second column right-justified, and (2) you can include computed values from R expressions.  On the caption line we specify that the first column occupies 2/3 of the width.  We could have specified `tbl-colwidths="[67,33]"` to get the same result.
+
+| | This Column | That Column |
+| |:-----|-----:|
+| | cat | dog |
+| | `r rwrap('pi')` | `r rwrap('2+3')` |
+| : Table caption {tbl-colwidths="[2,1]"}
+
+The result is
+
+| This Column | That Column |
+|:-----|-----:|
+| cat | dog |
+| `r pi` | `r 2+3` |
+: Table caption {tbl-colwidths="[2,1]"}
+
+There is an automatic feature of html that makes it especially attractive as a destination format: If a cell contains a long string of characters, those strings will be line-wrapped appropriately, with the line length depending on the width of the display device.
+
+The `knitr` package `kable` function provides an easy way to produce html tables from data tables/frames and matrices, and `knitr::kables` allows one to put several tables together.  The `qreport` package `kabl` function combines the features of `kable` and `kables`.  The [`kableExtra`](https://cran.r-project.org/web/packages/kableExtra/index.html) package allows you to greatly extend what `kable` can do.
+
+There are many R packages and functions for making advanced html tables.  See for example the `Table 1` tab in @sec-descript.  This table was produced by the `Hmisc` package `summaryM` function, which used the `htmlTable` function in the [`htmlTable`](https://cran.r-project.org/web/packages/htmlTable) package.  Other packages to consider are [`gt`](https://cran.r-project.org/web/packages/gt/index.html) (see @sec-rformat-mix) and its uncredited predecessor  [`tangram`](https://cran.r-project.org/web/packages/tangram), and packages discussed [here](https://rfortherestofus.com/2019/11/how-to-make-beautiful-tables-in-r).
+
+The central guide for basic table making in `Quarto` is [here](https://quarto.org/docs/authoring/tables.html).
+
+### `gt` Package {#sec-rformat-gt}
+
+The [`gt` package](https://gt.rstudio.com) is to tables as `ggplot2` is to graphs.  `gt` provides a wide variety of formatting opportunities allowing one to flexibly create fairly complex tables that can contain interactive elements.  Like `ggplot2`, table elements (column headings, rows, columns, or row-column combinations) are specified by adding layers to an accumulating `gt` object using a pipe operator ("pass along to") such as `|>`.  Unlike `ggplot2`, `gt` can translate `markdown` elements to html on-the-fly.  This allows you to do things like including bullet lists and small tables inside `gt` table cells. [See for example the `Categorical` tab in @sec-case-desc for an example where small `markdown` tables appear inside a larger `gt` table.]{.aside}
+
+Here is an example that includes many of the `gt` features that are commonly needed.  See @sec-rformat-mix for how to put graphics in `gt` table cells, and see @sec-sstats-gt for another `gt` example.
+
+```{r}
+require(gt)
+# Define a data frame that forms the table rows and columns
+set.seed(1)
+d <- data.frame(
+  Item              = c(runif(3), NA),
+  chi               = rchisq(4, 3),
+  '$$X_2$$'         = rnorm(4),
+  Markdown          = c('* part 1\n* part 2\n* part 3', '', '', '**xxx**'),
+  Y                 = c('$$\\alpha_{3}^{4}$$', rep('', 3)),
+  check.names = FALSE)   # allows illegal R column names
+
+gt(d)                                                |>
+  tab_header(title=md('**Main Title $\\beta_3$ Using `gt`**'), # <1>
+             subtitle='Some Subtitle')               |>
+  tab_options(table.width=pct(65))                   |> # <2>
+  tab_spanner('Numeric Variables', columns=1:3)      |>
+  tab_spanner('Non-Numeric Variables',
+              columns=c(Markdown, Y))                |>
+  tab_row_group(md('**After** Intervention'),  rows=3:4) |>
+  tab_row_group('Before Intervention', rows=1:2)     |>
+  tab_options(row_group.font.weight='bold',
+              row_group.background.color='lightgray')|>
+  sub_missing(missing_text='')                       |> # <3>
+  fmt_number(columns=c(Item, '$$X_2$$'), decimals=2) |> # <4>
+  cols_label(Y   ~ html('Velocity<br>of Thing'),
+             chi ~ md('$$\\chi^2_{3}$$'))            |> # <5>
+  cols_width(Markdown ~ px(160))                     |> # <6>
+  cols_align(align='center', columns=Y)              |>
+  fmt_markdown(columns=Markdown, rows=1)             |> # <7>
+  tab_style(style=cell_text(size='small'),
+            locations=cells_body(columns=Markdown))  |> # <8>
+  tab_style(style=cell_text(color='blue', align='right'), # <9>
+            locations=cells_column_labels(columns='$$X_2$$')) |>
+  tab_source_note(md('_Note_: There is a bug in `tab_row_group` in `gt` version 0.9.0 causing the row group labels to appear in the reverse order in which they were named.  This is why the `tab_row_group` were reversed in the code.  The problem is reported [here](https://github.com/rstudio/gt/issues/717).'))    |>
+  tab_footnote(md('Carefully calculated based on _bad_ assumptions'),
+               locations=cells_body(columns=Item,
+                                    rows=Item==min(Item, na.rm=TRUE))) # <10>
+```
+1. `md()` allows you to specify `markdown` syntax
+1. Make the table have 65% of the report body width
+1. Instead of printing `NA` for missing values of `Item`, print blank
+1. Two digits to the right of the decimal point for two columns
+1. Rename the `Y` column and stack two lines for the label, marking this as html; rename `chi` using `markdown` math notation
+1. Make the `Markdown` column 160 pixels wide
+1. Transform `markdown` text in column named `Markdown` (quotes not needed in `gt`) but only for the first row.  The fourth row rendered `**` literally instead of using bold face.
+1. Make column `Markdown` have a small font
+1. Make the X_2 column label be blue and right-aligned.  Right alignment did not work for math mode.
+1. Footnote automatically placed on the row where `Item` has its lowest value
+
+To remove certain table elements use these examples.
+
+```{r eval=FALSE}
+gt(d) |> tab_options(column_labels.hidden=TRUE)                          |> #<1>
+         tab_options(table_body.hlines.width=0, table.border.top.width=0)|> #<2>
+         cols_hide(columns=c(X1,X2)) #<3>
+# or
+g <- ...  #<4>
+g |> cols_hide(columns=Pvalue) #<5>
+```
+1. remove column headings
+1. remove top line
+1. remove columns named `X1` and `X2`
+1. some operation that creates a `gt` object, e.g., `print(describe(mydata, 'continuous'))`
+1. remove a column and finally render the table
+
+
+## CSS {#sec-rformat-css}
+
+When producing reports in html, you can create custom html styles that `quarto` will use.  These styles are defined using HTML5's CSS (cascading style sheets).  An example `.css` file is at [hbiostat.org/rflow/h.css](https://hbiostat.org/rflow/h.css), and your report may gain access to such a `.css` file by including a line like `css: h.css` in the top-level `quarto` `yaml` header under the `html:` section.
+
+Two of the styles defined by defined by `h.css` are `smaller` and `smaller2`.  `smaller` will shrink the font size of a block of text (even one containing code and R output, but it does not apply to tables) to 80% of its original size.  `smaller2` will make it 64% of the original size.  To invoke these styles we use `quarto` "`divs`" as follows:
+
+```
+::: {.smaller2}
+This is text that will appear smaller ...
+
+:::
+````
+
+Here is an example using `smaller2`.
+
+::: {.smaller2}
+This is text that will appear smaller.  More of the same.  More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. 
+
+| X | Y |
+|---|---|
+| 2.3 | 4.5 |
+| 2.2 | 3.3 |
+
+```{r}
+x <- pi
+x
+```
+:::
+
+Another style in `h.css` is `quoteit` which is useful for including quotations.  The text is italicized, dark blue, 80% of regular size, and has 10% left and right margins.  Here is an example.
+
+````
+::: {.quoteit}
+Some eloquent quote appears here.  The author of the quote is assumed to know what they are talking about, and seem to be able to express themselves.
+:::
+````
+
+::: {.quoteit}
+Some eloquent quote appears here.  The author of the quote is assumed to know what they are talking about, and seem to be able to express themselves.
+:::
+
+As discussed [here](https://stackoverflow.com/questions/72928726) you can use `Quarto's` markdown syntax to style text with CSS, e.g., the color is `[red]{style="color: red;"}`.  This can be handy when you change a report and you want someone else to see what's changed.  Suppose that changed text is to appear in blue.  Define a "mark changed text" character variable `Ch` as follows.[Unfortunately, these HTML colors will not render in Word.]{.aside}
+
+```{r}
+Ch <- '{style="color:blue;"}'
+```
+
+Then you can type "`[This text]``r rwrap('Ch')` has changed" to render the following: [This text]`r Ch` has changed.  You can also define a helper function to be generic if you want to use more than one color:
+
+```{r}
+# substitute keeps you from having to quote a word
+col <- function(co) {
+  co <- as.character(substitute(co))
+  paste0('{style="color:', co, ';"}')
+}
+```
+
+Try it: `[This]``r rwrap('col(red)')` is red and `[This other thing]``r rwrap('col(blue)')` is blue.
+
+which renders:
+
+[This]`r col(red)` is red and [this other thing]`r col(blue)` is blue if rendering to HTML.
+
+## Advanced Tables That Render to Both HTML and Word {#sec-rformat-word}
+
+Although there are many advanced table making tools in R for producing HTML, most of these will not properly render to Word much of the time.  Functions that directly write HTML markup such as those in the `Hmisc` and `htmlTable` packages produce HTML that `Quarto` and `pandoc` know how to faithfully render to Word.  An example multi-format output script is [here](word-tables.qmd), with [HTML output](word-tables.html) and [`.docx` output](word-tables.docx).
+
+## Diagrams {#sec-rformat-diagrams}
+
+`Quarto` [builds in](https://quarto.org/docs/authoring/diagrams.html) two diagramming languages: `mermaid` and `graphviz`. @sec-doverview-filter has detailed examples using `mermaid`, which uses a simpler format than `graphviz`.  One nice feature of `mermaid` is [its allowance for math expressions as of Quarto 1.6.12](https://github.com/quarto-dev/quarto-cli/discussions/10851) as shown below.  Note that $\LaTeX$ equations are surrounded by $$ and double quotes.
+
+```{mermaid}
+flowchart LR
+  A["$$\alpha_{3} + \beta\times X$$"] --> B(Round edge)
+  B --> C{Decision}
+  C --> D[Result one]
+  C --> E[Result two]
+```
+
+But `mermaid` tends to be quite fragile, and chart rendering gets distorted when the underlying `mermaid` code is updated.  `graphviz` is recommended.
+`graphviz` allows for more complex diagrams exemplified [here](https://www.graphviz.org/gallery) and also provides more control.  `graphviz` nodes can include HTML tables, and you can even have arrows drawn between table cells or between a table cells and other non-table nodes.  Here is an example, taken from [this excellent post](https://stackoverflow.com/questions/70884241).  Connections between diagram elements are made possible by assigning _port identifiers_ to elements. [The chunk header refers to `dot` which is a primary module of `graphviz`, for directed graphs.]{.aside}
+
+````
+digraph {
+  graph [pad="0.5", nodesep="0.5", ranksep="2"]
+  //  splines=ortho for square connections
+  node  [shape=plain]
+  rankdir=LR;
+
+Foo [label=<
+<table border="0" cellborder="0" cellspacing="0">
+  <tr><td><b><i>InputFoo</i></b></td><td><font color="blue">two</font> </td>   </tr><HR/>
+  <tr>  <td port="1">one</td><td> two </td></tr>
+  <tr>  <td port="2">two</td><td> two </td></tr>
+  <tr>  <td port="3">three</td><td> two </td></tr>
+  <tr>  <td port="4">four</td><td> two </td></tr>
+  <tr>  <td port="5">five</td><td port="a"> two </td></tr>
+  <tr>  <td port="6">six</td><td port="b"> two </td></tr>
+</table>>];
+Bar [label=<This and that<br/><font face="courier" color="darkblue">and that and <b>that</b></font>>];
+
+Foo:3:w -> Foo:2:w; 
+// node name:port:direction (n,ne,e,se,s,sw,w,nw,c,_)
+// c=center within node, _=use appropriate node side
+// See graphviz.org/docs/attr-types/portPos
+Foo:3:w -> Foo:6:w;
+Foo:6:w -> Foo:1:w;
+Foo:1:w -> Foo:a:e;
+Foo:b:e -> Bar;
+}
+```
+````
+
+```{dot}
+digraph {
+  graph [pad="0.5", nodesep="0.5", ranksep="2"]
+  //  splines=ortho for square connections
+  node  [shape=plain]
+  rankdir=LR;
+
+Foo [label=<
+<table border="0" cellborder="0" cellspacing="0">
+  <tr><td><b><i>InputFoo</i></b></td><td><font color="blue">two</font> </td>   </tr><HR/>
+  <tr>  <td port="1">one</td><td> two </td></tr>
+  <tr>  <td port="2">two</td><td> two </td></tr>
+  <tr>  <td port="3">three</td><td> two </td></tr>
+  <tr>  <td port="4">four</td><td> two </td></tr>
+  <tr>  <td port="5">five</td><td port="a"> two </td></tr>
+  <tr>  <td port="6">six</td><td port="b"> two </td></tr>
+</table>>];
+Bar [label=<This and that<br/><font face="courier" color="darkblue">and that and <b>that</b></font>>];
+
+Foo:3:w -> Foo:2:w; 
+// node name:port:direction (n,ne,e,se,s,sw,w,nw,c,_)
+// c=center within node, _=use appropriate node side
+// See graphviz.org/docs/attr-types/portPos
+Foo:3:w -> Foo:6:w;
+Foo:6:w -> Foo:1:w;
+Foo:1:w -> Foo:a:e;
+Foo:b:e -> Bar;
+}
+```
+
+The `qreport` `makegraphviz` function allows variable insertions into `graphviz` diagrams, and if a variable to be inserted is a data frame it will be converted to a simple HTML table that `graphviz` can handle.  Here is an example.  `{{u}}` is the syntax for inserting the value of variable `u`.
+
+```{r results='asis'}
+x <- data.frame(x1=round(runif(3), 3), x2=.q(a,b,c))
+pr(obj=x)
+z <- 'digraph {node [shape=plain];
+  Foo [shape=oval label=<Information about <font color="blue">{{g}}</font>>];
+  Bar [label=<{{u}}>];  // add shape=box to box the table
+  Foo -> Bar}'
+makegraphviz(z, g='states', u=x, file='gvtest.dot')
+```
+
+The diagram is then rendered with a `dot` chunk containing a special `file: gvtest.dot` markup.
+
+```{dot}
+//| file: gvtest.dot
+```
+
+See @sec-doverview-filter for a more advanced `graphviz` example that is along these lines.  See [this](https://renenyffenegger.ch/notes/tools/Graphviz/examples/index) for some excellent `graphviz` flowchart examples.
+
+In `qreport` version 1.0-2 there is a new function `makegvflow` that creates `graphviz` markup for flowcharts from plain text.  Indentation that is a multiple of 2 spaces indicates whether a node is a major, minor, or tiny node.  For example a line indented 4 spaces after a line that is indented 2 spaces becomes a minor node that is directed from the preceeding major node. `makegvflow` does automatic word-wrapping to keep text boxes from getting too wide, and translates simple $\LaTeX$ math markup to simple HTML markup.  Variable insertions using double braces are also supported.
+
+If a line begins with "+" as its first non-blank character, that line is appended to the previous regular line but with a double line break.  The following example shows most of `makegvflow`'s features.
+
+```{r}
+x <- '
+Root text
+  Major 1
+    Minor 11 {{jj}}
+    Minor 12
+  Major 2
+    Minor 21
+    Minor 22
+    Minor 23 that is very very long and just keeps going
+      tiny 231 and $\\alpha + \\sum_{i=1}^{n}X_{i}$
+      tiny 232
+      + a second line for tiny 232 that is pretty long
+      + a third line for tiny 232
+  Major 3
+    Minor 31
+      tiny 311'
+# First, just print the constructed graphviz code
+makegvflow(x, jj='tiger', onlyprint=TRUE)
+# Now write it to the indicated file for inclusion in the next code chunk
+makegvflow(x, extracon='n12 -> n21', jj='tiger', direction='LR',
+           file='gvflow.dot')
+```
+
+```{dot}
+//| file: gvflow.dot
+```
+
+::: {.callout-note collapse="true"}
+## `Mermaid` Tricks
+
+* [Mindmaps](https://mermaid.js.org/syntax/mindmap.html)
+* Using [Font Awesome](https://stackoverflow.com/questions/75996412/why-do-some-icons-from-fontawesome-in-mermaid-work-and-some-do-not)
+* [Theming](https://mermaid.js.org/config/theming.html) including specification of a diagram's color scheme, but see [this](https://github.com/quarto-dev/quarto-cli/discussions/12304)
+* [Theming with Quarto](https://quarto.org/docs/authoring/diagrams.html#mermaid-theming)
+
+**Using Tooltips**
+
+**Note**: As of 2022-12-11 `Quarto` has [withdrawn support for tooltips](https://github.com/quarto-dev/quarto-cli/discussions/3592).   I hope that is added back someday.
+
+As exemplified in @sec-doverview, `Mermaid` provides an easy way to make many types of diagrams.  Diagrams are more valuable when they are dynamic.  `Mermaid` provides an easy way to include pop-up tooltips in diagram nodes, to provide deeper information about the node.  When the tooltips contain tables whose columns need to line up, you need to put the following in your document so that tooltips will used a fixed-width font and preserve white space.  The best way to include this is to put it in a `.css` file that is reference in the report's `yaml`, or to surround the four lines with `<style>` ... `</style>`.
+
+| mermaidTooltip {
+| 		font-family: courier;
+| 		white-space: pre;
+| }
+
+`Quarto` has excellent support for `Graphviz` charts, facilitated by the `qreport` package `makegraphviz` function to help insert variables and data tables inside diagrams.  The `Graphviz` approach also allows fine control of fonts and colors.  It is best to spend a little more time learning the `Graphviz` [`dot` language](https://graphviz.org/docs/layouts/dot) with `Quarto`, with and without using `makegraphviz`.
+
+:::
+
+## Mixing Graphics and Tables {#sec-rformat-mix}
+
+You may need to compose a matrix of outputs where some elements are graphical and some are tabular.  R and `Quarto` provide a variety of methods for accomplishing this, summarized below, with links.
+
+* [Base graphics](https://twitter.com/danlewer/status/1642037604487929856?s=20): produce one large image using functions such as `lines`, `points`, `text`; simple to understand but takes a good deal of composition work to compute $x,y$ coordinates for placing text and for keeping the correct column justifications
+* [`flextable`](https://www.ardata.fr/en/flextable-gallery/2022-10-17-patchwork-flextable)
+* [`patchwork`](https://cran.r-project.org/web/packages/patchwork/vignettes/patchwork.html) + [`gridExtra`](https://cran.r-project.org/web/packages/gridExtra/vignettes/tableGrob.html): tables are converted to graphics then layed out using elegant `patchwork` syntax as exemplified [here](https://mattherman.info/blog/ppt-patchwork)
+* [`ggtext`](https://wilkelab.org/ggtext)
+* [`kableExtra`](https://haozhu233.github.io/kableExtra/awesome_table_in_html.html)
+* [`gt`](https://gt.rstudio.com) possibly with [`gtExtras`](https://github.com/jthomasmock/gtExtras) or [`sparkline`](https://cran.r-project.org/web/packages/sparkline/index.html)
+* [`gt nanoplots`](https://gt.rstudio.com/reference/cols_nanoplot.html), a new way to include tiny graphics in `gt` table cells
+* Native `Quarto` + [`gridExtra`](https://cran.r-project.org/web/packages/gridExtra/vignettes/tableGrob.html)
+* Native `Quarto` table with some cells created by converting graphics output to svg (scalable vector graphic using the `svglite` package) and marked as html
+
+The last two options are appealing because of their minimal dependencies.  Here is an example using the next-to-last option based on the `layout` syntax described in @sec-rformat-quarto.  The page is divided into two rows, with a graph and a table appearing left to right in the first row, and a large graph taking up the whole second row.  Between the two elements in the first row, 10% of the width is left blank to separate the two.  The `gridExtra` package is used to convert a table to a plot, and math notation using R `plotmath` is included.
+
+```{r}
+#| layout: [[45,-10,45], [100]]
+plot(cars)
+grid::grid.newpage()
+# parse=TRUE: make grid.table respect plotmath notation
+# also increase font size for the table
+tt <- gridExtra::ttheme_minimal(parse=TRUE, base_size=30)
+d <- cbind('A[3]'=1:2, B=c('alpha^33', 'frac(i+j,sqrt(n) + sqrt(m, 3))'))
+gridExtra::grid.table(d, theme=tt)
+plot(mtcars)
+```
+
+::: {.column-margin}
+See [this tutorial](https://liluoma22.medium.com/gridtable-gridextra-tutorial-3977aa52c458) for ways to format specific rows/columns in a `grid` table.
+
+:::
+
+Now consider the last option.  Instead of converting table elements to graphics we convert graphics elements to html by rendering them to svg text using the [`svglite` package](https://cran.r-project.org/web/packages/svglite) and marking the text as html with [`htmltools::HTML`](https://cran.r-project.org/web/packages/htmltools).  Here is a function that makes this easy to do.  The `expr` argument is any R expression that produces a graph.  It must be enclosed in braces if the expression has more than one command.  Arguments `ps, cex.lab, cex.axis, ...` are ignored when using `ggplot2`.
+
+```{r}
+msvg <- function(expr, w=5, h=4, ps=10, cex.lab=.9, cex.axis=0.6, 
+                 bg='transparent', ...) {
+  f <- tempfile(fileext='.svg')
+  on.exit(unlink(f))
+  svglite::svglite(f, width=w, height=h, pointsize=ps, bg=bg)
+  qreport::spar(cex.lab=cex.lab, cex.axis=cex.axis, ...)
+  .x. <- expr
+  if(inherits(.x., 'ggplot')) print(.x.)
+  dev.off() 
+  htmltools::HTML(readLines(f))
+}
+```
+
+In the following example the width of column 1 was specified to be twice the width of column 2, and column 2 is right-justified.  An R base graphic is placed in row 1 column 1, and a `ggplot2` graphic in row 2 column 2.  Column 2 is centered.
+
+| `r rwrap('p1 <- msvg(plot(rnorm(20), ylab=\'\'), w=4, h=2)')`
+| `r rwrap('p2 <- msvg(ggplot(mapping=aes(x=1:10, y=rnorm(10))) + geom_point(), w=2.5, h=1.4)')`
+| 
+| | A | B |
+| |:---|:---:|
+| | `r rwrap('p1')`           | Row 1 column 2 |
+| | `$\alpha_{3}^{47}$` | `r rwrap('p2')`         |
+| : Example table with svg graphics {tbl-colwidths="[2,1]"}
+
+`r p1 <- msvg(plot(rnorm(20), ylab=''), w=4, h=2)`
+`r p2 <- msvg(ggplot(mapping=aes(x=1:10, y=rnorm(10))) + geom_point(), w=2.5, h=1.4)`
+
+| A | B |
+|---|:---:|
+| `r p1`           | Row 1 column 2 |
+|$\alpha_{3}^{47}$ | `r p2`         |
+: Example table with svg graphics {tbl-colwidths="[2,1]"}
+
+The svg graphics, being scalable, will have full resolution for any level of magnification of the table.
+
+[`kableExtra`](https://haozhu233.github.io/kableExtra/awesome_table_in_html.html) and other packages such as `gt`,`flextable`, and `htmlTable` can provide table enhancements.  `kableExtra` would not preserve html for the graphics cell.   Here is an example using [`gt`](https://gt.rstudio.com/reference/local_image.html). [See [this](https://themockup.blog/posts/2020-10-31-embedding-custom-features-in-gt-tables) for `gt` examples where the same graphics form is used for all the rows for a column.]{.aside} In this `gt` approach a data frame is constructed with placeholders for graphics, with the placeholder value being the name of the svg graphics object.  Then specific rows and columns are replaced with svg graphics character strings.
+
+```{r}
+require(gt)
+# Must use double $ for LaTeX math inside gt tables
+d <- data.frame(A=c('p1',             '$$\\alpha_{3}^{47}$$'),
+                B=c('Row 1 column 2', 'p2'                  ) )
+# Define a function that will retrieve the correct graph
+s  <- function(x) c(p1 = p1, p2 = p2)[x]
+
+gt(d) |> tab_header(title='Main Title', subtitle='Some Subtitle') |>
+         tab_options(column_labels.hidden=TRUE) |>
+         tab_options(table_body.hlines.width=0, table.border.top.width=0) |>
+         cols_width(A ~ pct(67), B ~ pct(33)) |>
+         cols_align(align='left',   columns=A) |>
+         cols_align(align='center', columns=B) |>
+         text_transform(locations=cells_body(rows=1, columns=A), fn=s) |>
+         text_transform(locations=cells_body(rows=2, columns=B), fn=s)
+```
+
+`gt` has a special function for putting a `ggplot` in a table cell.  Let's try it. [But note that `ggplot_image` produces a `png` file that is not scalable.]{.aside}  Let's also replace the first graph with a spike histogram for a normal distribution sample using `Hmisc` function `pngNeedle` which produces a `png` file.  Use the `gt` `local_image` file to include it.
+
+```{r}
+g <- ggplot(mapping=aes(x=1:10, y=rnorm(10))) + geom_point()
+set.seed(1)
+x         <- rnorm(10000)
+sp        <- spikecomp(x, method='grid', normalize=FALSE)       # <1>
+spikehist <- pngNeedle(sp$y / max(sp$y), h=14, w=3, lwd=2)      # <2>
+gt(d) |> text_transform(locations=cells_body(rows=1, columns=A), 
+                        fn=function(x) local_image(spikehist, height=14)) |>
+         text_transform(locations=cells_body(rows=2, columns=B),
+                        fn=function(x)
+												   ggplot_image(g, height=200, aspect=1.5)) |> # <3>
+         tab_options(column_labels.hidden=TRUE)
+```
+1. `spikecomp` is in the `Hmisc` package and computes coordinates of spike histograms, rounding continuous values to pretty numbers.
+2. `pngNeedle` in `Hmisc` plots a spike histogram without labeling the original data values, and returns the name of a `.png` file containing the short and wide plot.  It needs values to be in $[0,1]$ so the input vector consists of counts divided by the maximum over all counts.  Height `h` is in pixels.
+3. `aspect` is the width:height aspect ratio.
+
+Instead of using a static spike histogram in the upper left column let's use the `sparkline` package's `sparkline` function to draw an interactive spike histogram, using similar examples from [here](https://themockup.blog/posts/2020-10-31-embedding-custom-features-in-gt-tables) and [these `jQuery` javascript options](https://omnipotent.net/jquery.sparkline/#s-docs).  See also [this](https://github.com/htmlwidgets/sparkline/blob/master/inst/examples/sparkline_histogram.R). [A disadvantage of this approach is that bar charts drawn using `sparkline` use $y$ coordinates (here, relative frequency) as tooltips (mouse hover text) instead of the more informative $x$ coordinates.]{.aside}
+
+```{r}
+require(sparkline)
+sparkline(0)   # load javascript dependencies
+
+spike <- htmltools::HTML(spk_chr(values=round(sp$y / sum(sp$y), 4), type='bar',
+                                 chartRangeMin=0, zeroColor='lightgray',
+                                 barWidth=1, barSpacing=1, width=200))
+gt(d) |> text_transform(locations=cells_body(rows=1, columns=A), 
+                        fn=function(x) spike) |>
+         text_transform(locations=cells_body(rows=2, columns=B),
+                        fn=function(x) ggplot_image(g, height=200, aspect=1.5)) |>
+         tab_options(column_labels.hidden=TRUE) |>
+         cols_width(A ~ pct(40), B ~ pct(60))
+```
+
+Let's improve the information by including $x$ coordinates in tooltips, using an example from [here](https://github.com/htmlwidgets/sparkline/issues/14) (see also [here](https://stackoverflow.com/questions/45179410)).  At the lowest `x` value, expand the tooltip to include quartiles, min, max, $n$, and mean.  Include the frequency count in addition to relative frequency.
+
+```{r}
+spike <- function(x, w=200) {
+  x        <- x[! is.na(x)]
+  sp       <- spikecomp(x, method='grid', normalize=FALSE)
+  freq     <- sp$y
+  xvals    <- paste0('x=', sp$x, '<br>n=', freq)
+  qu       <- paste0('Q<sub>', 1:3, '</sub>  : ', round(quantile(x, (1:3)/4), 3))
+  ot       <- paste0(c('n   :', 'Min :', 'Max :', 'Mean :'),
+                     c(length(x), round(c(range(x, na.rm=TRUE), mean(x)), 3)))
+  stats    <- paste(c(ot[1:2], qu, ot[3:4]), collapse='<br>')
+  xvals[1] <- paste0(stats, '<br><br>', xvals[1])
+  htmltools::HTML(spk_chr(values=round(freq / sum(freq), 4), type='bar',
+                          chartRangeMin=0, zeroColor='lightgray',
+                          barWidth=1, barSpacing=1, width=w,
+                          tooltipFormatter=tt(xvals)))
+}
+
+# Define javascript function to construct the tooltip
+tt <- function(xv)
+  htmlwidgets::JS(
+    sprintf(
+      "function(sparkline, options, field){
+       debugger;
+       return %s[field[0].offset] + '<br/>' + field[0].value;
+       }",
+      jsonlite::toJSON(xv) ) )
+
+sp <- spike(x)
+gt(d) |> text_transform(locations=cells_body(rows=1, columns=A), 
+                        fn=function(x) sp) |>
+         text_transform(locations=cells_body(rows=2, columns=B),
+                        fn=function(x) ggplot_image(g, height=200, aspect=1.5)) |>
+         tab_options(column_labels.hidden=TRUE) |>
+         cols_width(A ~ pct(40), B ~ pct(60))
+```
+
+In many situations we need the same type of micrographic constructed for all rows.  Creat a `gt` table with a spike histogram for each of several continuous variables in the `support` dataset.
+
+```{r}
+getHdata(support)
+X <- subset(support, select=c(age, slos, totcst, meanbp, hrt, temp, crea))
+s <- sapply(X, spike, w=300)         # apply spike to each variable in X
+# Or: require(data.table)
+#     setDT(support)
+#     s <- support[, sapply(.SD, spike, w=250), .SDcols=.q(age,slos,totcst,meanbp,hrt,temp,crea)]
+d <- data.frame(Variable          = names(X),
+                Label             = sapply(X, label),
+                Units             = .q(y, d, '$', 'mmHg', bpm, '$$^\\circ C$$', 'mg/dL'),
+                'Spike Histogram' = names(X),
+                check.names=FALSE)   # allow space inside name
+gt(d) |> text_transform(locations=cells_body(columns=4), fn=function(x) s) |>
+         tab_style(style=cell_text(weight='bold'), locations=cells_body(columns=Variable)) |>
+         tab_style(style=cell_text(size='small'), locations=cells_body(columns=Label)) |>
+         tab_style(style=cell_text(size='small', style='italic'), locations=cells_body(columns=Units)) |>
+         tab_options(table.width=pct(90))
+```
+
+This approach forms the basis of the `Hmisc` `print.describe` function when `options(prType='html')` and you code `print(describe(...), 'continuous')`. [Hover over the smallest value in a spike histogram sparkline to see the 5 smallest distinct data values, or over the largest value to see the 5 largest.  The `column: screen-inset` yaml markup is used to show this very wide table.]{.aside}
+
+```{r}
+#| column: screen-inset
+options(prType='html')
+des <- describe(support)
+print(des, 'continuous')
+print(des, 'categorical')
+```
+
+[`gt nanoplots`](https://gt.rstudio.com/reference/cols_nanoplot.html) are probably better than `sparklines`.  They are more flexible and may be more likely to render well when using R interactively.  But they do not allow for customized hover text.
+

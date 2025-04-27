@@ -1,0 +1,81 @@
+project:
+  type: book
+  output-dir: /Users/harrelfe/web/rflow
+
+book:
+  title: "R Workflow"
+  subtitle: "R Workflow for Reproducible Data Analysis and Reporting"
+  author:
+    - name: Frank E Harrell Jr
+      url: https://hbiostat.org
+      affiliation: Department of Biostatistics<br>School of Medicine<br>Vanderbilt University
+  date: last-modified
+  site-url: https://hbiostat.org/rflow
+  url: https://hbiostat.org/rflow
+
+  google-analytics: "G-FN79JJ28KR"
+
+  twitter-card:
+    creator: "@f2harrell"
+    site: "@f2harrell"
+		
+  chapters:
+    - index.qmd
+    - intro.qmd
+    - case.qmd
+    - rbasics.qmd
+    - rformat.qmd
+    - fcreate.qmd
+    - missing.qmd
+    - datachk.qmd
+    - doverview.qmd
+    - descript.qmd
+    - manip.qmd
+    - sstats.qmd
+    - merge.qmd
+    - long.qmd
+    - graphics.qmd
+    - analysis.qmd
+    - caching.qmd
+    - parallel.qmd
+    - sim.qmd
+    - figures.qmd
+    - resources.qmd
+
+  page-footer:
+    background: light
+    left:
+      - text: "Copyright 2024, Frank E Harrell Jr"
+    right:
+      - text: "License"
+        href: https://www.gnu.org/licenses/gpl-3.0.en.html
+
+  navbar:
+    collapse-below: xl
+
+bibliography:
+  - grateful-refs.bib
+
+format:
+  html:
+    theme: journal
+    number-depth: 3
+    cap-location: margin
+    reference-location: margin
+    css: h.css
+    code-tools: true
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    code-annotations: hover
+    crossrefs-hover: false
+
+comments:
+  hypothesis:
+    theme: clean
+    openSidebar: false
+    enableExperimentalNewNoteButton: true
+
+execute:
+  warning: false
+  message: false
+  freeze: auto

@@ -1,0 +1,152 @@
+```{mermaid}
+%%| fig-width: 5
+flowchart LR
+R[R Workflow] --> Rformat[Report formatting]
+Rformat --> Quarto[Quarto setup<br><br>Using metadata in<br>report output<br><br>Table and graph formatting]
+R --> DI[Data import] --> Annot[Annotate data<br><br>View data dictionary<br>to assist coding]
+R --> Do[Data overview] --> F[Observation filtration<br>Missing data patterns<br>Data about data]
+R --> P[Data processing] --> DP[Recode<br>Transform<br>Reshape<br>Merge<br>Aggregate<br>Manipulate]
+R --> Des[Descriptive statistics<br>Univariate or simple<br>stratification]
+R --> An[Analysis<br>Stay close to data] --> DA[Descriptive<br><br>Avoid tables by using<br>nonparametric smoothers] & FA[Formal]
+R --> CP[Caching<br>Parallel computing<br>Simulation]
+```
+
+
+# Preface {.unnumbered}
+
+
+This work is intended to foster best practices in reproducible data documentation and manipulation, statistical analysis, graphics, and reporting.  It will enable the reader to efficiently produce attractive, readable, and reproducible research reports while keeping code concise and clear.  Readers are also guided in choosing statistically efficient descriptive analyses that are consonant with the type of data being analyzed.  The _Statistical Thinking_ article [R Workflow](https://fharrell.com/post/rflow) provides an overview of this book and includes some more motivation from the standpoint of doing good scientific research.[[Comments](https://hbiostat.org/comment.html)]{.aside}
+
+Anyone who claims to be able to do good data science without coding is misleading you.  Coding is one of the most valuable skills for data preparation and analysis, and it leads to personal efficiency, reproducibility, and maintainability.  Learning how to write concise, elegant, debug-able code that generalizes to handle more complex tasks is not an insurmountable goal for anyone dealing with data, and `R Workflow` is intended to assist you in this regard.
+
+The methods in `R Workflow` will be helpful to anyone who analyzes data, whether they work in business, marketing, manufacturing, journalism, finance, science, observational research, experimental research, and virtually any field needing to understand data.  The book is best suited for those having at least rudimentary experience in running R commands, but @sec-rbasics points readers to excellent resources for learning R from scratch.  R can also be learned by starting with some standard analysis templates such as this in [this Github repository](https://github.com/harrelfe/rscripts).
+
+The work also showcases RStudio's [`Quarto`](https://quarto.org) which is a new standard for making beautiful and reproducible reports with R and other languages.  This book also captures what I've learned in using R (and its precursor S) heavily in biomedical research and clinical trials since 1991.  See my _Statistical Thinking_ blog [`fharrell.com`](https://fharrell.com) and resources at [`hbiostat.org`](https://hbiostat.org) for more.
+
+The term "workflow" connotes a rigid step-by-step process of data processing and reporting.  In one's day-to-day usage of R, myriad needs arise, and much creativity is needed to get the most insights from data while writing reliable code that generates reproducible results.  `R Workflow` will equip R users/analysts with a variety of powerful and flexible tools that will assist them in attacking a huge variety of problems and producing elegant reports while reducing the amount of coding required.
+
+A video covering many parts of the first 13 chapters may be found [here](https://youtu.be/ULWClhwrN2U).
+
+The general statistical analysis/inference companion to this book is [Biostatistics for Biomedical Research](https://hbiostat.org/bbr) which is a reproducible book with numerous examples of R code.  For and in-depth text and course notes on reproducible regression modeling with R, including extensive case studies, see [RMS](https://hbiostat.org/rms).
+
+## Resources for Learning `Quarto`
+
+* [Welcome to Quarto 2-hour workshop](https://youtu.be/yvi5uXQMvu4) by Tom Mock
+* [Awesome Quarto list](https://github.com/mcanouil/awesome-quarto) by Mickaël Canouil
+
+:::{.callout-note collapse="true"}
+# Acknowledgments
+
+The author wishes to thank the R Core team and R package developers along with RStudio for the free software they have developed that has revolutionized statistical computing, reporting, and reproducible research.  Thanks to [Titus von der Malsburg](email:titus.von-der-malsburg@ling.uni-stuttgart.de) for careful reading of the text and for reporting numerous typographical and grammatical errors and a few programming errors.  Thanks to [Norm Matloff](https://heather.cs.ucdavis.edu/matloff.html), University of California Davis, who provided big ideas to improve the preface and motivation for the book.
+
+:::
+
+::: {.callout-note collapse="true"}
+# Update History
+
+| Date | Sections | Changes |
+|:--|:-|:------------|
+| 2025-04-20 | [-@sec-graphics-ggplot2]  | Example of nice log scale axis |
+| 2025-03-28 | [-@sec-rformat-diagrams]  | Example of new `makegvflow` function |
+| 2024-09-26 | [-@sec-manip-keys]        | New subsection on keys in `data.table` |
+| 2024-09-24 | [-@sec-rformat-mix]       | Commented out `print(describe output)` until `gt` bug fixed |
+| 2024-09-23 | [-@sec-rformat-mix]       | Added mention of `gt nanoplots` |
+| 2024-08-13 | [-@sec-long-gap]          | New section for computing interval gaps |
+| 2024-08-11 | [-@sec-manip-dtspec]      | New subsection defining special `data.table` variables |
+| 2024-07-27 | [-@sec-manip-asubsets]    | Added two ways to run `describe` over subsets, getting around a `knitr` bug in rendering the original approach |
+| 2024-07-15 | [-@sec-graphics-ggplot2]  | Added `ggiraph` for tooltips on `ggplot2` plots |
+| 2024-07-06 | [-@sec-resenv]            | Changed environment pretty-printing to use the `grateful` package 
+| 2024-05-26 | [-@sec-rformat]           | Added link to updated recommended general report template |
+| 2024-05-04 | [-@sec-rformat-printl]    | New subsection for printing calculations in context when code is folded |
+| 2024-04-30 | [-@sec-manip-ftable]      | New subsection on expanding a frequency table into raw data rows |
+| 2024-04-21 | [-@sec-rformat-multi]     | New collapsed tab with considerations for collaborating with a Word user |
+| 2024-04-07 | [-@sec-rformat-word]      | New section of advanced tables that work with Word |
+| 2024-04-04 | [-@sec-rformat-css]       | More examples of colorizing text |
+| 2024-04-03 | [-@sec-manip-melted]      | New data.table example: creating melted aggregate statistics |
+| 2024-02-24 | [-@sec-descript-con]      | New examples using `ggplot2` for spike histograms and ECDFs |
+| 2024-02-18 | [-@sec-sim-datatable]     | New way to use `data.table` for simulations |
+| 2024-02-11 | [-@sec-manip-newdep]      | New subsection showing how to add multiple new variables to a data table when the new variables depend on each other |
+| 2024-02-10 | [-@sec-descript-mlong]    | New subsection on exploratory analysis of multiple longitudinal variables |
+| 2024-01-07 | [-@sec-fcreate-rcdep]     | New subsection with R code for automatic file deposit into REDCap file repository |
+| 2024-01-07 | [-@sec-fcreate-import]    | Re-wrote `REDCap` API section for latest `REDCap` R API |
+| 2024-01-02 | [-@sec-fcreate-secure]    | Showed how to mix interacting and batch processing so passwords will work |
+| 2023-10-28 | [-@sec-manip-bydup]       | New subsection showing how to add aggregate summaries to raw data |
+| 2023-10-23 | [-@sec-manip]             | Added examples of data table containing lists |
+| 2023-10-20 | [-@sec-long-regtimes]     | New longitudinal example on linear interpolation/extrapolation on regularized measurement times |
+| 2023-09-16 | [-@sec-sim-array]         | More array-style simulation examples |
+| 2023-07-30 | [-@sec-rformat-quarto]    | Mention tabsets, collapsible text, and tricks |
+| 2023-07-10 | [-@sec-manip-acr]         | Added `data.table::setcolorder` |
+| 2023-07-19 | [-@sec-rbasics-functions] | Listed `data.table` set functions |
+| 2023-07-12 | [-@sec-fcreate-secure]    | New section on protecting sensitive files |
+| 2023-05-11 | [-@sec-rbasics-resources] | Added info about learning by running scripts from `Github` |
+| 2023-05-06 | [-@sec-sstats-gt] | New section on customizing summary statistic tables using `gt` |
+| 2023-04-28 | [-@sec-graphics-dev;-@sec-graphics-ggplot2] | New section on graphical devices, added `ggplot2` themes and fonts |
+| 2023-04-20 | [-@sec-long-summary]     | New subsection on adding summary statistics to a longitudinal dataset |
+| 2023-04-09 | [-@sec-rformat-gt]       | New subsection on `gt` package |
+| 2023-04-08 | [-@sec-case-uni;-@sec-descript] | Switched to new describe function output |
+| 2023-04-02 | [-@sec-rformat-mix]      | New section on mixing graphics and tables |
+| 2023-04-02 | [-@sec-intro-install]    | New small subsection with links to installing R and RStudio |
+| 2023-03-29 | [-@sec-rbasics]          | Several new language features covered |
+| 2023-03-29 | [-@sec-long-interp]      | New subsection on interpolating longitudinal data to a target time |
+| 2023-03-26 | [-@sec-sim-datatable]    | New subsection showing simulation using lapply and rbindlist |
+| 2023-03-26 | [-@sec-graphics-ggplot2] | Example of plotting in a for-loop, and math expressions in caption |
+| 2023-03-24 | [-@sec-rbasics-ia]       | New section on interactive code writing |
+| 2023-03-16 | [-@sec-fcreate-import]   | Added description of new features of `cleanupREDCap` |
+| 2023-03-13 | [-@sec-manip]            | New example of `data.table` by-reference using a `list` of data tables |
+| 2023-03-05 | [-@sec-graphics-ggplot2] | Added `ggplot2` ECDF example, with math rendering; added plotting of ECDFs with different transformations, and labeling with math notation |
+| 2023-02-28 | [-@sec-manip-recode]   | Examples added for `combine.levels` |
+| 2023-02-26 | [-@sec-fcreate-import] | New csv.get example, expanded Excel, added General tab which discusses the `rio` package |
+| 2023-02-25 | [-@sec-manip-nascoring]| New section on computing total scores with simple imputation |
+| 2023-02-24 | [-@sec-manip-multx]    | New reshaping example |
+| 2023-02-23 | [-@sec-fcreate-import] | Added description of new features in `importREDCap` |
+| 2023-02-18 | Many | Updated chapter to use `Hmisc` 5.0 and the pre-release of the new `qreport` package and dropping use of `reptools` and `movStats` from Github.  Made use of new `Hmisc` easy labeling functions `hlab`, `hlabs`, `vlab`. |
+| 2023-02-08 | [-@sec-case]             | Changed rendering of html for contents and describe in anticipation of Hmisc 4.8-0 |
+| 2023-01-19 | [-@sec-graphics-ggplot2] | Added how to plot transformed axes |
+| 2023-01-16 | [-@sec-graphics-ggplot2] | Added simpler way to pull labels and units for plotting |
+| 2022-12-17 | [-@sec-rbasics-charmanip] | New subsection on character manipulation functions |
+| 2022-12-15 | [-@sec-manip-text]       | New subsection on text analysis |
+| 2022-12-11 | [-@sec-rformat-diagrams]  | New section on `graphviz` for diagrams |
+| 2022-12-04 | [-@sec-rbasics-dates]     | New section on dates and date/times |
+| 2022-12-03 | [-@sec-graphics;-@sec-graphics-types] | Linked to hex binning example and added new section |
+| 2022-12-03 |                           | Replaced `length(unique(x))` with `uniqueN(x)` everywhere | 
+| 2022-11-29 | [-@sec-merge-closest]     | New rolling join (closest match) example |
+| 2022-11-22 | [-@sec-manip-acr]         | Added `let` alias for `:=` in `data.table` |
+| 2022-11-09 | [-@sec-fcreate-import]    | Discussed `multDataOverview` function to summarize a `list` of datasets |
+| 2022-11-07 | [-@sec-manip-recexp]      | New section showing how to specify derived variable formulas in a separate file |
+| 2022-11-05 | [-@sec-fcreate-qs]        | New section for qs package for object storage |
+| 2022-11-05 | [-@sec-fcreate-import]    | Much new material on REDCap |
+| 2022-11-05 | [-@sec-manip-acr]         | Examples of in-place data.table changes of variables named in a separate vector |
+| 2022-11-01 | [-@sec-merge-disp]        | New subsection with example on looking up participant disposition for multiple clinical trials |
+| 2022-10-24 | [-@sec-merge-closest]     | New subsection on merging with closest matches |
+| 2022-10-22 | [-@sec-rbasics-condfun]   | New subsection on conditional function definitions |
+| 2022-10-22 | [-@sec-rbasics-lop]       | New section on logical operators |
+| 2022-10-22 | [-@sec-rbasics-sub]       | Added more subscripting examples |
+| 2022-10-17 | [-@sec-manip-fst]         | Added direct retrieval `fst` example where row numbers are looked up |
+| 2022-10-16 | [-@sec-fcreate-fst]       | Added `fst` package as alternative to `saveRDS` |
+| 2022-09-24 | Preface                   | Link to YouTube video |
+| 2022-09-21 | [-@sec-graphics;-@sec-rbasics-resources] | New links to Irizarry book |
+| 2022-09-09 | [-@sec-rbasics-resources] | New resources for learning R |
+| 2022-08-28 | [-@sec-rformat-css]       | New section on styling html with css |
+| 2022-08-24 | [-@sec-rbasics-formula]   | New section on stat model formula language |
+| 2022-08-19 | [-@sec-graphics]          | Added how to use `group=` in `ggplot2` |
+| 2022-08-15 | [-@sec-rbasics-objects]   | Added material about R object naming |
+| 2022-08-15 | Preface                   | Added links to resources for learning Quarto |
+| 2022-08-14 | [-@sec-case]              | Introduce the packages used (thanks to Tom Philips) |
+| 2022-07-17 | [-@sec-missing;-@sec-doverview] | Moved overall missing data summary to `missChk` |
+| 2022-07-11 | [-@sec-graphics]          | New introductory text and references copied from BBR Chapter 4 |
+| 2022-07-10 | [-@sec-case]              | New chapter with a case study of methods used in the book (thanks to Norm Matloff) |
+| 2022-07-08 | [-@sec-sstats-mult]       | New section on using data.table with summarization functions that return two-dimensional results |
+| 2022-07-07 | [-@sec-analysis;-@sec-analysis-third] | New chart about 1st, 2nd, 3rd order analysis; new section with example of 3rd order |
+| 2022-07-06 | [-@sec-long;-@sec-manip]  | Re-wrote intro to chapter, added LOCF example, added data table examples using %like% |
+| 2022-07-05 | [-@sec-manip-acr;-@sec-manip] | Renamed section and added more about removing columns; added link to `data.table` vignettes |
+| 2022-07-04 | [-@sec-manip-mult]        | New section on operations on multiple data tables |
+| 2022-07-03 | [-@sec-manip]             | New diagram to explain data tables |
+| 2022-06-30 | Preface                   | Better wording (thanks to Norm Matloff) |
+| 2022-06-28 |                           | Added Flow diagrams at the start of chapters (thanks to Norm Matloff) |
+| 2022-06-27 | [-@sec-rformat-html]      | New section on making html tables |
+| 2022-06-27 | [-@sec-rbasics-functions;-@sec-rbasics-objects;-@sec-rbasics-na;-@sec-rformat] | Added more basic R functions, arrays `NA`s, how to make `knitr` use plain text printing of objects such as data frame/tables |
+| 2022-06-26 | Preface                   | Clarified goals and audience (thanks to Norm Matloff) |
+| 2022-06-26 | | Fixed various typographical errors (thanks to Titus von der Malsburg) |
+| 2022-06-15 | | Published |             |
+
+:::

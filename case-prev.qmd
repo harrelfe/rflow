@@ -1,0 +1,402 @@
+# Case Study: The _Titanic_ {#sec-case}
+
+```{mermaid}
+%%| fig-width: 6
+flowchart LR
+imp[Import]
+rec[Recode]
+annot[Annotate]
+anal[Analysis]
+uni[Univariate<br>Descriptive<br>Analysis]
+ds[Data<br>Snapshot]
+biv[Descriptive<br>Association<br>Analysis]
+imp --> rec --> annot --> ds --> anal
+anal --> uni & biv
+```
+
+## Introduction
+
+This chapter provides a fairly complete case study involving data import, recoding, annotation using metadata from an external file, and descriptive analyses.  Many of the techniques used here are only briefly described, and more thorough descriptions are given in the chapters that follow.  Marginal notes refer to the pertinent later sections.  In addition to base R, we use a number of powerful R packages in this example, including `Hmisc` (a collection of utilities), `data.table` (a much better `data.frame`) and `ggplot2` (for beautiful graphics). The case study requires a bit more complex coding than we will see later, to deal with British currency notation in 1912.  Don't worry, coding will get easier for you with time after we build up with simpler examples in later chapters.
+
+## Data
+
+The [Regression Modeling Strategies](https://hbiostat.org/rms) text and course notes contains a detailed case study where survival patterns of passengers on the _Titanic_ were analyzed.  That analysis was based on `titanic3`, an older version of the data on 1309 passengers in which a large number of passengers had missing age.  [David Beltran del Rio](emailto:david_beltran_del_rio@ahm.honda.com) used updated data from [Encyclopedia Titanica](https://www.encyclopedia-titanica.org) to create a much improved dataset `titanic5` with far fewer missing ages.  The data are available at [hbiostat.org/data/repo/titanic5.xlsx](https://hbiostat.org/data/repo/titanic5.xlsx) as a 4-sheet Excel file, and the key analysis sheet for passengers is available at [hbiostat.org/data/repo/titanic5.csv](https://hbiostat.org/data/repo/titanic5.csv)
+
+## Importing the Data
+
+The `.xlsx` file passenger sheet's date of birth field was not handled correctly by either the R `readxl` package or the `openxlsx` package, even when reading the field as a plain text field.  Somehow Excel intercepted the way the field was stored in the sheet that made it impossible to read it correctly from the binary file.  The sheet had to be opened in Excel itself and saved as a `.csv` file for the dates not to be distorted.  The `.csv` file is imported below. [ @sec-fcreate-import]{.aside}  The `readxl` package is used only to read the metadata (data dictionary) sheet.
+
+Some non-numeric variables used blanks to denote missing.  We systematically change those blanks to true `NA`s.  The R `trimws` function is used to trim white space from the values so we do not need to distinguish `''` from `' '` and `'  '`.
+
+The `prType='html'` option makes the `Hmisc` and `rms` packages automatically render certain function output in html without needing need `results='asis'` in chunk headers.
+
+```{r import}
+# Load two packages
+require(Hmisc)
+require(data.table)
+options(prType='html') # make describe & contents print in html
+getRs('reptools.r')    # Loads reptools.r from Github
+hookaddcap()   # make knitr call a function at the end of each chunk
+               # to automatically add to list of figures
+
+# readxl does not handle URLs so download the Excel file (for metadata)
+file <- tempfile()
+download.file('https://hbiostat.org/data/repo/titanic5.xlsx', 
+              destfile=file)
+t5 <- csv.get('https://hbiostat.org/data/repo/titanic5.csv',
+             lowernames=TRUE, allow='_')
+# Convert blanks in character fields to NAs
+g <- function(x)
+  if(is.character(x)) ifelse(trimws(x) == '', NA, x) else x
+t5 <- lapply(t5, g)
+# Change to a data table
+setDT(t5)
+# Copy t5 into d so we can save original data t5 for later
+# With just d <- t5, d and t5 would occupy the same memory
+# and changes to data.table d would cause t5 to change
+d <- copy(t5)
+# Rename dob_clean to dob
+setnames(d, 'dob_clean', 'dob')
+head(d)
+# Read metadata
+dd <- readxl::read_xlsx(file, sheet='Titanic5_metadata')
+# Keep only the regular part of the dictionary
+setDT(dd)
+dd <- dd[, .(Variable, Description)]
+# Change names to lower case and replace blank and [] with . as
+# csv.get did.  makeNames is in Hmisc
+dd[, Variable := makeNames(tolower(Variable), allow='_')]
+dd[Variable == 'dob_clean', Variable := 'dob']
+# Print variable names and descriptions pasted together to save
+# horizontal space
+# \t is the tab character
+# Use writeLines instead of ordinary print to omit row numbers and
+# respect \t
+dd[, writeLines(paste0(Variable, '\t: ', Description))]
+```
+
+## Recoding Data
+
+Start by recoding date of birth from m/d/yyyy format to become a standard R date in yyyy-mm-dd format.  [ @sec-manip ]{.aside}
+
+
+```{r}
+d[, dob := as.Date(dob, '%m/%d/%Y')]
+```
+
+Check whether `dob` is missing if and only if the original integer `age` is missing.  `is.na` is the R function that returns `TRUE/FALSE` if a variable's value is missing (`NA`) or not.  [ @sec-rbasics]{.aside}
+
+```{r}
+d[, table(is.na(age), is.na(dob))]
+```
+
+Not quite.  `dob` is missing more often than `age`.  When both are non-missing, check that they are consistent.  Stratify by whether/how birth month or day were imputed.
+
+```{r}
+#| label: fig-case-hist
+#| fig-cap: "Histogram of difference in two ages, stratified by imputation type"
+#| fig-height: 3
+#| fig-width: 5
+# Compute age in days as of the date of the disaster, then convert to
+# fractional years
+# as.numeric makes the result a standard numeric variable instead of a
+# "difftime" variable
+d[, age := as.numeric((as.Date('1912-04-15') - dob) / 365.25)]
+ggplot(d, aes(x = age - age_f)) + geom_histogram() +
+  facet_wrap(~ age_f_code)
+```
+
+Agreement is reasonable.  A spike occurs for those passengers who had to have their birth month and day were imputed to Jun 30.  Code C is for complete date of birth, and D corresponds to unknown birth day imputed to 15.  For passengers with `dob` present use our newly computed `age`, and for others use the original integer `age`.
+
+```{r}
+d[, age := ifelse(is.na(age), age_f, age)]
+# Remove old age variables
+d[, .q(age_f, age_f_code) := NULL]     # .q is in Hmisc
+```
+
+The _Titanic_ ticket purchase price needs to undergo some moderately complex recoding to convert from British pounds, shillings, etc. to pounds + fraction of a pound.  The prices are in the format £$x$ $y$s $z$d for $x$ pounds, $y$ shillings ($\frac{1}{20}$ pound) and $z$ pennies ($\frac{1}{12}$ shilling).  We need to compute pounds in decimals which is $x + \frac{y}{20} + \frac{z}{12 \times 20}$. See [here](https://www.nottingham.ac.uk/manuscriptsandspecialcollections/researchguidance/weightsandmeasures/money.aspx) for more information.
+
+Start by splitting `price` with a space as field delimiter.  The R `strsplit` function splits each observation's string on the specified delimiter and creates a `list` with length equal to the number of observations.  Each element of the `list` is a vector containing all the sub-fields found during splitting.  To keep our R global environment from being cluttered with intermediate variables, and to possibly re-use code later, package the whole conversion in a function called `pounds2dec`.  To avoid repetitive coding within `pounds2dec` a service function `g` is written.  An argument `check` in `pounds2dec` causes various intermediate results to be printed for checking data and logic.  The `Hmisc` package `prn` function is used to print the code producing intermediate output along with the output.  The conversion process allows pounds, shillings, or pennies notation to be out of order within the price character string.
+
+```{r}
+pounds2dec <- function(price, check=FALSE) {
+  p <- strsplit(price, ' ')
+  if(check) prn(table(sapply(p, length)), 'Distribution of number of fields found')
+  # Get 1st, 2nd, 3rd fields (pad with blanks)
+  p1 <- sapply(p, function(x) x[1])
+  p2 <- sapply(p, function(x) if(length(x) < 2) ' ' else x[2])
+  p3 <- sapply(p, function(x) if(length(x) < 3) ' ' else x[3])
+  if(check) {
+    prn(table(p1), 'Frequencies of occurrence of all 1st field values')
+    prn(table(p2), '2nd field')
+    prn(table(p3), '3rd field')
+    prn(table(substring(p1, 1, 1)),       'First letter of 1st field')
+    prn(table(substring(p2, nchar(p2))),  'Last letter of 2nd field')
+    prn(table(substring(p3, nchar(p3))),  'Last letter of 3rd field')
+  }
+  # Put the 3 fields into a matrix for easy addressing
+  ps   <- cbind(p1, p2, p3)
+  pdec <- rep(0, length(p1))
+  # Function to return 0 if a specific currency symbol r is not
+  # found in x, otherwise removes the symbol and returns the
+  # remaining characters as numeric
+  # grepl returns TRUE if r is inside x, FALSE otherwise
+  # gsub replaces character r with "nothing" (''), i.e., removes r
+  g <- function(x, r) ifelse(grepl(r, x),
+                             as.numeric(gsub(r, '', x)), 0)
+  for(j in 1 : 3)  {
+    pj   <- ps[, j]    # jth sub-field of price for all passengers
+    pdec <- pdec + g(pj, '£') + g(pj, 's') / 20 + g(pj, 'd') / (12 * 20)
+  }
+  # If original price is NA or is either empty or blank
+  # make sure result is NA
+  pdec[is.na(price) | trimws(price) == ''] <- NA
+  if(check) print(data.table(price, pdec)[1:10])
+  pdec   # last object named in function is the returned value
+}
+```
+
+Apply the function to do the conversion, replacing the `price` variable in the data table.
+
+```{r}
+d[, price := pounds2dec(price, check=TRUE)]
+```
+
+The printed output resulting from `check=TRUE` verifies our data and logic.
+
+## Annotate Dataset
+
+Next bring the external data dictionary into the main data table.  The data dictionary did not define units of measurement so we will later add those manually.  We start by just adding variable labels to the variables after checking that all the variables in the data have variable names in the data dictionary.  We override the label for `age` that was constructed from the variables from which it was derived, override the labels for `sex`, `price` and `dob`, and add some units of measurement.  The data dictionary is displayed in html format using the `Hmisc` package `contents` function because of the earlier command `options(prType='html')`. [ @sec-fcreate-import]{.aside}  
+
+```{r}
+all(names(d) %in% dd$Variable)    # dd$Variable extracts column "Variable" from dd
+labs          <- dd$Description
+names(labs)   <- dd$Variable
+labs['age']   <- 'Age'            # named vector can be addressed with names
+labs['price'] <- 'Ticket price'   # instead of just integer subscripts
+labs['dob']   <- 'Date of birth'
+labs['sex']   <- 'Sex'
+d <- upData(d, labels=labs,
+            units=c(age='years', price='£'))
+contents(d)
+```
+
+The data dictionary can be displayed in the `RStudio` `Viewer` window using the `reptools` repository function `htmlView` as shown below. When running commands in the R or `RStudio` console or running them one-at-a-time from the `RStudio` script editor (very useful for debugging), you can just type `contents(d)` when `options(prType='html')` is in effect to display output in the `Viewer`. The same goes for displaying output of `describe()`.[ @sec-fcreate-dd]{.aside}
+
+```{r eval=FALSE}
+getRs('reptools.r')    # Loads reptools.r from Github
+htmlView(contents(d))
+```
+
+## Recoding and Annotation in One Step
+
+Instead of using external metadata and a sequence of recoding steps, take advantage of `pounds2dec` existing as a self-contained function and use the `Hmisc` `upData` function to do everything in one step.  Go back to the original imported data table `t5`.  We won't bother to provide labels to all the variables; just the ones we'll analyze later, and date of birth.
+
+```{r}
+d <- copy(t5)
+d <- upData(d,
+  rename = .q(dob_clean = dob),
+  dob    = as.Date(dob, '%m/%d/%Y'),
+  age    = as.numeric((as.Date('1912-04-15') - dob) / 365.25),
+  age    = ifelse(is.na(age), age_f, age),
+  price  = pounds2dec(price),
+  drop   = .q(age_f, age_f_code),
+  labels = .q(age      = Age,
+              price    = 'Ticket Price',
+              dob      = 'Date of Birth',
+              sex      = Sex,
+              class    = Class,
+              survived = Survived),
+  units = .q(age = years, price = '£') )
+```
+
+## Missing Data
+
+The `reptools` `missChk` function is used to create a tabbed report summarizing extent and patterns of `NA`s.  The `Clustering of missingness` tab shows that boat/body bag and `job` were mainly missing for the same passengers.  In the `NA combinations` tab, hover over the dots to see a great deal of information.
+
+```{r results='asis'}
+missChk(d)
+```
+
+## Data Overview
+
+The `reptools`  `dataOverview` function provides a statistical snapshot of the variables in the data table. [ @sec-doverview-data]{.aside}
+
+```{r results='asis'}
+dataOverview(d)
+```
+
+## Basic Descriptive Statistics
+
+## Univariate and Bivariate Descriptions
+
+The first line of defense is the `Hmisc` `describe` function, where the result is rendered as html.  This allows inclusion of micro-graphics which are "spike histograms" providing a high-resolution display that can reveal data errors, bimodality, digit preference, and other phenomena. [ @sec-descript]{.aside}
+
+```{r}
+des <- describe(d)
+des
+```
+
+[The spike histogram for `name_id` is uneven because of rounding the IDs, which are not consecutive integers.]{.aside} 
+
+`describe` also has a `plot` method.  For continuous variables the new information it adds to the small spike histograms is color coding for the number of missing values, and a detailed overall statistical summary.  For categorical variables frequencies are displayed using a dot chart.  The plots are rendered as interactive graphics using `plotly`.  Hover over points to see more details.
+
+```{r}
+#| label: fig-case-cat
+#| fig-cap: "Categorical variable proportions for `titanic5`"
+#| fig-height: 3.5
+#| fig-width: 6
+options(grType='plotly')   # makes plot() use plotly
+p <- plot(des)   # stores two plot objects in p
+p$Categorical    # picks off the first one
+```
+
+```{r}
+#| label: fig-case-cont
+#| fig-cap: "Continuous variable spike histograms for `titanic5` with details as hover text.  Hover over the leftmost spike to see a detailed statistical summary for the variable."
+#| fig-scap: "Continuous variable spike histograms for `titanic5`"
+#| fig-height: 3
+#| fig-width: 6
+p$Continuous
+```
+
+### Bivariate Descriptions
+
+Let's describe two-way relationships between some of the passenger characteristics.  In particular we'd like to know the age and ticket price distribution by sex and passenger class.  But start with a simple dot chart showing the proportion of males by passenger class. Plots are interactive, rendered by `plotly`. [ @sec-analysis-table1]{.aside}
+
+```{r}
+#| label: fig-case-sex
+#| fig-cap: "Dot plot of proportion of males by class using `Hmisc::summaryM`"
+#| fig-height: 1.25
+#| fig-width: 3.75
+plot(summaryM(sex ~ class, data=d))
+```
+
+Now draw extended box plots.  Hovering over elements of the boxes reveals their meaning.  
+
+```{r}
+#| label: fig-case-ebp1
+#| fig-cap: "Extended box plots showing age and ticket price distributions by sex"
+#| fig-height: 2.5
+#| fig-width: 6
+# Note the use of variable labels and units
+plot(summaryM(age + price ~ sex, data=d))
+```
+
+```{r}
+#| label: fig-case-ebp2
+#| fig-cap: "Extended box plots of age and price by class"
+#| fig-height: 3.75
+#| fig-width: 6
+plot(summaryM(age + price ~ class, data=d))
+```
+
+First-class passengers are older.  They have accumulated more money to be able to purchase the high-priced tickets.  There is substantial variation in ticket prices only for first-class passengers, and a few first-class passengers paid less than a few third-class passengers.
+
+Make a scatterplot of age vs. ticket price, and add a nonparametric smoother to the plot.  The `ggplot2` package is used.  `class` is treated as a categorical variable using `factor(class)`.  `price` is plotted on a square root scale to make lower ranges more visible.  Labels and units are extracted from the data table so that we can use them in the plot. [ @sec-graphics]{.aside}
+
+```{r}
+#| label: fig-case-scat
+#| fig-cap: "Scatter plot of ticket price vs. age with class identified using color"
+#| fig-scap: "Scatter plot of ticket price vs. age"
+# ggplot2 complained about class having a label, so we create a new
+# data.table where it doesn't
+w <- copy(d)
+w[, class := as.integer(class)]
+# Extract a named vector of var. labels specially formatting units
+vlabs <- sapply(d, function(x) label(x, plot=TRUE, html=FALSE))
+# vlab looks up in vlabs without requiring quotes
+vlab  <- function(x) vlabs[[as.character(substitute(x))]]
+ggplot(w, aes(x=age, y=price, color=factor(class))) +
+  geom_point() + geom_smooth() +
+  scale_y_continuous(trans='sqrt') +
+  guides(color=guide_legend(title='Class')) +
+  xlab(vlab(age)) + ylab(vlab(price))
+```
+
+## Associations of Passenger Characteristics With Survival
+
+In the _Titanic_ disaster, survival is synonymous with getting chosen for a lifeboat.  Detailed descriptive and formal analysis of such associations appeared in [RMS](https://hbiostat.org/rms) using the older `titanic3` dataset, which had a good many missing ages, and the ticket price was not converted to analyzable form so it was ignored.  Here we update the descriptive analyses using `titanic5`.  One of the key new questions relates to passenger class and ticket price.  It was demonstrated with `titanic3` that the chance of surviving declined steadily with increasing passenger class.  Third class passengers were situated in the ship's hold, making the trip to the deck to attempt to get on a lifeboat more difficult.  Let's see if the ticket price contains further information about survival tendencies once we control for passenger class. [ @sec-analysis]{.aside}
+
+Start by estimating the probability of survival as a function of inherently discrete variables sex and passenger class. Separately we compute proportions surviving by sex, then by class, then by both, using basic `data.table` package operations.  Then the `data.table` `cube` function is used to do all of that at once. [ @sec-sstats]{.aside}
+
+```{r}
+# Create a function that drops NAs when computing the mean
+# Note that the mean of a 0/1 variable is the proportion of 1s
+mn <- function(x) mean(x, na.rm=TRUE)
+# Create a function that counts the number of non-NA values
+Nna <- function(x) sum(! is.na(x))
+# This is for generality; there are no NAs in these examples
+d[, .(Proportion=mn(survived), N=Nna(survived)), by=sex]    # .N= # obs in by group
+d[, .(Proportion=mn(survived), N=Nna(survived)), by=class]
+d[, .(Proportion=mn(survived), N=Nna(survived)), by=.(sex,class)]
+cube(d, .(Proportion=mn(survived), N=Nna(survived)), by=.q(sex, class), id=TRUE)
+```
+
+This can be done more cleanly if we create a function that computes both the proportion surviving and the number of non-`NA`s in survival status.
+
+```{r}
+g <- function(x) list(Proportion=mean(x, na.rm=TRUE), N=sum(! is.na(x)))
+d[, g(survived), by=sex]
+d[, g(survived), by=class]
+d[, g(survived), by=.(sex, class)]
+cube(d, g(survived), by=.q(sex, class))
+```
+
+The `reptools` repository's `movStats` function can also compute summaries for discrete predictors as can a host of other functions.
+
+```{r}
+getRs('movStats.r')
+movStats(survived ~ sex,   discrete=TRUE, data=d)
+movStats(survived ~ class, discrete=TRUE, data=d)
+movStats(survived ~ sex + class, discrete=TRUE, data=d)
+```
+
+Now we use `movStats` for what it is mainly intended to do: estimate the relationship between a continuous X and a response Y, without assuming a functional form.  `movStats` does that by using overlapping moving windows, which is a quite general approach that can estimate means (which are proportions when Y=0/1), medians and other quantiles, measures of variability, censored survival estimates, and any other quantities for which the user provides a basic estimation function.   Moving window estimates, which by default include 15 observations on either side of the target point, are somewhat noisy, but passing the moving statistics through a second-stage nonparametric smoother results in smooth estimates.
+
+`movStats` can also estimate smooth relationships using parametric, semiparametric, and non-parametric regression directly on the raw data, for the case where means or proportions are involved.  While doing so we also stratify on discrete passenger characteristics. Start by only computing only moving proportions, which are estimates of the probability of survival. [ @sec-analysis-assoc]{.aside}
+
+```{r results='asis'}
+#| label: fig-case-mprice
+#| fig-cap: "Moving proportion survived vs. price by class"
+# base=9.5 uses more smoothing than the default
+# pr='margin' makes movStats put information about moving windows
+# in the right margin, using Quarto markup
+z <- movStats(survived ~ price + class, bass=9.5, data=d, pr='margin')
+ggplot(z, aes(x=price, y=`Moving Proportion`, col=factor(class))) +
+  geom_line() + guides(color=guide_legend(title='Class')) +
+  xlab(vlab(price)) + ylab('Survival')
+```
+
+It appears that the chance of getting on a lifeboat increased with increasing ticket price, for 1st and 2nd class.
+
+In the next example we stratify by two variables, and in addition to the moving statistic we compute _loess_ nonparametric estimates, and also use the gold standard smoother for Y=0/1: binary logistic regression (LR) without assuming linearity in the continuous predictor (age).  A restricted cubic spline with 5 default knot locations is used to model the age effect, and the LR fits are run separately by the six age-class combinations.  `melt=TRUE` tells `movStats` to "melt" the data table so that multiple types of estimates become multiple observations.  This makes it easy to handle in `ggplot2`.
+
+```{r results='asis'}
+#| label: fig-case-mage
+#| fig-cap: "Moving proportion survived vs. age by sex and class, along with binary logistic cubic spline regression and _loess_ estimates."
+#| fig-scap: "Moving proportion survived plus LR and _loess_ estimates"
+z <- movStats(survived ~ age + sex + class, bass=9.5,
+              lrm=TRUE, loess=TRUE,
+              data=d, melt=TRUE, pr='margin')
+ggplot(z, aes(x=age, y=survived, col=class, linetype=Type)) +
+  geom_line() + facet_wrap(~ sex) +
+  xlab(vlab(age)) + ylab('Survival')
+```
+
+
+Repeat the last plot using a nonparametric smoother built-in to `ggplot2`, which also computes approximate 0.95 confidence bands. [ @sec-analysis-table1]{.aside}
+
+```{r}
+#| label: fig-case-npage
+#| fig-cap: "Nonparametric smoother for survival vs. age by class and sex"
+ggplot(d, aes(x=age, y=survived, col=factor(class))) + geom_smooth() +
+  facet_wrap(~ sex) +
+  ylim(0, 1) + xlab(vlab(age)) + ylab('Survival') +
+  guides(color=guide_legend(title='Class'))
+```
+
+
+```{r echo=FALSE}
+saveCap('02')
+```

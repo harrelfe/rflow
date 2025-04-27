@@ -1,0 +1,35 @@
+# Data Checking
+
+```{mermaid}
+flowchart LR
+Ran[Range Checks]
+Con["Cross-Variable Consistency"]
+Rep[Checking and Reporting<br>With Minimal Coding] --> Li[Listings] & S[Summaries]
+Ran --> Rep
+Con --> Rep
+```
+
+Besides useful descriptive statistics exemplified below, it is important to flag suspicious values in an automated way.  Since checking multiple columns may involve a large number of R expressions to run to classify observations as suspicious, let's automate the process somewhat by specifying a vector of expressions.  Then we have R "compute on the language" to parse the expressions for finding observations to flag, and for printing.  This is done by the `dataChk` function in `qreport`.
+
+The following code results in separate output for each individual data check, in separate `Quarto` tabs.  The dataset does not have a subject ID variable so let's create one, and also add a `site` variable to print.  Arguments are specified to `dataChk` so that no tab is produced for a condition that never occurred in the data, and a tab is produced showing all data flags, sorted by `id` and `site`.
+
+```{r dcheck,results='asis'}
+require(Hmisc)
+require(data.table)
+require(qreport)
+getHdata(stressEcho)
+w <- stressEcho
+setDT(w)
+w[, id := 1 : .N]
+set.seed(1)
+w[, site := sample(LETTERS[1:6], .N, replace=TRUE)]
+checks <- expression(
+  age < 30 | age > 90,
+  gender == 'female' & maxhr > 170,
+  baseEF %between% c(72, 77),
+  baseEF > 77,
+  baseEF > 99,
+  sbp > 250 & maxhr < 160)
+dataChk(w, checks, id=c('id', 'site'),
+        omit0=TRUE, byid=TRUE, html=TRUE)
+```

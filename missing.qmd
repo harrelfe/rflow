@@ -1,0 +1,32 @@
+# Missing Data {#sec-missing}
+
+```{mermaid}
+flowchart LR
+Ext[Extent of NAs] --> PV[Per Variable] & PO[Per Observation]
+P[Patterns] --> Cl[Clustering of Missingness]
+P --> Seq[Sequential Exclusions]
+P --> Rel[Extent of Association<br>Between Values of<br>Non-missing Variables<br>and Number of Variables<br>Missing per Observation]
+```
+
+It is extremely important to understand the extent and patterns of missing data, starting with charting the marginal fraction of observations with `NA`s for each variable.  The occurrence of simultaneous missings on multiple variables makes multiple imputation and analysis more difficult, so it is important to correlate and quantify missingness in variables multiple ways.  The `Hmisc` package [`naclus`](https://www.rdocumentation.org/packages/Hmisc/versions/4.7-0/topics/varclus), `naplot`, and `combplotp` functions provide a number of graphics along these lines.  
+
+The `missChk` function in `qreport` uses these functions and others to produces a fairly comprehensive missingness report, placing each output in its own tab.  When the number of variables containing any `NA` is small, the `Hmisc` `na.pattern` function's simple output is by default all that is shown, and only one sentence is produced if there are no variables with `NA`s.  Here is an example using again the the 1000-patient `support` dataset on `hbiostat.org/data`, retrieved with the `Hmisc` function `getHdata`.  Variables with no missing values are excluded from the report (except for being used in the predictive model at the end) to save space.  The chart in the next-to-last tab is interactive.  We also use the `prednmiss` options to run an ordinal logistic regression model to predict the number of missing variables from the values of all the non-missing variables, omitting the predictor `dzclass` because it is redundant with the variable `dzgroup`.  The results of this analysis are in the last tab.   
+
+```{r misscheck,results='asis'}
+require(Hmisc)
+require(data.table)
+require(qreport)  # Define dataChk, missChk, maketabs, ...
+getHdata(support)
+# Make it into a data table
+setDT(support)
+# Remove one variable we'll not be using
+support[, adlsc := NULL]
+missChk(support, prednmiss=TRUE, omitpred = ~ dzclass)
+```
+
+The likelihood ratio $\chi^2$ test in the last tab is a test of whether any of a subject's non-missing variable values are associated with the number of missing variables on the subject.  It shows strong evidence for such associations.  From the dot chart we see that the strongest predictors of missing baseline variables are time to death/censoring and disease group.  This may be due to patients on ventilators not being able to provide as much baseline information such as activities of daily living (`adlp`), and being on a ventilator is a strong prognostic sign.   There is a possible sex effect worth investigating.
+
+```{r echo=FALSE}
+saveCap('06')
+```
+

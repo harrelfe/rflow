@@ -1,0 +1,7 @@
+# List of Figures
+
+```{r echo=FALSE}
+require(qreport)
+printCap(book=TRUE)
+```
+

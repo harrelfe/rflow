@@ -1,0 +1,465 @@
+# Descriptive Statistics {#sec-descript}
+
+```{mermaid}
+flowchart LR
+des[describe Function] --> ss[Statistical Summary] & dsh[Spike Histogram]
+cat[Categorical Variables] --> dot[Frequency Dot Charts]
+con[Continuous Variables] --> sh[Spike Histograms] & ebp[Extended Box Plots] & ecdf[Empirical Cumulative Distributions]
+lon[Longitudinal Data] --> sg[Spaghetti Graphs] & rc[Representative Curves] & ol[Ordinal Transitions<br>and States] & mlong[Multiple<br>Longitudinal<br>Variables]
+ev[Events] --> mc[Multi-category Event Charts] & tl[Timelines]
+rel[Relationships] --> cm[Graphical Correlation Matrix] & vc[Variable Clustering]
+```
+
+## Simple Descriptive Statistics
+
+The `Hmisc` `describe` function is my main tool for getting initial descriptive statistics and quality controlling the data in a univariate fashion.  Here is an example.  The `Info` index is a measure of the information content in a numeric variable relative to the information in a continuous numeric variable with no ties.  A very low value of `Info` will occur when a highly imbalanced variable is binary.  Clicking on `Glossary` on the right will pop up a browser window with a more in-depth glossary of terms used in `Hmisc` package output.  It links to `hbiostat.org/R/glossary.html` which you can link  from your reports that use `Hmisc`.[`Info` comes from the [approximate formula](http://hbiostat.org/bib/r2.html) for the variance of a log odds ratio for a proportional odds model/Wilcoxon test, due to Whitehead.<br><a href="https://hbiostat.org/R/glossary.html" target="popup" onclick="window.open('https://hbiostat.org/R/glossary.html#describe', 'popup', 'width=450,height=600'); return false;"><small>Glossary</small></a>]{.aside}
+
+`Gmd` in the output stands for Gini's mean difference---the mean absolute difference over all possible pairs of different observations.  It is a very interpretable measure of dispersion that is more robust than the standard deviation.
+
+```{r setup}
+require(Hmisc)
+options(prType='html')   # have certain Hmisc functions render in html
+require(qreport)
+hookaddcap()   # make knitr call a function at the end of each chunk
+               # to try to automatically add to list of figure
+
+getHdata(stressEcho)
+d <- stressEcho
+```
+
+::: {.callout-note .column-page collapse="true"}
+# `describe` Output
+```{r desc}
+# The callout was typed manually; could have run
+#  makecnote(~ describe(d), wide=TRUE)
+w <- describe(d)
+w
+```
+:::
+
+
+```{r eval=FALSE}
+# To create a separate browser window:
+cat(html(w), file='desc.html')
+browseURL('desc.html', browser='firefox -new-window')
+```
+
+Better, whether using `RStudio` or not:
+
+```{r eval=FALSE}
+htmlView(w, contents(d))  # or htmlView(describe(d1), describe(d2), ...)
+# Use htmlViewx to use an external browser window (see above)
+```
+
+Or just type `contents(d)` with `options(prType='html')` in effect.  This will launch a browser window if you are not in `RStudio`.
+
+Nicer output from `describe` is obtained by separating categorical and continuous variables.  The special `print` method used here, with `options(prType='html')` in effect, creates interactive sparklines so that variable values and frequencies can be looked up in spike histograms without using `plotly` graphics but using more basic `javascript`.  Hover over the lowest and highest points on the histograms to see the 5 most extreme data values.  Note that to initialize `javascript` `jQuery` dependencies we must include `sparkline::sparkline(0)` somewhere in the report before creating the first sparkline output.  The `qreport` `maketabs` function is helpful here.
+
+```{r results='asis'}
+sparkline::sparkline(0)
+maketabs(print(w, 'both'), wide=TRUE, initblank=TRUE)
+```
+
+There is also a `plot` method for `describe` output.  It produces two graphics objects: one for categorical variables and one for continuous variables.  The default is to use `ggplot2` to produce static graphics.  The result can be fed directly into `maketabs` described earlier.  `results='asis'` must appear in the chunk header.
+
+```{r pdesc,results='asis'}
+cap <- 'Regular `plot(describe)` output'
+maketabs(plot(w, bvspace=2.5), basecap=cap, cap=1)
+```
+
+By specifying `grType` option you can instead get `plotly` graphics that use hover text to show more information, especially when hovering over the leftmost dot or tick mark for a variable.
+
+```{r pldesc,results='asis'}
+options(grType='plotly')
+cap <- '`plotly` `plot(describe)` output'
+maketabs(plot(w, bvspace=2.5), wide=TRUE, cap=1, basecap=cap)
+```
+
+See [this](http://hbiostat.org/R/Hmisc/examples.html) for other `Hmisc` functions for descriptive graphics and tables, especially for stratified descriptive statistics for categorical variables.  The `summaryM` function prints a tabular summary of a mix of continuous and categorical variables.  Here is an example where stratification is by history of myocardial infarction (MI).
+
+```{r summaryM,results='asis'}
+require(data.table)
+setDT(d)   # turn d into a data table
+# tables() with no arguments will give a concise summary of all active data tables
+w <- d
+w[, hxofMI := factor(hxofMI, 0 : 1, c('No history of MI', 'History of MI'))]
+vars <- setdiff(names(d), 'hxofMI')
+form <- as.formula(paste(paste(vars, collapse='+'), '~ hxofMI'))
+print(form)
+s <- summaryM(form, data=d, test=TRUE)
+# Note: there is a problem with the width of the categorical variable
+# plot.  Neither fig.size() nor options(plotlyauto=FALSE) fixed it.
+maketabs(
+  ` `                         ~ ` `,   # empty tab
+  `Table 1`                   ~ print(s, exclude1=TRUE, npct='both', digits=3, middle.bold=TRUE),
+  `Categorical Variable Plot` ~ plot(s, which='categorical', vars=1 : 4) +
+                                caption('`summaryM` plots') +
+                                fig.size(width=6),
+  `Continuous Variable Plot`  ~ plot(s, which='continuous',  vars=1 : 4),
+  wide=TRUE)
+```
+
+### Descriptive Graphics for Continuous Variables {#sec-descript-con}
+
+Semi-interactive stratified spike histograms are also useful descriptive plots.  These plots also contain a superset of the quantiles used in box plots, and the legend is clickable, allowing any of the statistical summaries to be turned off.
+
+```{r spikeh}
+#| label: fig-spikeh
+#| fig-cap: Spike histograms of heart rate stratified by ECG category
+#| fig-height: 2.5
+d[, histboxp(x=maxhr, group=ecg, bins=200)]
+```
+
+An advantage of spike histograms over regular histograms is that when no distinct values are very close together the plot shows actual data values instead of necessarily binning everything.  [An exception is when the `Hmisc` package functions produce sparklines in tables, where uniform binning is required.]{.aside}
+
+The `Hmisc` `spikecomp` function computes segment endpoints needed to construct a spike histogram.  This makes it easy to draw spike histograms with `ggplot2`.  Here histograms are annotated with quartiles.
+
+```{r}
+#| label: fig-descript-spike-gg
+#| fig-cap: Spike histograms by ECG category, with quartiles, drawn using `ggplot2`
+#| fig-height: 1.25
+g <- function(x) {
+  z <- quantile(x, (1:3)/4, na.rm=TRUE)
+  list(x=z, y1=-0.07, y2=-0.025)   #<1>
+}
+s  <- d[, spikecomp(maxhr, tresult='segments'), by=ecg]
+qu <- d[, g(maxhr), by=ecg]
+ggplot(s) + geom_segment(aes(x=x, y=y1, xend=x, yend=y2, alpha=I(0.3))) +
+  geom_segment(aes(x=x, y=y1, xend=x, yend=y2, col=I('red')), data=qu) +
+  scale_y_continuous(breaks=NULL, labels=NULL) + ylab('') +
+  facet_wrap(~ ecg) + xlab(hlab(maxhr)) #<2>
+```
+1. `spikecomp` scales the $y$-axis from 0-1 for the spikes, so `y1` and `y2` are set to make small segments under the spikes.
+2. The $x$-axis label was constructed from the `label` and `units` of `maxhr` by the `Hmisc` `hlab` function, which looked for a data table named `d` for this information.
+
+Empirical cumulative distribution functions (ECDFs) also provide high-resolution data displays, and allow direct reading of quantiles.  A large advantage of ECDFs is that they do not use binning.  The `Hmisc` `ecdfSteps` function computes coordinates of the steps that make up ECDFs.  This is recommended over built-in methods such as in `ggplot2` because with `ecdfSteps` you can control how far to horizontally extend a plot at the extremes.  The default is to extend the function horizontally at its 0.0 and 1.0 values to $\frac{1}{20}^\text{th}$ of the data range on either side.  For reference medians are added.
+
+```{r ecdf}
+#| label: fig-descript-ecdf
+#| fig-cap: Empirical CDFs for maximum heart rate by ECG category, wth medians as vertical lines
+#| fig-height: 3.75
+g <- function(x) {
+  m <- as.double(median(x, na.rm=TRUE))  #<1>
+  list(x=m, y1=0, y2=0.5)
+}
+w <- d[, ecdfSteps(maxhr), by=ecg]
+meds <- d[, g(maxhr), by=ecg]
+ggplot(w, aes(x, y, color=ecg)) + geom_step() +
+  geom_segment(aes(x=x, y=y1, xend=x, yend=y2, alpha=I(0.3)), data=meds) +
+  xlab(hlab(maxhr)) + ylab('')
+```
+1. `data.table` requires consistency in the numeric storage mode.  Since `median` can return an integer we store its result consistently in double precision floating point.
+
+## Longitudinal Continuous Y
+
+For a continuous response variable measured longitudinally, two of the ways to display the data are
+
+* "spaghetti plots" showing all data for all individual subjects, if the number of subjects is not very large
+* finding clusters of individual subject curve characteristics and plotting a random sample of raw data curves within each cluster if the sample size is large
+
+The `Hmisc` package [`curveRep`](https://www.rdocumentation.org/packages/Hmisc/versions/4.7-0/topics/curveRep) function facilitates the latter approach using representative curves.  It considers per-subject sample sizes and measurement time gaps as these will not only limit how we look at the data but may be informative, e.g., subjects who are failing may start to get more frequent measurements.
+
+To demonstrate we simulate data in the following way.
+
+* Simulate 200 subjects (curves) with per-curve sample sizes ranging from 1 to 10
+* Make curves with odd-numbered IDs have a measurement time distribution that is random uniform [0,1] and those with even-numbered IDs have a time distribution that is half as wide but still centered at 0.5.  Shift y values higher with increasing IDs
+* Make 1/3 of subjects have a flat trajectory, 1/3 linear and not flat, and 1/3 quadratic
+
+Request `curveRep` to cluster the 200 curves on the following characteristics:
+
+* `kn=3` sample size groups (`curveRep` actually used one more than this)
+* `kxdist=2` time point distribution groups based here on the earliest and latest measurement times and the longest gap between any two measurements within a subject
+* `k=4` trajectory clusters.  Trajectories are determined by `loess`-smoothing each subject's curve and linearly interpolating the estimates to the same evenly-spaced grid of time points, then clustering on these 10 y-estimates.  This captures intercepts, slopes, and shapes.
+
+All subjects within each cluster are shown; we didn't need to take random samples for 200 subjects.  Results for the 4 per-curve sample size groups are placed in separate tabs.
+
+```{r long,results='asis'}
+set.seed(1)
+N <- 200
+nc <- sample(1:10, N, TRUE)
+id <- rep(1:N, nc)
+x  <- y <- id
+# Solve for coefficients of quadratic function such that it agrees with 
+# the linear function at x=0.25, 0.75 and is lower by -delta at x=0.5
+delta    <- -3
+cof      <- list(c(0, 0, 0), c(0, 10, 0), c(delta, 10, -2 * delta / (2 * 0.25^2)))
+
+for(i in 1 : N) {
+  x[id==i] <- if(i %% 2) runif(nc[i]) else runif(nc[i], c(.25, .75))
+  shape    <- sample(1:3, 1)
+  xc       <- x[id == i] - 0.5
+  k        <- cof[[shape]]
+  y[id == i] <- i/20 + k[1] + k[2] * xc + k[3] * xc ^ 2 +
+                    runif(nc[i], -2.5, 2.5)
+}
+require(cluster)
+w   <- curveRep(x, y, id, kn=3, kxdist=2, k=4, p=10)
+gg  <- vector('list', 4)
+nam <- rep('', 4)
+for(i in 1 : 4) {
+  z <- plot(w, i, method='data')  # method='data' available in Hmisc 4.7-1
+  z <- transform(z,
+                 distribution = paste('Time Distribution:', distribution),
+                 cluster      = paste('Trajectory Cluster:', cluster))
+  gg[[i]] <-
+    if(i == 1)
+      ggplot(z, aes(x, y, color=curve)) + geom_point() +
+        facet_grid(distribution ~ cluster) +
+        theme(legend.position='none')
+  else
+      ggplot(z, aes(x, y, color=curve)) + geom_line() +
+        facet_grid(distribution ~ cluster) +
+        theme(legend.position='none')
+  nam[i] <- z$ninterval[1]
+}
+names(gg) <- nam
+maketabs(gg, basecap='Representative curves determined by `curveRep` stratified by per-subject sample size ranges', cap=1)
+```
+
+## Longitudinal Ordinal Y
+
+Continuous longitudinal Y may be analyzed flexibly [using semiparametric models](https://hbiostat.org/proj/covid19) while being described using representative curves as just discussed.  Now suppose that Y is discrete.  There are three primary ways of describing such data graphically.
+
+1. Show event occurrences/trajectories for a random sample of subjects (`Hmisc::multEventChart`) [Thanks to Lucy D'Agostino McGowan for writing most of the code for `multEventChart`]{.aside}
+1. Show all transition proportions if time is discrete (`Hmisc::propsTrans`)
+1. Show all state occupancy proportions if time is discrete (`Hmisc::propsPO`)
+
+Starting with a multiple event chart, simulate data on 5 patients, then display all the raw data.
+
+```{r}
+#| label: fig-descript-multevent
+#| fig-cap: "Multi-event chart for 4 patients"
+#| fig-height: 3.5
+pt1 <- data.frame(pt=1, day=0:3,
+         status=.q(well, well, sick, 'very sick'))
+pt2 <- data.frame(pt=2, day=c(1,2,4,6),
+         status=.q(sick, 'very sick', coma, death))
+pt3 <- data.frame(pt=3, day=1:5,
+         status=.q(sick, 'very sick', sick, 'very sick', 'discharged'))
+pt4 <- data.frame(pt=4, day=c(1:4, 10),
+         status=.q(well, sick, 'very sick', well, discharged))
+d <- rbind(pt1, pt2, pt3, pt4)
+d <- upData(d, 
+            status = factor(status, .q(discharged, well, sick,
+                            'very sick', coma, death)),
+            labels = c(day = 'Day'), print=FALSE)
+kabl(pt1, pt2, pt3, pt4)
+multEventChart(status ~ day + pt, data=d,
+               absorb=.q(death, discharged),
+               colorTitle='Status', sortbylast=TRUE) +
+  theme_classic() + theme(legend.position='bottom')
+```
+
+For an example of displaying transition proportions, whereby all the outcome information in the raw data is shown, simulate some random data.  The result is a `plotly` graphic over which you hover the pointer to see details.  The size of the bubbles is proportional to the proportion in that transition.
+
+```{r propsTrans}
+#| label: fig-strans
+#| fig-cap: State transition proportions
+set.seed(1)
+d <- expand.grid(id=1:30, time=1:7)
+setDT(d)   # convert to data.table
+d[, sex   := sample(c('female', 'male'), .N, replace=TRUE)]
+d[, state := sample(LETTERS[1:4], .N, replace=TRUE)]
+ggplotlyr(propsTrans(state ~ time + id, data=d))
+```
+
+The final display doesn't capture the within-subject correlation as done with the transition proportions, but is the most familiar display for longitudinal ordinal data as it shows proportions in the current states, which are cumulative incidence estimates for absorbing states. [Should absorbing states have occurred in the data you would need to carry these forward to the end of follow-up for `propsPO` to work properly, even though the real data file would terminate follow-up at an absorbing event.]{.aside}
+
+```{r propsPO}
+#| label: fig-sops
+#| fig-cap: State occupancy proportions by time and male/female
+#| fig-height: 3
+ggplotlyr(propsPO(state ~ time + sex, data=d))
+```
+
+## Multiple Longitudinal Continuous Variables {#sec-descript-mlong}
+
+When there are multiple longitudinal measurements, exploratory or descriptive analysis is more challenging.  One can learn how the different longitudinal processes relate to each other by computing pairwise cross-correlations, time-stratified variable clustering, a matrix of pairwise correlation time-trends, and, in what may be called a third-order analysis, a thermometer-plot matrix of pairwise correlation coefficients where each correlation coefficient quantifies the correlation between time and the correlation coefficient between the indicated pair of variables.
+
+Consider a longitudinal dataset of participants in a clinical trial safety study that was described [here](https://hbiostat.org/talks/gsksafety.pdf).  The dataset is in the Vanderbilt Biostatistics data repository and is called `safety`.  Fetch the data, keep only the needed variables, and show descriptive statistics.
+
+```{r results='asis'}
+getHdata(safety)   # Internal dataset name was All
+d <- All[, .q(id, week,
+              sbp, dbp, hr, axis, corr.qt, pr, qrs, rr, neutrophils,
+              alat, albumin, alk.phos, asat, basophils, bilirubin, bun, 
+              chloride, creatinine, eosinophils, ggt, glucose,
+              hematocrit, hemoglobin, potassium, lymphocytes,
+              monocytes, sodium, platelets, protein, rbc, uric.acid, wbc)]
+setDT(d, key=.q(id, week))
+sparkline::sparkline(0)
+w <- describe(d)
+maketabs(print(w, 'both'), wide=TRUE, initblank=TRUE)
+```
+Show the frequency distribution of the set of distinct time points per subject.
+
+```{r}
+w <- d[, .(uw=paste(sort(week), collapse=' ')), by=.(id)]
+w[, table(uw)]
+```
+
+Every subject has a record for every week.  However there are many `NA`s for several of the variables.
+
+```{r}
+plot(naclus(d))
+```
+
+Let's remove the variables that are missing more than 0.8 of the time.
+
+```{r}
+set(d, j=.q(monocytes, lymphocytes, basophils, eosinophils), value=NULL)
+```
+
+### Cross-Correlation
+
+Compute all possible cross-correlations.  The cross-correlation of two signals quantifies how closely the two signals track over time.  It uses time-paired data but does not otherwise use the absolute times or the ordering of times.  The dataset is a tall and thin dataset with one row per subject per time and one column per lab measurement, so it is already set up for computing cross-correlations.  We just need to compute the correlations separately by subject, then average them over subjects.  Spearman rank correlations are used throughout.
+
+```{r}
+#| fig-height: 7
+#| fig-width: 7
+# Get variables to correlate
+v <- setdiff(names(d), .q(week, id))
+# Function to create a matrix of Spearman correlations using
+# Hmisc::rcorr
+r <- function(u) rcorr(as.matrix(u), type='spearman')$r
+# Make a list weith raw data, one element per subject
+s <- split(d[, ..v], d$id)
+# Make a list of correlation matrices, one per subject
+R <- lapply(s, r)
+# Combine all these into an array with an extra dimension for subjects
+R <- array(unlist(R), dim=c(length(v), length(v), length(R)),
+           dimnames=list(v, v, NULL))
+# Compute mean (separately by row and col var. combinations) 
+# over subjects, ignoring NAs
+R <- apply(R, 1:2, mean, na.rm=TRUE)
+# Plot the matrix using Hmisc::plotCorrM
+plotCorrM(R, xangle=45)[[1]]
+```
+
+The variables that move strongly together over time are WBC and neutrophils, RBC and hemotocrit, RBC and hemoglobin, hematocrit and hemoglobin, no surprises.  Let's see how this compares to the ordinary correlation matrix obtained by pooling all the subjects, and ignoring which measurements came from which subjects.
+
+```{r}
+#| fig-height: 7
+#| fig-width: 7
+R <- r(d[, ..v])
+plotCorrM(R, xangle=45)[[1]]
+```
+
+
+### Time-Stratified Variable Clustering
+
+Let's describe how the relationships among variables appear to change over time, if they do.  We do this by running variable clustering separately by follow-up time.  Ignore week 1 when little data were collected.
+
+```{r}
+#| fig-height: 14
+#| fig-width: 7
+par(mfrow=c(4,2))
+g <- function(x, wk) {
+  plot(varclus(as.matrix(x)))
+  title(sub=paste('Week', wk), adj=0)
+  invisible()
+}
+d[week != 1, g(.SD, week), by=.(week), .SDcols=v]
+```
+
+### Time Trends in Correlations
+
+The `Hmisc` package `plotMultSim` function takes a series of similarity matrices and plots trends in their components.  The default similarity measure is the squared Spearman's correlation coefficient.  A 3-dimensional array `s` is used to hold similarity matrices computed for each week.
+
+```{r}
+#| fig-height: 6
+#| fig-width: 7
+#| column: screen-inset
+wks <- setdiff(sort(unique(d$week)), 1)
+s <- array(NA, c(length(v), length(v), length(wks)),
+           dimnames=list(v, v, NULL))
+for(i in 1 : length(wks))
+  s[, , i] <- varclus(as.matrix(d[week==wks[i], ..v]))$sim
+plotMultSim(s, wks, slim=c(0,1), labelx=FALSE, xspace=5)
+```
+
+
+### Correlation Time Trend Summaries
+
+Take the similarity array just computed, and reduce it by one dimension by computing the linear correlation between time and Spearman's $\rho^2$.
+
+```{r}
+#| fig-height: 7
+#| fig-width: 7
+k <- dim(s)
+r <- matrix(0., nrow=k[1], ncol=k[2],
+            dimnames=dimnames(s)[1:2])
+for(i in 1 : k[1])
+  for(j in 1 : k[2])
+    if(i != j) r[i, j] <- cor(wks, s[i, j, ])
+plotCorrM(r, xangle=45)[[1]]
+```
+
+The correlation that is changing the most over time is correlation between the following two variables.
+
+```{r}
+v[row(r)[abs(r) == max(abs(r))]]
+```
+
+## Adverse Event Chart
+
+When there is a potentially large number of event types, such as adverse events (AEs) in a clinical trial, and the event timing is not considered, a dot chart is an excellent way to present the proportion of subjects suffering each type of AE.  The AEs can be sorted in descending order by the difference in proportions between treatments, and `plotly` hover text can display more details.  Half-width confidence intervals are used (see @sec-confbands).  An AE chart is easily produced using the `aePlot` function in `qreport`.  `aePlot` expects the dataset to have one record per subject per AE, so the dataset itself does not define the proper denominator and this must be specified by the user (see `denom` below).  The color coded needles in the right margin are guideposts to which denominators are being used in the analysis (details are [here](http://hbiostat.org/R/hreport/report.html)).
+
+```{r aeplot,results='asis'}
+#| fig-height: 7.5
+getHdata(aeTestData)  # original data source: HH package
+# One record per subject per adverse event
+
+# For this example, the denominators for the two treatments in the
+# pop-up needles will be incorrect because the dataset did not have
+# subject IDs.
+
+ae <- aeTestData
+# qreport requires us to define official clinical trial counts and 
+# name of treatment variable
+denom <- c(enrolled   = 1000,
+           randomized =  400,
+           a=212, b=188)
+
+setqreportOption(tx.var='treat', denom=denom)
+aePlot(event ~ treat, data=ae, minincidence=.05, size='wide')
+```
+
+## Continuous Event Times
+
+For time-to-event data with possibly multiple types of events, an event chart is a good way to show the raw outcome data for a sample of up to perhaps 40 subjects.  The `Hmisc` package offers the `event.chart` function written by Jack Lee, Kenneth Hess, and Joel Dubin.  Here is an example they provided.  Patients are sorted by diagnosis date.
+
+```{r event.chart}
+#| label: fig-event.chart
+#| fig-cap: Event chart
+getHdata(cdcaids)
+event.chart(cdcaids,
+  subset.c=.q(infedate, diagdate, dethdate, censdate),
+  x.lab = 'Observation Dates',
+  y.lab='Patients',
+  titl='AIDS Data Calendar Event Chart',
+  point.pch=c(1,2,15,0), point.cex=c(1,1,0.8,0.8),
+  legend.plot=TRUE, legend.location='i', legend.cex=0.8,
+  legend.point.text=.q(transfusion,'AIDS diagnosis',death,censored),
+  legend.point.at = list(c(7210, 8100), c(35, 27))) 
+```
+
+## Describing Variable Interrelationships
+
+The most basic way to examine interrelationships among variables is to graphically depict a correlation matrix.  Below is an example on `support` using the Spearman's $\rho$ rank correlation coefficient.  Another good descriptive analysis to help understand relationships among variables and redundancies/collinearities is variable clustering.  Here one clusters on variables instead of observations, and instead of a distance matrix we have a similarly matrix.  A good default similarity matrix is based on the square of $\rho$.  In order to restrict ourselves to _unsupervised learning_, also called _data reduction_, we restrict attention to non-outcome variables in both displays.  The `vClus` function in `qreport` runs the dataset, after excluding some variables, through the `Hmisc` `dataframeReduce` function to eliminate variables that are missing more than 0.4 of the time and to ignore character or factor variables having more than 10 levels.  Binary variables having prevalence < 0.05 are dropped, and categorical variables having < 0.05 of their non-missing values in a category will have such low-frequency categories combined into an "other" category for purposes of computing all the correlation coefficients.[Normally one would omit the `fracmiss, maxlevels, minprev` arguments as the default values are reasonable.]{.aside}
+
+```{r varclus,results='asis'}
+getHdata(support)
+outcomes <- .q(slos,   charges, totcst,   totmcst, avtisst,
+               d.time, death,   hospdead, sfdm2)
+vClus(support, exclude=outcomes, corrmatrix=TRUE,
+      fracmiss=0.4, maxlevels=10, minprev=0.05,
+      label='fig-varclus')
+```
+
+The most strongly related variables are competing indicator variables for categories from the same variable, `scoma` vs. `dzgroup` "Coma", and `dzgroup` "Cancer" vs. `dzclass` "Cancer".  The first type of relationship generates a strong negative correlation because  if you're in one category you can't be in the other.
+
+
+```{r echo=FALSE}
+saveCap('09')
+```
