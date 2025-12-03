@@ -46,6 +46,12 @@ The author wishes to thank the R Core team and R package developers along with R
 
 | Date | Sections | Changes |
 |:--|:-|:------------|
+| 2025-11-06 | [-@sec-descript-ae]       | Added `ggplot2` code for 2-panel adverse event charts | 
+| 2025-08-25 | [-@sec-long-ai]           | New subsection: using AI as a data.table coding assistant |
+| 2025-07-11 | [-@sec-merge-closest]     | New subsection with non-equi join to count close observations |
+| 2025-06-29 | [-@sec-graphics-mgg]      | New subsection on displaying multiple variables with `ggplot2` |
+| 2025-06-10 | [-@sec-rformat-diagrams]  | New example using `makedot` function |
+| 2025-05-26 | [-@sec-sim-graphics]      | New subsection on graphical display of simulation results |
 | 2025-04-20 | [-@sec-graphics-ggplot2]  | Example of nice log scale axis |
 | 2025-03-28 | [-@sec-rformat-diagrams]  | Example of new `makegvflow` function |
 | 2024-09-26 | [-@sec-manip-keys]        | New subsection on keys in `data.table` |

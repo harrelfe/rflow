@@ -645,7 +645,7 @@ describe(d)
 
 ::: {.column-screen-right}
 
-<img src="describe-view.png" width="100%">
+<img src="images/describe-view.png" width="100%">
 :::
 
 ## Resources for Learning R {#sec-rbasics-resources}

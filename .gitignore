@@ -4,3 +4,7 @@ Active
 .Rhistory
 .Rproj.user
 
+
+/.quarto/
+
+**/*.quarto_ipynb

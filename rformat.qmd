@@ -14,7 +14,7 @@ MD[Metadata<br>Report<br>Annotations] --> mds[Variable Labels<br>and Units]
 
 A state-of-the-art way to make reproducible reports is to use a statistical computing language such as R and its [`knitr`](https://cran.r-project.org/web/packages/knitr) package in conjunction with either [`RMarkdown`](https://rmarkdown.rstudio.com) or [`Quarto`](https://quarto.org), with the latter likely to replace the former.  Both of the report-making systems allow one to produce reports in a variety of formats including html, pdf, and Word.  Html is recommended because pages can be automatically resized to allow optimum viewing on devices of most sizes, and because html allows for interactive graphics and other interactive components.  Pdf is produced by converting `RMarkdown` or `Quarto`-produced markdown elements to $\LaTeX$.[Report formatting is very much enhanced by using variable attributes such as labels and units of measurement that are not considered in base R.  Methods for better annotating output using labels and units are given below.]{.aside}
 
-This document can serve as a template for using R with `Quarto`; one can see the raw script by clicking on `Code` at the top right of the report.  A recommended template for typical statistical reports is [here](../R/reportTemplate.qmd) with [html](../R/reportTemplate.html) and [pdf](../R/reportTemplate.pdf) output.
+This document can serve as a template for using R with `Quarto`; one can see the raw script by clicking on `Code` at the top right of the report.  A recommended template for typical statistical reports is [here](https://hbiostat.org/R/reportTemplate.qmd) with [html](https://hbiostat.org/R/reportTemplate.html) and [pdf](https://hbiostat.org/R/reportTemplate.pdf) output.
 
 ## General Formatting 
 
@@ -370,9 +370,13 @@ There is an automatic feature of html that makes it especially attractive as a d
 
 The `knitr` package `kable` function provides an easy way to produce html tables from data tables/frames and matrices, and `knitr::kables` allows one to put several tables together.  The `qreport` package `kabl` function combines the features of `kable` and `kables`.  The [`kableExtra`](https://cran.r-project.org/web/packages/kableExtra/index.html) package allows you to greatly extend what `kable` can do.
 
-There are many R packages and functions for making advanced html tables.  See for example the `Table 1` tab in @sec-descript.  This table was produced by the `Hmisc` package `summaryM` function, which used the `htmlTable` function in the [`htmlTable`](https://cran.r-project.org/web/packages/htmlTable) package.  Other packages to consider are [`gt`](https://cran.r-project.org/web/packages/gt/index.html) (see @sec-rformat-mix) and its uncredited predecessor  [`tangram`](https://cran.r-project.org/web/packages/tangram), and packages discussed [here](https://rfortherestofus.com/2019/11/how-to-make-beautiful-tables-in-r).
+There are many R packages and functions for making advanced html tables.  See for example the `Table 1` tab in @sec-descript.  This table was produced by the `Hmisc` package `summaryM` function, which used the `htmlTable` function in the [`htmlTable`](https://cran.r-project.org/web/packages/htmlTable) package.  Other packages to consider are [`gt`](https://cran.r-project.org/web/packages/gt/index.html) (see @sec-rformat-mix) and its uncredited predecessor  [`tangram`](https://cran.r-project.org/web/packages/tangram), and packages discussed [here](https://rfortherestofus.com/2019/11/how-to-make-beautiful-tables-in-r).  
+
+Quarto is capable of converting many raw html tables to markdown automatically, and it also allows you to embed markdown syntax in html tables; see [here](https://quarto.org/docs/authoring/tables.html#html-tables).
 
 The central guide for basic table making in `Quarto` is [here](https://quarto.org/docs/authoring/tables.html).
+
+Beginning with version 1.5 of the R `quarto` package (not used in R Workflow), new functions support inclusion of markdown, including math, in most user-generated html markup.  Details may be found [here](https://quarto-dev.github.io/quarto-r/articles/markdown-html-tables.html).[As of 2025-09-04 Mac binaries for `quarto 1.5` are not available on CRAN and a development version must be installed from `github`.]{.aside}
 
 ### `gt` Package {#sec-rformat-gt}
 
@@ -512,7 +516,7 @@ which renders:
 
 ## Advanced Tables That Render to Both HTML and Word {#sec-rformat-word}
 
-Although there are many advanced table making tools in R for producing HTML, most of these will not properly render to Word much of the time.  Functions that directly write HTML markup such as those in the `Hmisc` and `htmlTable` packages produce HTML that `Quarto` and `pandoc` know how to faithfully render to Word.  An example multi-format output script is [here](word-tables.qmd), with [HTML output](word-tables.html) and [`.docx` output](word-tables.docx).
+Although there are many advanced table making tools in R for producing HTML, most of these will not properly render to Word much of the time.  Functions that directly write HTML markup such as those in the `Hmisc` and `htmlTable` packages produce HTML that `Quarto` and `pandoc` know how to faithfully render to Word.  An example multi-format output script is [here](https://hbiostat.org/R/word-tables.qmd), with [HTML output](https://hbiostat.org/R/word-tables.html) and [`.docx` output](https://hbiostat.org/R/word-tables.docx).
 
 ## Diagrams {#sec-rformat-diagrams}
 
@@ -640,6 +644,33 @@ makegvflow(x, extracon='n12 -> n21', jj='tiger', direction='LR',
 
 ```{dot}
 //| file: gvflow.dot
+```
+
+If not needing to use $\LaTeX$ math notation, the `makedot` function in `qreport` version 1.1-0 is useful for making flow diagrams with control of node connections, word wrapping of long strings, and variable insertions.  Lines with node names following by a colon with no spaces define node text.  Lines not starting with this pattern define node connections and are placed verbatim in the output.  Here is an example.  `\\n` in label text is replaced with ordinary `\n` line breaks, and lines containing `\\n` do not have ordinary word wrapping done.
+
+```{r}
+x <- '
+R:Root text
+N1:Major 1
+N11:Minor 11 {{jj}}
+N12:Minor 12
+N2:Major 2
+N21:Minor 21
+N22:Minor 22
+N23:Minor 23 that\\nis very very\\nlong and\\njust keeps going\\nΔ < γ
+N3:Major 3
+N31:Minor 31
+R -> {N1, N2, N3}
+N1 -> {N11, N12}
+N2 -> {N21, N22, N23}
+N3 -> N31
+N31 -> R [arrowhead=none, arrowtail=none]'
+makedot(x, jj='tiger', onlyprint=TRUE)
+makedot(x, jj='tiger', file='makedot.dot')
+```
+
+```{dot}
+//| file: makedot.dot
 ```
 
 ::: {.callout-note collapse="true"}

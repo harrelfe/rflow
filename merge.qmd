@@ -81,7 +81,9 @@ pd[trial == 'trial1' & mitt][d]
 
 
 
-## Non-equi Joins: Closest Matches {#sec-merge-closest}
+## Non-equi Joins {#sec-merge-closest}
+
+### Closest Matches
 
 Suppose that we wished to merge records without requiring an exact match, i.e., we want to get closest matches to records on a numeric variable (including dates, times, etc.).  Consider the following example in which we create two data tables containing a numeric matching variable that is named differently in the two datasets.  For data table `a` the matching variable is named `ax` and for `b` it is `bx`. [See [this](https://www.r-bloggers.com/2016/06/understanding-data-table-rolling-joins) for nice examples of rolling joins.]{.aside}
 
@@ -163,4 +165,16 @@ B <- data.table(
 A
 B
 A[, .SD[B, on='x', roll='nearest'], by=grp]
+```
+
+### Frequencies of Close Values
+
+Suppose a data table `d` contains a numeric variable `x`, and a separate vector `xgrid` contains a set of reference values.  We want to create a new vector `count` whose $i^\text{th}$ element is the number of `x` values in `d` that are within 2 units of `xgrid[i]`.  A non-equi join does the trick.
+
+```{r}
+d     <- data.table(x=c(7, 9, 9, NA, -2, 1, 1, 2, 3))
+xgrid <- 0:12
+w     <- data.table(xgrid, lower = xgrid - 2, upper = xgrid + 2)
+count <- d[w, on = .(x >= lower, x <= upper), .N, by = .EACHI][, N]
+rbind(xgrid, count)
 ```

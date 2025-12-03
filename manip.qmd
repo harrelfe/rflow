@@ -38,6 +38,8 @@ L --> N["No :=<br><br>Print/Plot Output<br>or Assign Result To<br>New Data Table
 L --> IP[":=<br><br>Change DT in Place"]
 ```
 
+For thinking logically about data manipulations and for efficient use of your time, it is best to thoroughly learn the `data.table` algebra.  But you can also use a large language model as an assistant in developing `data.table` code as demonstrated in @sec-long-ai.
+
 Data tables are also data frames so work on any method handling data frames.  But data tables do not contain `rownames`.
 
 Several `data.table` examples follow.  I like to hold the current dataset in `d` to save typing.  Some basic operations on data tables are:

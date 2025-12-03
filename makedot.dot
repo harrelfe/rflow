@@ -1,0 +1,22 @@
+digraph {rankdir =TD;
+node [shape=box, fontsize=24];
+R[label="Root text"]
+N1[label="Major 1"]
+N11[label="Minor 11 tiger"]
+N12[label="Minor 12"]
+N2[label="Major 2"]
+N21[label="Minor 21"]
+N22[label="Minor 22"]
+N23[label="Minor 23 that
+is very very
+long and
+just keeps going
+Δ < γ"]
+N3[label="Major 3"]
+N31[label="Minor 31"]
+R -> {N1, N2, N3}
+N1 -> {N11, N12}
+N2 -> {N21, N22, N23}
+N3 -> N31
+N31 -> R [arrowhead=none, arrowtail=none]
+}

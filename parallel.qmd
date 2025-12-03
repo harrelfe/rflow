@@ -42,3 +42,5 @@ Coefs <- runifChanged(g, X, run1, nsim, seed)
 dim(Coefs)
 apply(Coefs, 2, mean)
 ```
+
+See [this](https://fharrell.com/post/aci) for an example where the per-core function (`g` above) returns a data table, and the multiple data tables are combined into one long data table over the simulations.

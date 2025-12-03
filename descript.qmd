@@ -401,7 +401,7 @@ The correlation that is changing the most over time is correlation between the f
 v[row(r)[abs(r) == max(abs(r))]]
 ```
 
-## Adverse Event Chart
+## Adverse Event Chart {#sec-descript-ae}
 
 When there is a potentially large number of event types, such as adverse events (AEs) in a clinical trial, and the event timing is not considered, a dot chart is an excellent way to present the proportion of subjects suffering each type of AE.  The AEs can be sorted in descending order by the difference in proportions between treatments, and `plotly` hover text can display more details.  Half-width confidence intervals are used (see @sec-confbands).  An AE chart is easily produced using the `aePlot` function in `qreport`.  `aePlot` expects the dataset to have one record per subject per AE, so the dataset itself does not define the proper denominator and this must be specified by the user (see `denom` below).  The color coded needles in the right margin are guideposts to which denominators are being used in the analysis (details are [here](http://hbiostat.org/R/hreport/report.html)).
 
@@ -424,6 +424,99 @@ denom <- c(enrolled   = 1000,
 setqreportOption(tx.var='treat', denom=denom)
 aePlot(event ~ treat, data=ae, minincidence=.05, size='wide')
 ```
+
+For a simpler, non-interactive chart we can use the `greport` package.
+
+```{r}
+require(greport)
+setgreportOption(denom=denom, tx.var='treat', texdir='/tmp', gtype='interactive')
+eReport(event ~ treat, data=ae, minincidence=0.05)
+```
+
+Here is a `ggplot2` way of doing something similar, using code drafted by `ChatGPT` then heavily edited.  Start with the raw data.  The `patchwork` package is used to combine two panels.
+
+```{r}
+require(data.table)
+setDT(ae)
+# Compute AE frequencies for each AE event and treatment group
+w <- ae[, .(freq=.N), by=.(event, treat)]
+# Compute denominators for each treatment
+w[, N := denom[as.character(treat)]]
+# Compute proportions and SEs
+w[, prop := freq / N]
+w[, se   := sqrt(prop * (1 - prop) / N)]
+
+plot2panel <- function(y, g, stat, se, statlabel='Proportion',
+                       sortby = c("none", "average", "difference"),
+                       conf.int=0.95) {
+  require(patchwork)
+  sortby <- match.arg(sortby)
+
+  # --- Prepare data ---
+  d <- data.table(y = y, g = g, stat = stat, se = se)
+  glev <- levels(g)
+  if (length(glev) != 2)
+    stop("Argument g must be a factor with exactly two levels.")
+
+  # --- Compute differences and averages within y ---
+  d_diff <- d[, .(
+    stat_diff = stat[g == glev[1]] - stat[g == glev[2]],
+    se_diff   = sqrt(se[g == glev[1]]^2 + se[g == glev[2]]^2),
+    stat_avg  = mean(stat)
+  ), by = y]
+
+  # --- Sorting of y levels ---
+  ylev <- switch(
+    sortby,
+    none       = levels(y),
+    average    = d_diff[order(stat_avg), y],
+    difference = d_diff[order(stat_diff), y]
+  )
+
+  d[, y := factor(y, levels = ylev)]
+  d_diff[, y := factor(y, levels = ylev)]
+
+  # --- Panel A ---
+  pA <- ggplot(d, aes(x = stat, y = y, shape = g, fill = g)) +
+    geom_point(size = 2, color = "black") +
+    scale_shape_manual(values = c(16, 24)) +
+    scale_fill_manual(values = c("black", "lightblue")) +
+    labs(x = NULL, y = NULL, title = statlabel) +
+    theme_minimal(base_size = 12) +
+    theme(
+      legend.position = "bottom",
+      plot.title = element_text(hjust = 0.5, face = "bold"),
+      axis.title.y = element_blank(),
+      panel.border = element_rect(color = "black", fill = NA, size = 0.5)
+    )
+
+  # --- Panel B ---
+  zcrit <- qnorm((1 + conf.int) / 2)
+  
+  pB <- ggplot(d_diff, aes(x = stat_diff, y = y)) +
+    geom_vline(xintercept = 0, color = "red", alpha = 0.5) +
+    geom_errorbar(mapping =
+      aes(xmin = stat_diff - zcrit * se_diff,
+          xmax = stat_diff + zcrit * se_diff),
+          orientation = "y", width = 0.2) +
+    geom_point(size = 2) +
+    labs(x = NULL, y = NULL, title = "Difference with 0.95 CI") +
+    theme_minimal(base_size = 12) +
+    theme(
+      axis.text.y  = element_blank(),
+      plot.title   = element_text(hjust = 0.5, face = "bold"),
+      axis.title.y = element_blank(),
+      panel.border = element_rect(color = "black", fill = NA, size = 0.5)
+    )
+
+  # --- Combine panels with small gap ---
+  pA + pB + plot_layout(ncol = 2, widths = c(1, 1)) &
+    theme(plot.margin = unit(c(0, 0.25, 0, 0), "cm"))
+}
+
+w[, plot2panel(event, treat, prop, se, sortby = "difference")]
+```
+
 
 ## Continuous Event Times
 

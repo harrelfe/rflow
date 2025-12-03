@@ -519,3 +519,210 @@ m[, stop := NULL]
 setnames(m, 'start', 'date')
 m
 ```
+
+## Using Large Language Models as `data.table` Coding Assistants {#sec-long-ai}
+
+Large language models are now useful for assisting in coding for fairly complex tasks, if the user is willing to throughly test the generated code.  This makes powerful syntax and fast execution time of `data.table` even more available to users.  The following query was given to `ChatGPT` on 2025-08-21.
+
+> Using the R language and only using the R `data.table` package and base R code, write code to solve the following problem. Consider a data.table named `A` with variables `id, sex, y` and a data.table named `B` with variables `id, y, z`. `A` has one record per distinct `id` and `B` has possibly multiple records per `id`. Join `A` and `B` by `id`, keeping the record in `B` that is closest on the `y` value to the value of `y` in `A`. If there is no observation within 5 units of `y` for `sex=='male'` or within 7 units of `y` for `sex=='female'`, set the value of `y` in the joined data table to `NA`.
+
+The reply from `ChatGPT` and the ensuing dialog follow.  The only changes in the text were to actually execute the generated R code here, to remove superfluous `print()` around objects to be printed, and to use a special font for R object names and expressions in sentences.
+
+> Got it 👍 — this is a “closest match join with tolerance” problem.
+> We want:
+>
+> * For each `A[id]`, find the row in `B[id]` with `y` closest to `A$y`.
+> * Tolerance depends on `sex`.
+> * If no `B$y` within tolerance, return `NA` for the `y` (and `z`) from `B`.
+
+Here’s a pure `data.table` + base R solution:
+
+```{r}
+A <- data.table(id = c(1, 2, 3, 4),
+                sex = c("male", "female", "male", "female"),
+                y   = c(10, 20, 30, 40))
+
+B <- data.table(id = c(1,1,1,2,2,3,3,4),
+                y  = c(12, 17, 25, 15, 30, 28, 40, 100),
+                z  = letters[1:8])
+
+setkey(A, id)
+setkey(B, id)
+
+result <- B[A, allow.cartesian=TRUE][
+  , diff := abs(i.y - y), by=.(id, i.y, sex)][
+  , .SD[which.min(diff)], by=.(id, i.y, sex)][
+  , tol := ifelse(sex=="male", 5, 7)][
+  , `:=`(
+    y = ifelse(diff <= tol, y, NA_real_),
+    z = ifelse(diff <= tol, z, NA_character_)
+  )][
+  , .(id, sex, yA = i.y, yB = y, z)]
+
+result
+```
+
+> Explanation of steps:
+>
+> * `B[A, allow.cartesian=TRUE]` → join all `B` rows for each `A$id`.
+> * Compute `diff = |A$y - B$y|` for each candidate.
+> * `which.min(diff)` → select closest `B` row for each (`id, A$y, sex`).
+> * Define tolerance by `sex` (5 for male, 7 for female`).
+> * If `diff > tol`, replace `y` and `z` from `B` with `NA`.
+
+> Write a function named `g` that does as many of the calculations as possible outside of `data.table` syntax, and use this function within `data.table` syntax to arrive at the same answer as you obtained already.
+
+> Great request 👍 — you want to push the “heavy lifting” (the min-diff calculation + tolerance check) into a base R function and then just use that inside `data.table` grouping. That way the `data.table` code is lean.
+> 
+> Here’s a way to do it:
+
+```{r}
+# Function to select the best match given one row of A and all rows of B for that id
+g <- function(yA, sex, yB, zB) {
+  # tolerance by sex
+  tol <- if (sex == "male") 5 else 7
+  
+  # if no candidates, return NA
+  if (length(yB) == 0) return(list(yB = NA_real_, zB = NA_character_))
+  
+  # find closest yB
+  diffs <- abs(yA - yB)
+  j <- which.min(diffs)
+  
+  if (diffs[j] <= tol) {
+    return(list(yB = yB[j], zB = zB[j]))
+  } else {
+    return(list(yB = NA_real_, zB = NA_character_))
+  }
+}
+
+# Apply inside data.table syntax
+setkey(A, id)
+setkey(B, id)
+
+result <- B[A, allow.cartesian=TRUE][
+  , g(i.y, sex[1L], y, z), by=.(id, sex, i.y)]
+
+# Clean names
+setnames(result, c("id","sex","yA","yB","z"))
+
+result
+```
+
+> How it works
+>
+> * `g()` is pure base R. It:
+>   1. Decides the tolerance.
+>   2. Finds the closest `yB`.
+>   3. Returns either the `yB/zB` pair or `NA`.
+> * Inside the join, we just call `g()` grouped by (`id, sex, i.y`).
+> * The output matches the earlier solution.
+
+> I don't understand the subscripting of `sex` when computing the result.
+
+> Ah good eye 👀 — the `sex[1L]` part in
+> `g(i.y, sex[1L], y, z)`
+> deserves an explanation.
+> 
+> Why `sex[1L]`?
+>
+> * After the join `B[A, allow.cartesian=TRUE]`, each row of `A` (with its `sex` and `y`, stored as `i.y`) is paired with all rows of `B` that share the same `id`.
+> * So within each group (`id, sex, i.y`), `sex` is repeated many times (once for each `B` row).
+>
+> Example: suppose
+> `A: id=1, sex="male", y=10`
+> `B: id=1` has 3 rows
+>
+> Then the join produces 3 rows, and each of those rows carries `sex="male"`.
+>
+> So inside the group, `sex` is a vector like `c("male","male","male")`.
+>
+> * But we only need one value of sex to send to `g()` — it’s the same across all rows in the group.
+> * So we just take the first element, `sex[1L]`. (The `1L` is an integer literal, a habit in `data.table` to be explicit and efficient.)
+
+> What would happen of `allow.cartesian=TRUE` were not included?
+
+> This goes right to the heart of why `allow.cartesian=TRUE` is sometimes needed with `data.table`.
+> 
+> Without `allow.cartesian=TRUE`
+> `B[A]`   # same as `B[A, allow.cartesian=FALSE]`
+>
+> * By default, data.table does not allow one-to-many or many-to-many joins unless you explicitly tell it it’s OK.
+* If `A` has `id=1` once, and `B` has id=1 three times, the join would need to return 3 rows for that one row of `A` (a Cartesian product).
+* That’s exactly the situation in your problem: each row in `A` joins to potentially multiple rows in `B`.
+>
+> So if you left out `allow.cartesian=TRUE`, you’d get an error like:
+>
+> Error in `B[A]` : 
+>  join results in more than one match per row of 'i'; 
+>  please use `allow.cartesian=TRUE` to proceed
+>
+> With `allow.cartesian=TRUE`
+>
+> * You explicitly acknowledge: “Yes, I know this join may expand rows, that’s what I want.”
+> * Then `A` rows are duplicated for each matching row in `B`.
+> * That expansion is exactly what we need before we calculate distances and pick the closest `y`.
+>
+> ✅ In short:
+>
+> Without it → error if one row in `A` matches multiple in `B`.
+> With it → allowed expansion (the Cartesian join), which we need for the “closest match” problem.
+
+> But I frequently use `data.table` to do one to many joins (`A` has one record per `id` and `B` has one or more records per `id`) and have gotten the multiple matches retained without specifying `allow.cartesian=TRUE`.
+
+> Excellent point — and you’re right 👍.
+> Let’s unpack what’s going on, because the difference is subtle and can be confusing.
+>
+> Case 1: `B[A]` (`A` on the `i` side)
+>
+> When you do:
+> `B[A]`
+>
+> * `A` is on the `i` side of the join.
+> * `data.table` says: “For each row of `A`, pull matching rows from `B`.”
+> * If one row in `A` matches many rows in `B`, those matches are returned by default — no `allow.cartesian` needed.
+> * That’s the normal one-to-many join you’re used to.
+>
+> ✅ So this is why your experience is that you don’t need a`llow.cartesian=TRUE`
+>
+> Case 2: Both sides can repeat → Cartesian explosion
+>
+> `allow.cartesian=TRUE` only becomes necessary when the join can multiply rows in both directions (i.e. many-to-many).
+> 
+> For example:
+>
+> `A <- data.table(id=1:2, x=1:2)` <br>
+> `B <- data.table(id=c(1,1), y=1:2)`
+>
+> Both have duplicate ids (`A` has 1 row with `id=1`, `B` has 2 rows with `id=1`)
+> `B[A]`
+>
+> This works fine (no error):
+>
+>    `id y x`<br>
+> 1:  1 1 1<br>
+> 2:  1 2 1<br>
+> 3:  2 NA 2
+> 
+> But if both `A` and `B` have multiple rows per `id`, the join could create Cartesian products.
+> That’s where `allow.cartesian` kicks in:
+>
+> `A <- data.table(id=c(1,1), x=1:2)`  # 2 rows with id=1 <br>
+> `B <- data.table(id=c(1,1), y=1:2)`  # 2 rows with id=1
+>
+> `B[A]`
+>
+> Error:
+> Error in `B[A]` : 
+>  join results in more than one match per row of `i`; 
+>   please use `allow.cartesian=TRUE` to proceed
+>
+> Because now one row in A can match multiple in `B`, and `A` itself has duplicates — so the join multiplies. That’s a true Cartesian join.
+>
+> Back to your problem
+>
+> * In your setup, `A` has exactly one row per `id`.
+> * `B` can have many rows per `id`.
+> * That’s just a one-to-many join → no need for `allow.cartesian=TRUE`.
+>
+> I included it earlier as a “safe guard” because in testing toy examples, sometimes `A` accidentally has duplicates, and then you hit the error. But if you know `A` really is one row per `id`, you can safely omit it.

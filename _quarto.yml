@@ -1,6 +1,6 @@
 project:
   type: book
-  output-dir: /Users/harrelfe/web/rflow
+  post-render: syncdir _book/ /Users/harrelfe/web/rflow
 
 book:
   title: "R Workflow"
@@ -45,7 +45,7 @@ book:
   page-footer:
     background: light
     left:
-      - text: "Copyright 2024, Frank E Harrell Jr"
+      - text: "Copyright 2025, Frank E Harrell Jr"
     right:
       - text: "License"
         href: https://www.gnu.org/licenses/gpl-3.0.en.html

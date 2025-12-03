@@ -94,7 +94,7 @@ g <- ggplot(u, aes(x=n, y=r, col=type)) + geom_jitter(height=0, width=2) +
 plotly::ggplotly(g)
 ```
 
-An example of simulating asymmetric conditions, i.e., where multiple methods are studied and each method has different parameters to vary, may be found [here](https://fharrell.com/post/kmove).
+An example of simulating asymmetric conditions, i.e., where multiple methods are studied and each method has different parameters to vary, may be found [here](https://fharrell.com/post/kmove).  See [this](https://fharrell.com/post/aci) for another `data.table` example plus other general simulation example code.
 
 ### `expand.grid` with `lapply` and `rbindlist`
 
@@ -261,6 +261,10 @@ ggplot(w, aes(x=n, y=r, col=factor(p))) + geom_line() +
        guides(color=guide_legend(title='p')) +
        ylab('Mean Maximum |r|')
 ```
+
+## Graphical Display of Simulation Results {#sec-sim-graphics}
+
+The R [`rsimsum` package](https://ellessenne.github.io/rsimsum) implements a number of excellent graphical displays of simulation study results, including the [nested loop plot](https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/1471-2288-14-129) of Rücker & Schwarzer exemplified [here](https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/1471-2288-14-129/figures/2).
 
 ```{r echo=FALSE}
 saveCap('14')

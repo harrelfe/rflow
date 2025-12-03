@@ -242,6 +242,10 @@ ggplot(d, aes(x, y, color=z)) + geom_line() +
   theme(legend.text = element_text(family='mono'))
 ```
 
+## Controlling Legend Placement
+
+See [this](https://datavizpyr.com/remove-space-between-legend-at-bottom-and-x-axis-in-ggplot2) excellent tutorial.
+
 ## Plot Annotation
 
 * See [this](https://www.r-bloggers.com/2018/11/adding-different-annotation-to-each-facet-in-ggplot) by Mine Çetinkaya-Rundel.  Note that when annotating a facet or a whole plot, when the annotation does not use an aesthetic (such as colors to represent different curves on one facet), make sure that aesthetic does not appear in `ggplot()` but rather only in the `geom`s, e.g. `geom_line(aes(col=region))`.  See @sec-long-interp for an example.
@@ -322,6 +326,10 @@ g + theme(panel.grid.major=element_line(linetype='dotted'))
 
 The [`ggiraph` package](https://davidgohel.github.io/ggiraph) allows you to make certain elements of `ggplot2` graphics interactive.  [This example](https://stackoverflow.com/questions/78740958) shows how to use `ggiraph` to add a tooltip to facet labels. 
 
+## Two Independent Panels
+
+See @sec-descript-ae for a more advanced `ggplot2` example where the `patchworks` package assists in the construction of a two-panel plot.  The left panel shows group means or proportions and the right panel shows confidence intervals for differences in these.
+
 :::
 
 For large datasets you can use [hexagonal binning with `ggplot2`](http://hbiostat.org/bbr/descript.html#fig-descript-phhex) or use the `Hmisc` package `ggfreqScatter` function.  Both approaches make it easy to see overlapping points by color coding the frequency of points in each small bin, allowing scatterplots to scale to very large datasets.  Here is an example using `ggfreqScatter`: [`html=TRUE` was needed because otherwise axis labels are formatted using R's `plotmath` and `plotly` doesn't like that.]{.aside}
@@ -374,6 +382,35 @@ ggplot(mapping=aes(x,y)) +
   stat_binhex(aes(fill=cut2(..count.., c(1:5, 10))), bins=75) +
 	guides(fill=guide_legend(title='Frequency')) +
 	hlabs(x, y)
+```
+
+### Maximal Number of Variables With `ggplot2`    {#sec-graphics-mgg}
+
+For ordinary plots such as line and scatter plots, `ggplot2` can utilize the following graphics characteristics:
+
+* for continuous variables: $x$-axis, $y$-axis, color spectrum, saturation (alpha) / gray scale darkness, line thickness
+* for categorical variables: point symbol, horizontal facet, vertical facet, line thickness, line type
+
+Line type is not allowed to be non-solid when color, line width, or alpha are varying.  Line width is not very effective when there is more than one curve in a panel.
+
+The following line plot has a continuous variable `x` as the primary "mover", and uses the following characteristics to encode other numeric variables that are evaluated only on discrete grids of values.
+
+* `k`: color, with superpositioning within each panel; multiplier of `x` within $\sin(x)$
+* `shift`: vertical facet; constant $c$ in $\sin(x + c)$
+* `cos`: horizontal facet: multiplier of an additional $\cos(x)$ term
+* `a`: line type: overall multiplier
+
+```{r}
+d <- expand.grid(x     = seq(0, 2 * pi, length=150),
+                 k     = c(.8, .9, 1, 1.1, 1.2),
+                 shift = c(-0.5, 0, 0.5),
+                 cos   = c(-0.3, 0, 0.3),
+                 a     = c(0.6, 1, 1.6))
+d <- transform(d, y = a * (sin(k * x + shift) + cos * cos(x)))
+ggplot(d, aes(x, y, color=factor(k), linetype=factor(a))) +
+       geom_line() + facet_grid(shift ~ cos) +
+       guides(color    = guide_legend(title='k'),
+              linetype = guide_legend(title='a'))
 ```
 
 ```{r echo=FALSE}
