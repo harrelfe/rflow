@@ -17,6 +17,7 @@ found at [hbiostat.org/bbr/descript.html](https://hbiostat.org/bbr/descript.html
 especially these notes: [hbiostat.org/doc/graphscourse.pdf](https://hbiostat.org/doc/graphscourse.pdf).
 John Rauser has an [exceptional video](https://www.youtube.com/watch?v=fSgEeI2Xpdc) about principles of good graphics.  Rafael Irizarry has an excellent chapter on [graphics principles and recommendations](https://rafalab.github.io/dsbook/data-visualization-principles.html).
 See [datamethods.org/t/journal-graphics](https://discourse.datamethods.org/t/journal-graphics) for graphical methods for journal articles.
+Also see Saloni Dattani's [excellenet article on data visualization]{https://www.scientificdiscovery.dev/p/salonis-guide-to-data-visualization).
 
 Paul Murrell has an excellent [summary of recommendations](https://www.tandfonline.com/doi/abs/10.1080/10618600.2012.751875):
 
