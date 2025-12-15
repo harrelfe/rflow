@@ -46,6 +46,7 @@ The author wishes to thank the R Core team and R package developers along with R
 
 | Date | Sections | Changes |
 |:--|:-|:------------|
+| 2025-12-15 | [-@sec-rformat-diagrams]  | Added methods for putting generated graphiviz markup in a Quarto figure environment |
 | 2025-11-06 | [-@sec-descript-ae]       | Added `ggplot2` code for 2-panel adverse event charts | 
 | 2025-08-25 | [-@sec-long-ai]           | New subsection: using AI as a data.table coding assistant |
 | 2025-07-11 | [-@sec-merge-closest]     | New subsection with non-equi join to count close observations |

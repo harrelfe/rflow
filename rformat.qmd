@@ -673,6 +673,65 @@ makedot(x, jj='tiger', file='makedot.dot')
 //| file: makedot.dot
 ```
 
+The last diagram was rendered with
+
+```{r echo=FALSE,result='asis'}
+cat("
+\`\`\`{dot}
+//| file: makedot.dot
+\`\`\`
+")
+```
+
+which renders fine, but if you want to put the diagram in a numbered figure environment with a caption you need to use another approach.
+First convert the diagram to an actual graphics format that Quarto understands: `svg`.  Assuming the user has installed the `graphviz` app externally the conversion is simple.
+
+```{r}
+system("dot -Tsvg makedot.dot -o makedot.svg")
+```
+
+Then render as a true figure using the following.
+
+```{r echo=FALSE,result='asis'}
+cat('
+\`\`\`{r echo=FALSE}
+#| label: fig-rformat-makedot
+#| fig-cap: Example graphviz chart as a true figure
+knitr::include_graphics("makedot.svg")
+\`\`\`
+')
+```
+
+```{r echo=FALSE}
+#| label: fig-rformat-makedot2
+#| fig-cap: Example graphviz chart as a true figure
+knitr::include_graphics("makedot.svg")
+```
+
+::: {.callout-note collapse="true"}
+## Other Approaches for Adding Captions to Generated `graphviz` charts
+
+The following work but may not treat the figure as a true Quarto figure, so may not include it in a table of figures.
+
+```{r echo=FALSE,result='asis'}
+cat("
+![Example graphviz chart with a caption](makedot.svg){#fig-rformat-makedot2}
+
+or
+
+::: {.figure #fig-rformat-makedot3}
+\`\`\`{dot}
+//| file: makedot.dot
+\`\`\`
+
+Example graphviz chart with a caption
+:::
+
+")
+```
+
+:::
+
 ::: {.callout-note collapse="true"}
 ## `Mermaid` Tricks
 
