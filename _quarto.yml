@@ -16,8 +16,8 @@ book:
   google-analytics: "G-FN79JJ28KR"
 
   twitter-card:
-    creator: "@f2harrell"
-    site: "@f2harrell"
+    creator: "f2harrell"
+    site: "f2harrell"
 		
   chapters:
     - index.qmd
