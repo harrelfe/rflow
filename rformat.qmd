@@ -246,6 +246,18 @@ Adding `+ raw` to a formula in `makecnote`, `makecolmarg`, or `maketabs` forces 
 
 However the automatic viewing of html objects in the `RStudio` `Viewer` will satisfy most needs.
 
+### Including Arbitrary Verbatim Text in documents {#sec-rformat-verb}
+
+Arbitrary text, including triple colon directives, code chunk headers, and R code, can be made to appear verbatim by enclosing the block with lines containing n=only 4 consecutive backticks.  The lines of 4 backticks should be surrounded by empty lines.  If you need something like `{r}` or `{dot}` to not render anything, use double braces instead of single ones. Here is an example listing a simple R code chunk.
+
+````
+
+```{{r}}
+x <- 1
+```
+
+````
+
 ## Multi-Output Format Reports {#sec-rformat-multi}
 
 To allow one report to be used to render multiple output formats, especially html and pdf, it is helpful to be able to sense which output format is currently in play, and to use different functions or options to render output explicitly for the current format.  Here is how to create variables that can be referenced simply in code throughout the report, and to invoke the `plotly` graphics package if output is in html to allow interactivity.  A small function `ggp` is defined so that if you run any `ggplot2` output through it, the result will be automatically converted to `plotly` using the `ggplotly` function, otherwise it is left at standard static `ggplot2` output if html is not the output target.[See [this](https://hbiostat.org/ordinal) for examples of articles rendered in both html and PDF from the same script.]{.aside}
@@ -675,13 +687,11 @@ makedot(x, jj='tiger', file='makedot.dot')
 
 The last diagram was rendered with
 
-```{r echo=FALSE,result='asis'}
-cat("
-\`\`\`{dot}
+````
+```{{dot}}
 //| file: makedot.dot
-\`\`\`
-")
 ```
+````
 
 which renders fine, but if you want to put the diagram in a numbered figure environment with a caption you need to use another approach.
 First convert the diagram to an actual graphics format that Quarto understands: `svg`.  Assuming the user has installed the `graphviz` app externally the conversion is simple.
@@ -692,43 +702,46 @@ system("dot -Tsvg makedot.dot -o makedot.svg")
 
 Then render as a true figure using the following.
 
-```{r echo=FALSE,result='asis'}
-cat('
-\`\`\`{r echo=FALSE}
+````
+
+```{{r}}
+#| echo: FALSE
 #| label: fig-rformat-makedot
 #| fig-cap: Example graphviz chart as a true figure
 knitr::include_graphics("makedot.svg")
-\`\`\`
-')
 ```
 
-```{r echo=FALSE}
+````
+
+```{r}
+#| echo: FALSE
 #| label: fig-rformat-makedot2
 #| fig-cap: Example graphviz chart as a true figure
 knitr::include_graphics("makedot.svg")
 ```
 
 ::: {.callout-note collapse="true"}
-## Other Approaches for Adding Captions to Generated `graphviz` charts
+## Other Approaches for Adding Captions to Generated `graphviz` Charts
 
 The following work but may not treat the figure as a true Quarto figure, so may not include it in a table of figures.
 
-```{r echo=FALSE,result='asis'}
-cat("
+````
+
 ![Example graphviz chart with a caption](makedot.svg){#fig-rformat-makedot2}
 
 or
 
 ::: {.figure #fig-rformat-makedot3}
-\`\`\`{dot}
+```{{dot}}
 //| file: makedot.dot
-\`\`\`
+```
 
 Example graphviz chart with a caption
 :::
 
-")
 ```
+
+````
 
 :::
 

@@ -1,9 +1,9 @@
 _freeze
+_book/
 Active
 .quarto
 .Rhistory
 .Rproj.user
-
 
 /.quarto/
 

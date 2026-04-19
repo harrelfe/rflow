@@ -675,4 +675,5 @@ describe(d)
       - Go to the `RStudio Console` and run `require(Hmisc)` then `getRs('stressecho.qmd', put='rstudio')`
       - Click on `Render` to run the script and create an html report that is shown in the `RStudio` `Viewer` on the right
    + Do likewise for scripts that work problems in _The Analysis of Biological Data_, e.g. `abd17-lion.qmd`, `abd18-molerats.qmd`
+* [Big Book of R](https://www.bigbookofr.com) by Oscar Baruffa
 	 

@@ -195,6 +195,26 @@ ggplotlyr(g, remove='.*): ')  # removes paste0("dose:", dose):
 # dose is in hover text for each point
 ```
 
+
+::: {.callout-note collapse="true"}
+# Using `ggplot2` Built-in Label Lookup
+
+You can also use the `ggplot2` `labs` function to look up variable labels for plotting, although this approach does not provide an automatic way to incorporate units of measurement.  This can be done through the `dictionary` argument to `labs`, which allows only character string labels and not `plotmath` expressions or HTML.  Or with recent versions of `ggplot2`, just let `ggplot2` find the `label` attribute for variables on axes.  Here is an example.
+
+```{r}
+#| label: fig-graphics-ggplot2ex2
+#| fig-cap: "`ggplot2` graph automatically making use of variable labels"
+ggplot(d, aes(x=age, y=bhr, color=gender, label=paste0('dose:', dose))) +
+       geom_point() + geom_smooth() +
+       scale_x_continuous(minor_breaks=seq(30, 80, by=5)) +
+       guides(color=guide_legend(title='')) +
+       theme(legend.position='bottom') +
+       labs(caption='Scatterplot of age by basal heart rate stratified by sex')
+```
+
+:::
+
+
 `ggplot2` allows one to flexibly use transformed axes.  Here is example syntax to plot the $x$ variable on a log scale, taking charge of tick mark placement and adding minor divisions depicted with grid lines.
 
 ```{r eval=FALSE}
