@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.13">
+<meta name="generator" content="quarto-1.9.20">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>5&nbsp; Analysis File Creation – R Workflow</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -74,10 +77,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-ac077c1e730dfeb5e42400639d17284e.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-3512cbed9e2527d986e9b0b56d261405.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-9d16bd9ddc44c4bc1d4ae3488c927ea9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-ca52c48b12645450bbae4e0fad355f8b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -135,8 +138,8 @@ gtag('config', 'G-FN79JJ28KR', { 'anonymize_ip': true});
 <link rel="stylesheet" href="h.css">
 <meta name="twitter:title" content="5&nbsp; Analysis File Creation – R Workflow">
 <meta name="twitter:description" content="">
-<meta name="twitter:creator" content="@f2harrell">
-<meta name="twitter:site" content="@f2harrell">
+<meta name="twitter:creator" content="f2harrell">
+<meta name="twitter:site" content="f2harrell">
 <meta name="twitter:card" content="summary">
 </head>
 
@@ -314,7 +317,7 @@ gtag('config', 'G-FN79JJ28KR', { 'anonymize_ip': true});
   <li><a href="#variable-naming" id="toc-variable-naming" class="nav-link" data-scroll-target="#variable-naming"><span class="header-section-number">5.3</span> Variable Naming</a></li>
   <li><a href="#sec-fcreate-dd" id="toc-sec-fcreate-dd" class="nav-link" data-scroll-target="#sec-fcreate-dd"><span class="header-section-number">5.4</span> Data Dictionary</a></li>
   <li><a href="#sec-fcreate-fst" id="toc-sec-fcreate-fst" class="nav-link" data-scroll-target="#sec-fcreate-fst"><span class="header-section-number">5.5</span> Efficient Storage and Retrieval With <code>fst</code></a></li>
-  <li><a href="#sec-fcreate-qs" id="toc-sec-fcreate-qs" class="nav-link" data-scroll-target="#sec-fcreate-qs"><span class="header-section-number">5.6</span> Efficient Storage and Retrieval With <code>qs</code></a></li>
+  <li><a href="#sec-fcreate-qs" id="toc-sec-fcreate-qs" class="nav-link" data-scroll-target="#sec-fcreate-qs"><span class="header-section-number">5.6</span> Efficient Storage and Retrieval With <code>qs2</code></a></li>
   <li><a href="#sec-fcreate-secure" id="toc-sec-fcreate-secure" class="nav-link" data-scroll-target="#sec-fcreate-secure"><span class="header-section-number">5.7</span> Secure File Storage and Transmission</a>
   <ul class="collapse">
   <li><a href="#sec-fcreate-rcdep" id="toc-sec-fcreate-rcdep" class="nav-link" data-scroll-target="#sec-fcreate-rcdep"><span class="header-section-number">5.7.1</span> Depositing Files on <code>REDCap</code></a></li>
@@ -369,7 +372,7 @@ Im --&gt; mf[Multiple Files&lt;br&gt;Looping]
 </section>
 <section id="sec-fcreate-import" class="level2 page-columns page-full" data-number="5.2">
 <h2 data-number="5.2" class="anchored" data-anchor-id="sec-fcreate-import"><span class="header-section-number">5.2</span> Importing and Creating Annotated Analysis Files</h2>
-<div class="page-columns page-full"><p>I typically create a compact analysis file in a separate R script called <code>create.r</code> and have it produce compressed R binary <code>data.frame</code> or <code>data.table</code> <code>.rds</code> files using <code>saveRDS(name, 'name.rds', compress='xz')</code>. Then I have an analysis script named for example <code>a.qmd</code> (for <a href="https://quarto.org">Quarto</a> reports) or <code>a.Rmd</code> (for RMarkdown reports) that starts with <code>d &lt;- readRDS('name.rds')</code>.  This process is especially helpful with analysis file creation takes multiple steps or files are large. <code>readRDS</code> is very fast for loading binary R objects, and <code>qread</code> is even faster. </p><div class="no-row-height column-margin column-container"><span class="margin-aside">See <a href="#sec-fcreate-qs" class="quarto-xref"><span>Section 5.6</span></a> for an alternative that is generally preferable to <code>saveRDS</code> using the <code>qs</code> package: <code>qsave(name, 'name.qs')</code> and <code>d &lt;- qread('name.qs')</code>.<br><br>Templates for analysis reports are <a href="http://hbiostat.org/rr/index.html#template">here</a>, and a comprehensive report example may be found <a href="https://hbiostat.org/R/Hmisc/markov">here</a>.</span><span class="margin-aside">There is an older way to read/write binary R objects using R <code>load</code> and <code>save</code> and <code>Hmisc</code> frontends for them <code>Load</code> and <code>Save</code>. Files using these formats typically have suffixes of <code>.rda</code>, <code>.RData</code>, or <code>.sav</code>, and using <code>load</code> stores the object under its original name, which might not be clear until you check your R <code>.global</code> environment by looking in the upper right <code>RStudio</code> panel.</span></div></div>
+<div class="page-columns page-full"><p>I typically create a compact analysis file in a separate R script called <code>create.r</code> and have it produce compressed R binary <code>data.frame</code> or <code>data.table</code> <code>.rds</code> files using <code>saveRDS(name, 'name.rds', compress='xz')</code>. Then I have an analysis script named for example <code>a.qmd</code> (for <a href="https://quarto.org">Quarto</a> reports) or <code>a.Rmd</code> (for RMarkdown reports) that starts with <code>d &lt;- readRDS('name.rds')</code>.  This process is especially helpful with analysis file creation takes multiple steps or files are large. <code>readRDS</code> is very fast for loading binary R objects, and <code>qread</code> is even faster. </p><div class="no-row-height column-margin column-container"><span class="margin-aside">See <a href="#sec-fcreate-qs" class="quarto-xref"><span>Section 5.6</span></a> for an alternative that is generally preferable to <code>saveRDS</code> using the <code>qs2</code> package: <code>qs_save(name, 'name.qs2')</code> and <code>d &lt;- qs_read('name.qs2')</code>.<br><br>Templates for analysis reports are <a href="http://hbiostat.org/rr/index.html#template">here</a>, and a comprehensive report example may be found <a href="https://hbiostat.org/R/Hmisc/markov">here</a>.</span><span class="margin-aside">There is an older way to read/write binary R objects using R <code>load</code> and <code>save</code> and <code>Hmisc</code> frontends for them <code>Load</code> and <code>Save</code>. Files using these formats typically have suffixes of <code>.rda</code>, <code>.RData</code>, or <code>.sav</code>, and using <code>load</code> stores the object under its original name, which might not be clear until you check your R <code>.global</code> environment by looking in the upper right <code>RStudio</code> panel.</span></div></div>
 <div class="page-columns page-full"><p>When variables need to be recoded, have labels added or changed, or have units of measurement added, I specify those using the <code>Hmisc</code> package <a href="https://www.rdocumentation.org/packages/Hmisc/versions/4.7-0/topics/upData"><code>upData</code> function</a>.</p><div class="no-row-height column-margin column-container"><span class="margin-aside">Variable labels and units of measurement are used in special ways in my R packages. This will show up in the <code>describe</code> and <code>contents</code> function outputs below and in axis labels for graphics.</span></div></div>
 <p>To facilitate some operations requiring variable names to be quoted, the <code>Hmnisc</code> package provides the <code>.q</code> function so that you don’t have to quote names that are legal R object names.</p>
 <div class="cell">
@@ -445,7 +448,7 @@ Im --&gt; mf[Multiple Files&lt;br&gt;Looping]
 <span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a>         )</span>
 <span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(d, <span class="st">'stressEcho.rds'</span>, <span class="at">compress=</span><span class="st">'xz'</span>)</span>
-<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a><span class="co"># Or qsave(d, 'stressEcho.qs')</span></span>
+<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a><span class="co"># Or qs_save(d, 'stressEcho.qs2')</span></span>
 <span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a><span class="co"># Note that we could have automatically recoded all 0:1 variables</span></span>
 <span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a><span class="co"># if they were all to be treated identically:</span></span>
@@ -526,10 +529,10 @@ wt_lbs        Weight integer integer</code></pre>
 <div id="tabset-1-5" class="tab-pane page-columns page-full" role="tabpanel" aria-labelledby="tabset-1-5-tab">
 <p>If reading data exported from <a href="https://www.project-redcap.org"><code>REDCap</code></a> that are placed into the project directory I run the following to get rid of duplicate (<code>factor</code> and non-<code>factor</code> versions of variables <code>REDCap</code> produces) variables and automatically convert dates to <code>Date</code> variables:</p>
 <pre><code>require(Hmisc)
-require(qs)
+require(qs2)
 getRs('importREDCap.r')   # source() code to define function
 mydata &lt;- importREDCap()  # by default operates on last downloaded export
-qsave(mydata, 'mydata.qs')</code></pre>
+qs_save(mydata, 'mydata.qs2')</code></pre>
 <p>When file names are not given to <code>importREDCap</code> the function looks for the latest created <code>.csv</code> file and <code>.R</code> file with same prefix and uses those. See <a href="http://hbiostat.org/bbr/md/r.html">this</a> for more information.</p>
 <p><code>getRs('importREDCap.r')</code> also defines the <code>cleanupREDCap</code> function serving several useful roles. It can remove html code (tags) that sometimes clutters variable labels, and it converts sequences representing <code>REDCap</code> multiple choice variables into a single multiple choice variable using the <code>Hmisc</code> package <code>mChoice</code> function to do the work. During the export process, <code>REDCap</code> converts what appears to be one multiple choice entity during data entry into one variable per possible choice, and these variables have names of the form <code>basename___choice number</code> (note the three underscores). Assuming that the <code>checkboxLabels</code> argument to <code>drinkREDCap</code> was set to <code>TRUE</code> if exporting using the <code>REDCap</code> API (see below), <code>cleanupREDCap</code> puts these back into a single variable. Such an <code>mChoice</code> variable has an internal value of, for example, <code>2;3;7</code> if choices 2, 3, and 7 were selected for a subject. These are converted to text form if you print the variable, run it through <code>as.character()</code> or <code>format()</code>, or if you run <code>summary()</code> or <code>summaryM()</code> on the variable. For example you may see output in the three choices example of <code>"pain;stomach ache;headache"</code>. See <a href="https://www.rdocumentation.org/packages/Hmisc/versions/4.7-1/topics/mChoice"><code>mChoice</code> documentation</a>. When the new consolidated variables are created, the original choice variables created by <code>REDCap</code> are removed from the data table. The new variable is the base name of these deleted variables.</p>
 <p>You can run <code>cleanupREDCap</code> on a data table <code>d</code>, making changes to it in place using</p>
@@ -732,10 +735,10 @@ if(any(j)) cat('Variables never dropped:',
 # binary file for fast retrieval
 # Add export_time attribute to R to define export date/time
 attr(R, 'export_time') &lt;- when
-qsave(R, 'R.qs')    # 5.8MB 0.2s
+qs_save(R, 'R.qs2')    # 5.8MB 0.2s
 # saveRDS(..., compress='xz') resulted in 3MB R.rds file, 10.7s
-# qsave(R, 'R.qs', preset='archive')  resulted in 3.8M, 2.8s</code></pre>
-<p>Subsequent programs may retrieve the database using <code>R &lt;- qread('R.qs')</code> and access the export date/time stamp using <code>attr(R, 'export_time')</code>.</p>
+# qs_save(R, 'R.qs2', preset='archive')  resulted in 3.8M, 2.8s</code></pre>
+<p>Subsequent programs may retrieve the database using <code>R &lt;- qs_read('R.qs2')</code> and access the export date/time stamp using <code>attr(R, 'export_time')</code>.</p>
 <p>See the <code>Multiple Files</code> tab for useful R examples for processing multiple files inside objects like the <code>R</code> list just created.</p>
 <p>Here are some examples showing how to use <code>mChoice</code> variables.</p>
 <pre><code>r &lt;- R$demographics$race_eth
@@ -854,7 +857,7 @@ chol Cholesterol, mg% integer integer</code></pre>
 <span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>  X[[dnames[i]]] <span class="ot">&lt;-</span> d</span>
 <span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(X, <span class="st">'X.rds'</span>, <span class="at">compress=</span><span class="st">'xz'</span>)  <span class="co"># Efficiently store all datasets together</span></span>
-<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Or qsave(X, 'X.qs')</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Or qs_save(X, 'X.qs2')</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>To process one of the datasets one can do things like <code>summary(X[[3]])</code> or <code>summary(X$baseline)</code> where the third dataset stored was named <code>baseline</code> because it was imported from <code>baseline.csv</code>.</p>
 <p>Now there are many possibilities for processing all the datasets at once such as the following.</p>
@@ -946,16 +949,16 @@ chol Cholesterol, mg% integer integer</code></pre>
 <hr><h4 class="anchored">Data frame:d</h4>558 observations and 31 variables, maximum # NAs:0  
 <hr>
 <style>
- .hmisctable847923 {
+ .hmisctable289838 {
  border: 1px solid gray;
  border-collapse: collapse;
  font-size: 100%;
  }
- .hmisctable847923 td {
+ .hmisctable289838 td {
  text-align: right;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable847923 th {
+ .hmisctable289838 th {
  color: Black;
  text-align: center;
  padding: 0 1ex 0 1ex;
@@ -963,7 +966,7 @@ chol Cholesterol, mg% integer integer</code></pre>
  }
  </style>
  
-<table class="hmisctable847923 table table-sm table-striped small" data-border="1">
+<table class="hmisctable289838 table table-sm table-striped small" data-border="1">
 <tbody>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">Name</th>
@@ -1269,16 +1272,16 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <hr><h4 class="anchored">Data frame:dr</h4>10000000 observations and 3 variables, maximum # NAs:0  
 <hr>
 <style>
- .hmisctable238946 {
+ .hmisctable482713 {
  border: 1px solid gray;
  border-collapse: collapse;
  font-size: 100%;
  }
- .hmisctable238946 td {
+ .hmisctable482713 td {
  text-align: right;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable238946 th {
+ .hmisctable482713 th {
  color: Black;
  text-align: center;
  padding: 0 1ex 0 1ex;
@@ -1286,7 +1289,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
  }
  </style>
  
-<table class="hmisctable238946 table table-sm table-striped small" data-border="1">
+<table class="hmisctable482713 table table-sm table-striped small" data-border="1">
 <tbody>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">Name</th>
@@ -1328,16 +1331,16 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <hr><h4 class="anchored">Data frame:dr</h4>10000000 observations and 3 variables, maximum # NAs:0  
 <hr>
 <style>
- .hmisctable816267 {
+ .hmisctable656240 {
  border: 1px solid gray;
  border-collapse: collapse;
  font-size: 100%;
  }
- .hmisctable816267 td {
+ .hmisctable656240 td {
  text-align: right;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable816267 th {
+ .hmisctable656240 th {
  color: Black;
  text-align: center;
  padding: 0 1ex 0 1ex;
@@ -1345,7 +1348,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
  }
  </style>
  
-<table class="hmisctable816267 table table-sm table-striped small" data-border="1">
+<table class="hmisctable656240 table table-sm table-striped small" data-border="1">
 <tbody>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">Name</th>
@@ -1410,16 +1413,16 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <hr><h4 class="anchored">Data frame:dr</h4>1000 observations and 2 variables, maximum # NAs:0  
 <hr>
 <style>
- .hmisctable159071 {
+ .hmisctable665537 {
  border: 1px solid gray;
  border-collapse: collapse;
  font-size: 100%;
  }
- .hmisctable159071 td {
+ .hmisctable665537 td {
  text-align: right;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable159071 th {
+ .hmisctable665537 th {
  color: Black;
  text-align: center;
  padding: 0 1ex 0 1ex;
@@ -1427,7 +1430,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
  }
  </style>
  
-<table class="hmisctable159071 table table-sm table-striped small" data-border="1">
+<table class="hmisctable665537 table table-sm table-striped small" data-border="1">
 <tbody>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">Name</th>
@@ -1460,14 +1463,14 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 </div>
 </section>
 <section id="sec-fcreate-qs" class="level2" data-number="5.6">
-<h2 data-number="5.6" class="anchored" data-anchor-id="sec-fcreate-qs"><span class="header-section-number">5.6</span> Efficient Storage and Retrieval With <code>qs</code></h2>
-<p>The <a href="https://cran.r-project.org/web/packages/qs"><code>qs</code></a> package, like <code>fst</code>, provides fast reading and writing of R objects. Unlike <code>fst</code>, <code>qs</code> can store any type of object, does not lose attributes, and does not allow for direct access of selected rows or columns. Let’s compare <code>qs</code>, <code>fst</code>, and <code>saveRDS</code> for speed and disk storage efficiency. First, make sure that <code>qs</code> keeps all attributes.</p>
+<h2 data-number="5.6" class="anchored" data-anchor-id="sec-fcreate-qs"><span class="header-section-number">5.6</span> Efficient Storage and Retrieval With <code>qs2</code></h2>
+<p>The <a href="https://cran.r-project.org/web/packages/qs2"><code>qs2</code></a> package, like <code>fst</code>, provides fast reading and writing of R objects. Unlike <code>fst</code>, <code>qs2</code> can store any type of object, does not lose attributes, and does not allow for direct access of selected rows or columns. Let’s compare <code>qs2</code>, <code>fst</code>, and <code>saveRDS</code> for speed and disk storage efficiency. First, make sure that <code>qs2</code> keeps all attributes.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(qs)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(qs2)</span>
 <span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a><span class="fu">getHdata</span>(support)   <span class="co"># loads from hbiostat.org/data; has</span></span>
 <span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>                    <span class="co"># lots of variable attributes</span></span>
-<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a><span class="fu">qsave</span>(support, <span class="st">'/tmp/support.qs'</span>)</span>
-<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a>w <span class="ot">&lt;-</span> <span class="fu">qread</span>(<span class="st">'/tmp/support.qs'</span>)</span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_save</span>(support, <span class="st">'/tmp/support.qs2'</span>)</span>
+<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a>w <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(<span class="st">'/tmp/support.qs2'</span>)</span>
 <span id="cb51-6"><a href="#cb51-6" aria-hidden="true" tabindex="-1"></a><span class="fu">identical</span>(support, w)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] TRUE</code></pre>
@@ -1479,7 +1482,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(d, <span class="st">'/tmp/dc.rds'</span>, <span class="at">compress=</span><span class="st">'xz'</span>)  <span class="co">#  124s 116M</span></span>
 <span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a><span class="fu">write_fst</span>(d, <span class="st">'/tmp/d.fst'</span>)                <span class="co">#  0.2s 161M</span></span>
 <span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a><span class="fu">write_fst</span>(d, <span class="st">'/tmp/dc.fst'</span>, <span class="at">compress=</span><span class="dv">100</span>) <span class="co">#  1.4s 122M</span></span>
-<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a><span class="fu">qsave</span>(d, <span class="st">'/tmp/d.qs'</span>, <span class="at">nthreads=</span><span class="dv">3</span>)         <span class="co">#  0.3s 110M</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_save</span>(d, <span class="st">'/tmp/d.qs2'</span>, <span class="at">nthreads=</span><span class="dv">3</span>)         <span class="co">#  0.3s 110M</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Read times are as follows.</p>
 <div class="cell">
@@ -1487,10 +1490,10 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a><span class="fu">readRDS</span>(<span class="st">'/tmp/dc.rds'</span>)          <span class="co"># 7.5 s</span></span>
 <span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a><span class="fu">read_fst</span>(<span class="st">'/tmp/d.fst'</span>)          <span class="co"># 0.04s</span></span>
 <span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a><span class="fu">read_fst</span>(<span class="st">'/tmp/dc.fst'</span>)         <span class="co"># 0.07s</span></span>
-<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a><span class="fu">qread</span>(<span class="st">'/tmp/d.qs'</span>)              <span class="co"># 0.2 s</span></span>
-<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a><span class="fu">qread</span>(<span class="st">'/tmp/d.qs'</span>, <span class="at">nthreads=</span><span class="dv">6</span>)  <span class="co"># 0.16s</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_read</span>(<span class="st">'/tmp/d.qs2'</span>)              <span class="co"># 0.2 s</span></span>
+<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_read</span>(<span class="st">'/tmp/d.qs2'</span>, <span class="at">nthreads=</span><span class="dv">6</span>)  <span class="co"># 0.16s</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>When direct access is not needed, i.e., when whole data frames/tables are to be read, the <code>qs</code> package would be a good default, especially if one takes into account that <code>qs</code> preserves all object attributes. <code>qs</code> dependencies are also more actively supported.</p>
+<p>When direct access is not needed, i.e., when whole data frames/tables are to be read, the <code>qs2</code> package would be a good default, especially if one takes into account that <code>qs2</code> preserves all object attributes. <code>qs2</code> dependencies are also more actively supported.</p>
 </section>
 <section id="sec-fcreate-secure" class="level2 page-columns page-full" data-number="5.7">
 <h2 data-number="5.7" class="anchored" data-anchor-id="sec-fcreate-secure"><span class="header-section-number">5.7</span> Secure File Storage and Transmission</h2>
@@ -1499,10 +1502,10 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <ul>
 <li>System keyrings are used to cache passwords, and the creator of the file is asked for the password only once (possibly again if rebooting the computer or otherwise starting a new session); handled by the <a href="https://cran.r-project.org/web/packages/keyring/index.html"><code>keyring</code></a> package</li>
 <li>Passwords do not appear in R code but are entered into a pop-up window; done by the <a href="https://cran.r-project.org/web/packages/getPass"><code>getPass</code></a> package</li>
-<li>Objects are saved externally in a very efficient manner using the <code>qs</code> package (see above)</li>
+<li>Objects are saved externally in a very efficient manner using the <code>qs2</code> package (see above)</li>
 <li>The saved unencrypted file exists only momentarily in a temporary directory</li>
 <li>The file is encrypted and saved in the current working directory using the <a href="https://cran.r-project.org/web/packages/safer"><code>safer</code></a> package and the unencrypted file is immediately deleted </li>
-<li>When a stored file is decrypted, the decrypted <code>.qs</code> file is stored only momentarily in a temporary directory, and is deleted once the unencrypted file is read using <code>qs::qread</code>.</li>
+<li>When a stored file is decrypted, the decrypted <code>.qs2</code> file is stored only momentarily in a temporary directory, and is deleted once the unencrypted file is read using <code>qs2::qs_read</code>.</li>
 </ul>
 <div class="no-row-height column-margin column-container"><span class="margin-aside">The overhead of encrypting and decrypting is small, e.g., 0.5s for a data frame with 100,000 rows and 100 columns.</span></div><p>Here is an example using <code>qcrypt</code> to encrypt and then to decrypt a data frame. The decryption phase can appear in a different script and the password will still be cached.</p>
 <div class="cell">
@@ -1513,30 +1516,30 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <dl class="code-annotation-container-hidden code-annotation-container-grid">
 <dt data-target-cell="annotated-cell-18" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-cell="annotated-cell-18" data-code-lines="2" data-code-annotation="1">Asks for a password (one-time); use <code>qs::qsave</code> to create a temporary file <code>x.qs</code> in a temporary directory; store encrypted version as <code>x.qs.encrypted</code> in current working directory; delete <code>x.qs</code></span>
+<span data-code-cell="annotated-cell-18" data-code-lines="2" data-code-annotation="1">Asks for a password (one-time); use <code>qs2::qs_save</code> to create a temporary file <code>x.qss\2</code> in a temporary directory; store encrypted version as <code>x.qs2.encrypted</code> in current working directory; delete <code>x.qs2</code></span>
 </dd>
 <dt data-target-cell="annotated-cell-18" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-cell="annotated-cell-18" data-code-lines="3" data-code-annotation="2">Unencrypt <code>x.qs.encrypted</code> into a temporary directory as <code>x.qs</code> using the cached password; use <code>qs::qread</code> to read it; store the result in <code>x</code></span>
+<span data-code-cell="annotated-cell-18" data-code-lines="3" data-code-annotation="2">Unencrypt <code>x.qs2.encrypted</code> into a temporary directory as <code>x.qs2</code> using the cached password; use <code>qs2::qs_read</code> to read it; store the result in <code>x</code></span>
 </dd>
 </dl>
 </div>
 </div>
-<div class="page-columns page-full"><p><code>qcrypt</code> also has the capability to encrypt general files such as html and pdf reports and csv files. </p><div class="no-row-height column-margin column-container"><span class="margin-aside">The <code>safer</code> package can encrypt/decrypt R objects and general files. <code>qcrypt</code> did not use <code>safer</code>’s object encryption capabilities because in a test the resulting <code>.qs</code> file was much larger due to originally sparse data not being sparse any more upon encryption.</span></div></div>
+<div class="page-columns page-full"><p><code>qcrypt</code> also has the capability to encrypt general files such as html and pdf reports and csv files. </p><div class="no-row-height column-margin column-container"><span class="margin-aside">The <code>safer</code> package can encrypt/decrypt R objects and general files. <code>qcrypt</code> did not use <code>safer</code>’s object encryption capabilities because in a test the resulting <code>.qs2</code> file was much larger due to originally sparse data not being sparse any more upon encryption.</span></div></div>
 <p>The functions that <code>qcrypt</code> calls may only be called in an interactive R session. If you want to be able to run the main part (e.g., <code>main.qmd</code>) of a script in batch mode, create an interactive script like the following. If your operating system does not have a <code>/tmp</code> directory for storing temporary files, use another appropriate directory name.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(Hmisc)</span>
-<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(qs)</span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(qs2)</span>
 <span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a>w <span class="ot">&lt;-</span> <span class="fu">qcrypt</span>(<span class="st">'w'</span>)                    <span class="co"># reads w.qs.encrypted</span></span>
-<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a><span class="fu">qsave</span>(w, <span class="st">'/tmp/w.qs'</span>)</span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a>w <span class="ot">&lt;-</span> <span class="fu">qcrypt</span>(<span class="st">'w'</span>)                    <span class="co"># reads w.qs2.encrypted</span></span>
+<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_save</span>(w, <span class="st">'/tmp/w.qs2'</span>)</span>
 <span id="cb55-6"><a href="#cb55-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb55-7"><a href="#cb55-7" aria-hidden="true" tabindex="-1"></a><span class="fu">system</span>(<span class="st">'quarto render main.qmd'</span>)    <span class="co"># creates /tmp/u.qs</span></span>
 <span id="cb55-8"><a href="#cb55-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb55-9"><a href="#cb55-9" aria-hidden="true" tabindex="-1"></a>u <span class="ot">&lt;-</span> <span class="fu">qread</span>(<span class="st">'/tmp/u.qs'</span>)</span>
-<span id="cb55-10"><a href="#cb55-10" aria-hidden="true" tabindex="-1"></a><span class="fu">qcrypt</span>(u, <span class="st">'u'</span>)                      <span class="co"># writes u.qs.encrypted</span></span>
+<span id="cb55-9"><a href="#cb55-9" aria-hidden="true" tabindex="-1"></a>u <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(<span class="st">'/tmp/u.qs2'</span>)</span>
+<span id="cb55-10"><a href="#cb55-10" aria-hidden="true" tabindex="-1"></a><span class="fu">qcrypt</span>(u, <span class="st">'u'</span>)                      <span class="co"># writes u.qs2.encrypted</span></span>
 <span id="cb55-11"><a href="#cb55-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb55-12"><a href="#cb55-12" aria-hidden="true" tabindex="-1"></a><span class="fu">unlink</span>(<span class="fu">c</span>(<span class="st">'/tmp/w.qs'</span>, <span class="st">'/tmp/u.qs'</span>)) <span class="co"># remove temporary files</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb55-12"><a href="#cb55-12" aria-hidden="true" tabindex="-1"></a><span class="fu">unlink</span>(<span class="fu">c</span>(<span class="st">'/tmp/w.qs2'</span>, <span class="st">'/tmp/u.qs2'</span>)) <span class="co"># remove temporary files</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <section id="sec-fcreate-rcdep" class="level3" data-number="5.7.1">
 <h3 data-number="5.7.1" class="anchored" data-anchor-id="sec-fcreate-rcdep"><span class="header-section-number">5.7.1</span> Depositing Files on <code>REDCap</code></h3>
@@ -1976,7 +1979,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-28"><a href="#cb57-28" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-29"><a href="#cb57-29" aria-hidden="true" tabindex="-1"></a>I typically create a compact analysis file in a separate R script</span>
 <span id="cb57-30"><a href="#cb57-30" aria-hidden="true" tabindex="-1"></a>called <span class="in">`create.r`</span> and have it produce compressed R binary <span class="in">`data.frame`</span></span>
-<span id="cb57-31"><a href="#cb57-31" aria-hidden="true" tabindex="-1"></a>or <span class="in">`data.table`</span> <span class="in">`.rds`</span> files using <span class="in">`saveRDS(name, 'name.rds', compress='xz')`</span>.  Then I have an analysis script named for example <span class="in">`a.qmd`</span> (for <span class="co">[</span><span class="ot">Quarto</span><span class="co">](https://quarto.org)</span> reports) or <span class="in">`a.Rmd`</span> (for RMarkdown reports) that starts with <span class="in">`d &lt;- readRDS('name.rds')`</span>.  <span class="co">[</span><span class="ot">See @sec-fcreate-qs for an alternative that is generally preferable to `saveRDS` using the `qs` package: `qsave(name, 'name.qs')` and `d &lt;- qread('name.qs')`.&lt;br&gt;&lt;br&gt;Templates for analysis reports are [here](http://hbiostat.org/rr/index.html#template), and a comprehensive report example may be found [here](https://hbiostat.org/R/Hmisc/markov).</span><span class="co">]</span>{.aside} This process is especially helpful with analysis file creation takes multiple steps or files are large.  <span class="in">`readRDS`</span> is very fast for loading binary R objects, and <span class="in">`qread`</span> is even faster.  <span class="co">[</span><span class="ot">There is an older way to read/write binary R objects using R `load` and `save` and `Hmisc` frontends for them `Load` and `Save`.  Files using these formats typically have suffixes of `.rda`, `.RData`, or `.sav`, and using `load` stores the object under its original name, which might not be clear until you check your R `.global` environment by looking in the upper right `RStudio` panel.</span><span class="co">]</span>{.aside}</span>
+<span id="cb57-31"><a href="#cb57-31" aria-hidden="true" tabindex="-1"></a>or <span class="in">`data.table`</span> <span class="in">`.rds`</span> files using <span class="in">`saveRDS(name, 'name.rds', compress='xz')`</span>.  Then I have an analysis script named for example <span class="in">`a.qmd`</span> (for <span class="co">[</span><span class="ot">Quarto</span><span class="co">](https://quarto.org)</span> reports) or <span class="in">`a.Rmd`</span> (for RMarkdown reports) that starts with <span class="in">`d &lt;- readRDS('name.rds')`</span>.  <span class="co">[</span><span class="ot">See @sec-fcreate-qs for an alternative that is generally preferable to `saveRDS` using the `qs2` package: `qs_save(name, 'name.qs2')` and `d &lt;- qs_read('name.qs2')`.&lt;br&gt;&lt;br&gt;Templates for analysis reports are [here](http://hbiostat.org/rr/index.html#template), and a comprehensive report example may be found [here](https://hbiostat.org/R/Hmisc/markov).</span><span class="co">]</span>{.aside} This process is especially helpful with analysis file creation takes multiple steps or files are large.  <span class="in">`readRDS`</span> is very fast for loading binary R objects, and <span class="in">`qread`</span> is even faster.  <span class="co">[</span><span class="ot">There is an older way to read/write binary R objects using R `load` and `save` and `Hmisc` frontends for them `Load` and `Save`.  Files using these formats typically have suffixes of `.rda`, `.RData`, or `.sav`, and using `load` stores the object under its original name, which might not be clear until you check your R `.global` environment by looking in the upper right `RStudio` panel.</span><span class="co">]</span>{.aside}</span>
 <span id="cb57-32"><a href="#cb57-32" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-33"><a href="#cb57-33" aria-hidden="true" tabindex="-1"></a>When variables need to be recoded, have labels added or changed, or</span>
 <span id="cb57-34"><a href="#cb57-34" aria-hidden="true" tabindex="-1"></a>have units of </span>
@@ -2053,7 +2056,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-105"><a href="#cb57-105" aria-hidden="true" tabindex="-1"></a>         )</span>
 <span id="cb57-106"><a href="#cb57-106" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-107"><a href="#cb57-107" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(d, <span class="st">'stressEcho.rds'</span>, <span class="at">compress=</span><span class="st">'xz'</span>)</span>
-<span id="cb57-108"><a href="#cb57-108" aria-hidden="true" tabindex="-1"></a><span class="co"># Or qsave(d, 'stressEcho.qs')</span></span>
+<span id="cb57-108"><a href="#cb57-108" aria-hidden="true" tabindex="-1"></a><span class="co"># Or qs_save(d, 'stressEcho.qs2')</span></span>
 <span id="cb57-109"><a href="#cb57-109" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-110"><a href="#cb57-110" aria-hidden="true" tabindex="-1"></a><span class="co"># Note that we could have automatically recoded all 0:1 variables</span></span>
 <span id="cb57-111"><a href="#cb57-111" aria-hidden="true" tabindex="-1"></a><span class="co"># if they were all to be treated identically:</span></span>
@@ -2139,10 +2142,10 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-193"><a href="#cb57-193" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-194"><a href="#cb57-194" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-195"><a href="#cb57-195" aria-hidden="true" tabindex="-1"></a><span class="in">require(Hmisc)</span></span>
-<span id="cb57-196"><a href="#cb57-196" aria-hidden="true" tabindex="-1"></a><span class="in">require(qs)</span></span>
+<span id="cb57-196"><a href="#cb57-196" aria-hidden="true" tabindex="-1"></a><span class="in">require(qs2)</span></span>
 <span id="cb57-197"><a href="#cb57-197" aria-hidden="true" tabindex="-1"></a><span class="in">getRs('importREDCap.r')   # source() code to define function</span></span>
 <span id="cb57-198"><a href="#cb57-198" aria-hidden="true" tabindex="-1"></a><span class="in">mydata &lt;- importREDCap()  # by default operates on last downloaded export</span></span>
-<span id="cb57-199"><a href="#cb57-199" aria-hidden="true" tabindex="-1"></a><span class="in">qsave(mydata, 'mydata.qs')</span></span>
+<span id="cb57-199"><a href="#cb57-199" aria-hidden="true" tabindex="-1"></a><span class="in">qs_save(mydata, 'mydata.qs2')</span></span>
 <span id="cb57-200"><a href="#cb57-200" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-201"><a href="#cb57-201" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-202"><a href="#cb57-202" aria-hidden="true" tabindex="-1"></a>When file names are not given to <span class="in">`importREDCap`</span> the function looks for</span>
@@ -2365,12 +2368,12 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-419"><a href="#cb57-419" aria-hidden="true" tabindex="-1"></a><span class="in"># binary file for fast retrieval</span></span>
 <span id="cb57-420"><a href="#cb57-420" aria-hidden="true" tabindex="-1"></a><span class="in"># Add export_time attribute to R to define export date/time</span></span>
 <span id="cb57-421"><a href="#cb57-421" aria-hidden="true" tabindex="-1"></a><span class="in">attr(R, 'export_time') &lt;- when</span></span>
-<span id="cb57-422"><a href="#cb57-422" aria-hidden="true" tabindex="-1"></a><span class="in">qsave(R, 'R.qs')    # 5.8MB 0.2s</span></span>
+<span id="cb57-422"><a href="#cb57-422" aria-hidden="true" tabindex="-1"></a><span class="in">qs_save(R, 'R.qs2')    # 5.8MB 0.2s</span></span>
 <span id="cb57-423"><a href="#cb57-423" aria-hidden="true" tabindex="-1"></a><span class="in"># saveRDS(..., compress='xz') resulted in 3MB R.rds file, 10.7s</span></span>
-<span id="cb57-424"><a href="#cb57-424" aria-hidden="true" tabindex="-1"></a><span class="in"># qsave(R, 'R.qs', preset='archive')  resulted in 3.8M, 2.8s</span></span>
+<span id="cb57-424"><a href="#cb57-424" aria-hidden="true" tabindex="-1"></a><span class="in"># qs_save(R, 'R.qs2', preset='archive')  resulted in 3.8M, 2.8s</span></span>
 <span id="cb57-425"><a href="#cb57-425" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-426"><a href="#cb57-426" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-427"><a href="#cb57-427" aria-hidden="true" tabindex="-1"></a>Subsequent programs may retrieve the database using <span class="in">`R &lt;- qread('R.qs')`</span> and access the export date/time stamp using <span class="in">`attr(R, 'export_time')`</span>.</span>
+<span id="cb57-427"><a href="#cb57-427" aria-hidden="true" tabindex="-1"></a>Subsequent programs may retrieve the database using <span class="in">`R &lt;- qs_read('R.qs2')`</span> and access the export date/time stamp using <span class="in">`attr(R, 'export_time')`</span>.</span>
 <span id="cb57-428"><a href="#cb57-428" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-429"><a href="#cb57-429" aria-hidden="true" tabindex="-1"></a>See the <span class="in">`Multiple Files`</span> tab for useful R examples for processing multiple files inside objects like the <span class="in">`R`</span> list just created.</span>
 <span id="cb57-430"><a href="#cb57-430" aria-hidden="true" tabindex="-1"></a></span>
@@ -2474,7 +2477,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-530"><a href="#cb57-530" aria-hidden="true" tabindex="-1"></a>  X[[dnames[i]]] <span class="ot">&lt;-</span> d</span>
 <span id="cb57-531"><a href="#cb57-531" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb57-532"><a href="#cb57-532" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(X, <span class="st">'X.rds'</span>, <span class="at">compress=</span><span class="st">'xz'</span>)  <span class="co"># Efficiently store all datasets together</span></span>
-<span id="cb57-533"><a href="#cb57-533" aria-hidden="true" tabindex="-1"></a><span class="co"># Or qsave(X, 'X.qs')</span></span>
+<span id="cb57-533"><a href="#cb57-533" aria-hidden="true" tabindex="-1"></a><span class="co"># Or qs_save(X, 'X.qs2')</span></span>
 <span id="cb57-534"><a href="#cb57-534" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-535"><a href="#cb57-535" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-536"><a href="#cb57-536" aria-hidden="true" tabindex="-1"></a>To process one of the datasets one can do things like <span class="in">`summary(X[[3]])`</span> or <span class="in">`summary(X$baseline)`</span> where the third dataset stored was named <span class="in">`baseline`</span> because it was imported from <span class="in">`baseline.csv`</span>.</span>
@@ -2637,16 +2640,16 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-697"><a href="#cb57-697" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="st">'d.fst'</span>, <span class="st">'d-attr.rds'</span>))</span>
 <span id="cb57-698"><a href="#cb57-698" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-699"><a href="#cb57-699" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-700"><a href="#cb57-700" aria-hidden="true" tabindex="-1"></a><span class="fu">## Efficient Storage and Retrieval With `qs` {#sec-fcreate-qs}</span></span>
+<span id="cb57-700"><a href="#cb57-700" aria-hidden="true" tabindex="-1"></a><span class="fu">## Efficient Storage and Retrieval With `qs2` {#sec-fcreate-qs}</span></span>
 <span id="cb57-701"><a href="#cb57-701" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-702"><a href="#cb57-702" aria-hidden="true" tabindex="-1"></a>The <span class="co">[</span><span class="ot">`qs`</span><span class="co">](https://cran.r-project.org/web/packages/qs)</span> package, like <span class="in">`fst`</span>, provides fast reading and writing of R objects.  Unlike <span class="in">`fst`</span>, <span class="in">`qs`</span> can store any type of object, does not lose attributes, and does not allow for direct access of selected rows or columns.  Let's compare <span class="in">`qs`</span>, <span class="in">`fst`</span>, and <span class="in">`saveRDS`</span> for speed and disk storage efficiency.   First, make sure that <span class="in">`qs`</span> keeps all attributes.</span>
+<span id="cb57-702"><a href="#cb57-702" aria-hidden="true" tabindex="-1"></a>The <span class="co">[</span><span class="ot">`qs2`</span><span class="co">](https://cran.r-project.org/web/packages/qs2)</span> package, like <span class="in">`fst`</span>, provides fast reading and writing of R objects.  Unlike <span class="in">`fst`</span>, <span class="in">`qs2`</span> can store any type of object, does not lose attributes, and does not allow for direct access of selected rows or columns.  Let's compare <span class="in">`qs2`</span>, <span class="in">`fst`</span>, and <span class="in">`saveRDS`</span> for speed and disk storage efficiency.   First, make sure that <span class="in">`qs2`</span> keeps all attributes.</span>
 <span id="cb57-703"><a href="#cb57-703" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-706"><a href="#cb57-706" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb57-707"><a href="#cb57-707" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(qs)</span>
+<span id="cb57-707"><a href="#cb57-707" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(qs2)</span>
 <span id="cb57-708"><a href="#cb57-708" aria-hidden="true" tabindex="-1"></a><span class="fu">getHdata</span>(support)   <span class="co"># loads from hbiostat.org/data; has</span></span>
 <span id="cb57-709"><a href="#cb57-709" aria-hidden="true" tabindex="-1"></a>                    <span class="co"># lots of variable attributes</span></span>
-<span id="cb57-710"><a href="#cb57-710" aria-hidden="true" tabindex="-1"></a><span class="fu">qsave</span>(support, <span class="st">'/tmp/support.qs'</span>)</span>
-<span id="cb57-711"><a href="#cb57-711" aria-hidden="true" tabindex="-1"></a>w <span class="ot">&lt;-</span> <span class="fu">qread</span>(<span class="st">'/tmp/support.qs'</span>)</span>
+<span id="cb57-710"><a href="#cb57-710" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_save</span>(support, <span class="st">'/tmp/support.qs2'</span>)</span>
+<span id="cb57-711"><a href="#cb57-711" aria-hidden="true" tabindex="-1"></a>w <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(<span class="st">'/tmp/support.qs2'</span>)</span>
 <span id="cb57-712"><a href="#cb57-712" aria-hidden="true" tabindex="-1"></a><span class="fu">identical</span>(support, w)</span>
 <span id="cb57-713"><a href="#cb57-713" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-714"><a href="#cb57-714" aria-hidden="true" tabindex="-1"></a></span>
@@ -2657,7 +2660,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-719"><a href="#cb57-719" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(d, <span class="st">'/tmp/dc.rds'</span>, <span class="at">compress=</span><span class="st">'xz'</span>)  <span class="co">#  124s 116M</span></span>
 <span id="cb57-720"><a href="#cb57-720" aria-hidden="true" tabindex="-1"></a><span class="fu">write_fst</span>(d, <span class="st">'/tmp/d.fst'</span>)                <span class="co">#  0.2s 161M</span></span>
 <span id="cb57-721"><a href="#cb57-721" aria-hidden="true" tabindex="-1"></a><span class="fu">write_fst</span>(d, <span class="st">'/tmp/dc.fst'</span>, <span class="at">compress=</span><span class="dv">100</span>) <span class="co">#  1.4s 122M</span></span>
-<span id="cb57-722"><a href="#cb57-722" aria-hidden="true" tabindex="-1"></a><span class="fu">qsave</span>(d, <span class="st">'/tmp/d.qs'</span>, <span class="at">nthreads=</span><span class="dv">3</span>)         <span class="co">#  0.3s 110M</span></span>
+<span id="cb57-722"><a href="#cb57-722" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_save</span>(d, <span class="st">'/tmp/d.qs2'</span>, <span class="at">nthreads=</span><span class="dv">3</span>)         <span class="co">#  0.3s 110M</span></span>
 <span id="cb57-723"><a href="#cb57-723" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-724"><a href="#cb57-724" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-725"><a href="#cb57-725" aria-hidden="true" tabindex="-1"></a>Read times are as follows.</span>
@@ -2667,11 +2670,11 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-729"><a href="#cb57-729" aria-hidden="true" tabindex="-1"></a><span class="fu">readRDS</span>(<span class="st">'/tmp/dc.rds'</span>)          <span class="co"># 7.5 s</span></span>
 <span id="cb57-730"><a href="#cb57-730" aria-hidden="true" tabindex="-1"></a><span class="fu">read_fst</span>(<span class="st">'/tmp/d.fst'</span>)          <span class="co"># 0.04s</span></span>
 <span id="cb57-731"><a href="#cb57-731" aria-hidden="true" tabindex="-1"></a><span class="fu">read_fst</span>(<span class="st">'/tmp/dc.fst'</span>)         <span class="co"># 0.07s</span></span>
-<span id="cb57-732"><a href="#cb57-732" aria-hidden="true" tabindex="-1"></a><span class="fu">qread</span>(<span class="st">'/tmp/d.qs'</span>)              <span class="co"># 0.2 s</span></span>
-<span id="cb57-733"><a href="#cb57-733" aria-hidden="true" tabindex="-1"></a><span class="fu">qread</span>(<span class="st">'/tmp/d.qs'</span>, <span class="at">nthreads=</span><span class="dv">6</span>)  <span class="co"># 0.16s</span></span>
+<span id="cb57-732"><a href="#cb57-732" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_read</span>(<span class="st">'/tmp/d.qs2'</span>)              <span class="co"># 0.2 s</span></span>
+<span id="cb57-733"><a href="#cb57-733" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_read</span>(<span class="st">'/tmp/d.qs2'</span>, <span class="at">nthreads=</span><span class="dv">6</span>)  <span class="co"># 0.16s</span></span>
 <span id="cb57-734"><a href="#cb57-734" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-735"><a href="#cb57-735" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-736"><a href="#cb57-736" aria-hidden="true" tabindex="-1"></a>When direct access is not needed, i.e., when whole data frames/tables are to be read, the <span class="in">`qs`</span> package would be a good default, especially if one takes into account that <span class="in">`qs`</span> preserves all object attributes.  <span class="in">`qs`</span> dependencies are also more actively supported.</span>
+<span id="cb57-736"><a href="#cb57-736" aria-hidden="true" tabindex="-1"></a>When direct access is not needed, i.e., when whole data frames/tables are to be read, the <span class="in">`qs2`</span> package would be a good default, especially if one takes into account that <span class="in">`qs2`</span> preserves all object attributes.  <span class="in">`qs2`</span> dependencies are also more actively supported.</span>
 <span id="cb57-737"><a href="#cb57-737" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-738"><a href="#cb57-738" aria-hidden="true" tabindex="-1"></a><span class="fu">## Secure File Storage and Transmission {#sec-fcreate-secure}</span></span>
 <span id="cb57-739"><a href="#cb57-739" aria-hidden="true" tabindex="-1"></a></span>
@@ -2681,10 +2684,10 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-743"><a href="#cb57-743" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-744"><a href="#cb57-744" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>System keyrings are used to cache passwords, and the creator of the file is asked for the password only once (possibly again if rebooting the computer or otherwise starting a new session); handled by the <span class="co">[</span><span class="ot">`keyring`</span><span class="co">](https://cran.r-project.org/web/packages/keyring/index.html)</span> package</span>
 <span id="cb57-745"><a href="#cb57-745" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>Passwords do not appear in R code but are entered into a pop-up window; done by the <span class="co">[</span><span class="ot">`getPass`</span><span class="co">](https://cran.r-project.org/web/packages/getPass)</span> package</span>
-<span id="cb57-746"><a href="#cb57-746" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>Objects are saved externally in a very efficient manner using the <span class="in">`qs`</span> package (see above)</span>
+<span id="cb57-746"><a href="#cb57-746" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>Objects are saved externally in a very efficient manner using the <span class="in">`qs2`</span> package (see above)</span>
 <span id="cb57-747"><a href="#cb57-747" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>The saved unencrypted file exists only momentarily in a temporary directory</span>
 <span id="cb57-748"><a href="#cb57-748" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>The file is encrypted and saved in the current working directory using the <span class="co">[</span><span class="ot">`safer`</span><span class="co">](https://cran.r-project.org/web/packages/safer)</span> package and the unencrypted file is immediately deleted <span class="co">[</span><span class="ot">The overhead of encrypting and decrypting is small, e.g., 0.5s for a data frame with 100,000 rows and 100 columns.</span><span class="co">]</span>{.aside}</span>
-<span id="cb57-749"><a href="#cb57-749" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>When a stored file is decrypted, the decrypted <span class="in">`.qs`</span> file is stored only momentarily in a temporary directory, and is deleted once the unencrypted file is read using <span class="in">`qs::qread`</span>.</span>
+<span id="cb57-749"><a href="#cb57-749" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>When a stored file is decrypted, the decrypted <span class="in">`.qs2`</span> file is stored only momentarily in a temporary directory, and is deleted once the unencrypted file is read using <span class="in">`qs2::qs_read`</span>.</span>
 <span id="cb57-750"><a href="#cb57-750" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-751"><a href="#cb57-751" aria-hidden="true" tabindex="-1"></a>Here is an example using <span class="in">`qcrypt`</span> to encrypt and then to decrypt a data frame.  The decryption phase can appear in a different script and the password will still be cached.</span>
 <span id="cb57-752"><a href="#cb57-752" aria-hidden="true" tabindex="-1"></a></span>
@@ -2693,26 +2696,26 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-755"><a href="#cb57-755" aria-hidden="true" tabindex="-1"></a><span class="fu">qcrypt</span>(x, <span class="st">'x'</span>)   <span class="co"># &lt;1&gt;</span></span>
 <span id="cb57-756"><a href="#cb57-756" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">qcrypt</span>(<span class="st">'x'</span>) <span class="co"># &lt;2&gt;</span></span>
 <span id="cb57-757"><a href="#cb57-757" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb57-758"><a href="#cb57-758" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Asks for a password (one-time); use <span class="in">`qs::qsave`</span> to create a temporary file <span class="in">`x.qs`</span> in a temporary directory; store encrypted version as <span class="in">`x.qs.encrypted`</span> in current working directory; delete <span class="in">`x.qs`</span></span>
-<span id="cb57-759"><a href="#cb57-759" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Unencrypt <span class="in">`x.qs.encrypted`</span> into a temporary directory as <span class="in">`x.qs`</span> using the cached password; use <span class="in">`qs::qread`</span> to read it; store the result in <span class="in">`x`</span></span>
+<span id="cb57-758"><a href="#cb57-758" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Asks for a password (one-time); use <span class="in">`qs2::qs_save`</span> to create a temporary file <span class="in">`x.qss\2`</span> in a temporary directory; store encrypted version as <span class="in">`x.qs2.encrypted`</span> in current working directory; delete <span class="in">`x.qs2`</span></span>
+<span id="cb57-759"><a href="#cb57-759" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Unencrypt <span class="in">`x.qs2.encrypted`</span> into a temporary directory as <span class="in">`x.qs2`</span> using the cached password; use <span class="in">`qs2::qs_read`</span> to read it; store the result in <span class="in">`x`</span></span>
 <span id="cb57-760"><a href="#cb57-760" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-761"><a href="#cb57-761" aria-hidden="true" tabindex="-1"></a><span class="in">`qcrypt`</span> also has the capability to encrypt general files such as html and pdf reports and csv files. <span class="co">[</span><span class="ot">The `safer` package can encrypt/decrypt R objects and general files.  `qcrypt` did not use `safer`'s object encryption capabilities because in a test the resulting `.qs` file was much larger due to originally sparse data not being sparse any more upon encryption.</span><span class="co">]</span>{.aside}</span>
+<span id="cb57-761"><a href="#cb57-761" aria-hidden="true" tabindex="-1"></a><span class="in">`qcrypt`</span> also has the capability to encrypt general files such as html and pdf reports and csv files. <span class="co">[</span><span class="ot">The `safer` package can encrypt/decrypt R objects and general files.  `qcrypt` did not use `safer`'s object encryption capabilities because in a test the resulting `.qs2` file was much larger due to originally sparse data not being sparse any more upon encryption.</span><span class="co">]</span>{.aside}</span>
 <span id="cb57-762"><a href="#cb57-762" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-763"><a href="#cb57-763" aria-hidden="true" tabindex="-1"></a>The functions that <span class="in">`qcrypt`</span> calls may only be called in an interactive R session.  If you want to be able to run the main part (e.g., <span class="in">`main.qmd`</span>) of a script in batch mode, create an interactive script like the following. If your operating system does not have a <span class="in">`/tmp`</span> directory for storing temporary files, use another appropriate directory name.</span>
 <span id="cb57-764"><a href="#cb57-764" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-765"><a href="#cb57-765" aria-hidden="true" tabindex="-1"></a><span class="in">```{r eval=FALSE}</span></span>
 <span id="cb57-766"><a href="#cb57-766" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(Hmisc)</span>
-<span id="cb57-767"><a href="#cb57-767" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(qs)</span>
+<span id="cb57-767"><a href="#cb57-767" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(qs2)</span>
 <span id="cb57-768"><a href="#cb57-768" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-769"><a href="#cb57-769" aria-hidden="true" tabindex="-1"></a>w <span class="ot">&lt;-</span> <span class="fu">qcrypt</span>(<span class="st">'w'</span>)                    <span class="co"># reads w.qs.encrypted</span></span>
-<span id="cb57-770"><a href="#cb57-770" aria-hidden="true" tabindex="-1"></a><span class="fu">qsave</span>(w, <span class="st">'/tmp/w.qs'</span>)</span>
+<span id="cb57-769"><a href="#cb57-769" aria-hidden="true" tabindex="-1"></a>w <span class="ot">&lt;-</span> <span class="fu">qcrypt</span>(<span class="st">'w'</span>)                    <span class="co"># reads w.qs2.encrypted</span></span>
+<span id="cb57-770"><a href="#cb57-770" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_save</span>(w, <span class="st">'/tmp/w.qs2'</span>)</span>
 <span id="cb57-771"><a href="#cb57-771" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-772"><a href="#cb57-772" aria-hidden="true" tabindex="-1"></a><span class="fu">system</span>(<span class="st">'quarto render main.qmd'</span>)    <span class="co"># creates /tmp/u.qs</span></span>
 <span id="cb57-773"><a href="#cb57-773" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-774"><a href="#cb57-774" aria-hidden="true" tabindex="-1"></a>u <span class="ot">&lt;-</span> <span class="fu">qread</span>(<span class="st">'/tmp/u.qs'</span>)</span>
-<span id="cb57-775"><a href="#cb57-775" aria-hidden="true" tabindex="-1"></a><span class="fu">qcrypt</span>(u, <span class="st">'u'</span>)                      <span class="co"># writes u.qs.encrypted</span></span>
+<span id="cb57-774"><a href="#cb57-774" aria-hidden="true" tabindex="-1"></a>u <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(<span class="st">'/tmp/u.qs2'</span>)</span>
+<span id="cb57-775"><a href="#cb57-775" aria-hidden="true" tabindex="-1"></a><span class="fu">qcrypt</span>(u, <span class="st">'u'</span>)                      <span class="co"># writes u.qs2.encrypted</span></span>
 <span id="cb57-776"><a href="#cb57-776" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-777"><a href="#cb57-777" aria-hidden="true" tabindex="-1"></a><span class="fu">unlink</span>(<span class="fu">c</span>(<span class="st">'/tmp/w.qs'</span>, <span class="st">'/tmp/u.qs'</span>)) <span class="co"># remove temporary files</span></span>
+<span id="cb57-777"><a href="#cb57-777" aria-hidden="true" tabindex="-1"></a><span class="fu">unlink</span>(<span class="fu">c</span>(<span class="st">'/tmp/w.qs2'</span>, <span class="st">'/tmp/u.qs2'</span>)) <span class="co"># remove temporary files</span></span>
 <span id="cb57-778"><a href="#cb57-778" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-779"><a href="#cb57-779" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-780"><a href="#cb57-780" aria-hidden="true" tabindex="-1"></a><span class="fu">### Depositing Files on `REDCap` {#sec-fcreate-rcdep}</span></span>

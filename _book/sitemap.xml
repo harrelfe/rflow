@@ -2,11 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://hbiostat.org/rflow/index.html</loc>
-    <lastmod>2025-12-15T18:15:15.964Z</lastmod>
+    <lastmod>2026-05-09T20:26:15.975Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/intro.html</loc>
-    <lastmod>2025-06-27T07:34:17.000Z</lastmod>
+    <lastmod>2025-06-27T07:34:17.796Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/case.html</loc>
@@ -14,15 +14,15 @@
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/rbasics.html</loc>
-    <lastmod>2025-07-31T16:58:53.000Z</lastmod>
+    <lastmod>2026-03-08T12:31:55.000Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/rformat.html</loc>
-    <lastmod>2025-12-15T18:15:21.022Z</lastmod>
+    <lastmod>2025-12-17T16:38:17.000Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/fcreate.html</loc>
-    <lastmod>2024-04-02T15:10:10.000Z</lastmod>
+    <lastmod>2026-05-09T20:24:13.952Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/missing.html</loc>
@@ -34,15 +34,15 @@
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/doverview.html</loc>
-    <lastmod>2024-11-16T17:59:11.000Z</lastmod>
+    <lastmod>2024-11-16T17:59:11.566Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/descript.html</loc>
-    <lastmod>2025-11-06T18:07:34.000Z</lastmod>
+    <lastmod>2025-11-06T18:07:34.681Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/manip.html</loc>
-    <lastmod>2025-08-24T21:12:14.000Z</lastmod>
+    <lastmod>2025-08-24T21:12:14.630Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/sstats.html</loc>
@@ -50,19 +50,19 @@
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/merge.html</loc>
-    <lastmod>2025-07-11T20:39:09.000Z</lastmod>
+    <lastmod>2025-07-11T20:39:09.214Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/long.html</loc>
-    <lastmod>2025-08-25T13:06:21.000Z</lastmod>
+    <lastmod>2025-08-25T13:06:21.921Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/graphics.html</loc>
-    <lastmod>2025-12-10T14:20:23.624Z</lastmod>
+    <lastmod>2026-01-30T17:02:33.000Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/analysis.html</loc>
-    <lastmod>2025-04-19T21:42:11.000Z</lastmod>
+    <lastmod>2025-04-19T21:42:11.117Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/caching.html</loc>
@@ -70,11 +70,11 @@
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/parallel.html</loc>
-    <lastmod>2025-08-15T16:36:35.000Z</lastmod>
+    <lastmod>2025-08-15T16:36:35.329Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/sim.html</loc>
-    <lastmod>2025-08-15T16:39:23.000Z</lastmod>
+    <lastmod>2025-08-15T16:39:23.385Z</lastmod>
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/figures.html</loc>
@@ -82,6 +82,6 @@
   </url>
   <url>
     <loc>https://hbiostat.org/rflow/resources.html</loc>
-    <lastmod>2024-07-06T15:59:28.000Z</lastmod>
+    <lastmod>2024-07-06T15:59:28.223Z</lastmod>
   </url>
 </urlset>

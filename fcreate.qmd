@@ -26,7 +26,7 @@ For multi-analyst projects or ones in which you want to capture the entire code 
 
 I typically create a compact analysis file in a separate R script
 called `create.r` and have it produce compressed R binary `data.frame`
-or `data.table` `.rds` files using `saveRDS(name, 'name.rds', compress='xz')`.  Then I have an analysis script named for example `a.qmd` (for [Quarto](https://quarto.org) reports) or `a.Rmd` (for RMarkdown reports) that starts with `d <- readRDS('name.rds')`.  [See @sec-fcreate-qs for an alternative that is generally preferable to `saveRDS` using the `qs` package: `qsave(name, 'name.qs')` and `d <- qread('name.qs')`.<br><br>Templates for analysis reports are [here](http://hbiostat.org/rr/index.html#template), and a comprehensive report example may be found [here](https://hbiostat.org/R/Hmisc/markov).]{.aside} This process is especially helpful with analysis file creation takes multiple steps or files are large.  `readRDS` is very fast for loading binary R objects, and `qread` is even faster.  [There is an older way to read/write binary R objects using R `load` and `save` and `Hmisc` frontends for them `Load` and `Save`.  Files using these formats typically have suffixes of `.rda`, `.RData`, or `.sav`, and using `load` stores the object under its original name, which might not be clear until you check your R `.global` environment by looking in the upper right `RStudio` panel.]{.aside}
+or `data.table` `.rds` files using `saveRDS(name, 'name.rds', compress='xz')`.  Then I have an analysis script named for example `a.qmd` (for [Quarto](https://quarto.org) reports) or `a.Rmd` (for RMarkdown reports) that starts with `d <- readRDS('name.rds')`.  [See @sec-fcreate-qs for an alternative that is generally preferable to `saveRDS` using the `qs2` package: `qs_save(name, 'name.qs2')` and `d <- qs_read('name.qs2')`.<br><br>Templates for analysis reports are [here](http://hbiostat.org/rr/index.html#template), and a comprehensive report example may be found [here](https://hbiostat.org/R/Hmisc/markov).]{.aside} This process is especially helpful with analysis file creation takes multiple steps or files are large.  `readRDS` is very fast for loading binary R objects, and `qread` is even faster.  [There is an older way to read/write binary R objects using R `load` and `save` and `Hmisc` frontends for them `Load` and `Save`.  Files using these formats typically have suffixes of `.rda`, `.RData`, or `.sav`, and using `load` stores the object under its original name, which might not be clear until you check your R `.global` environment by looking in the upper right `RStudio` panel.]{.aside}
 
 When variables need to be recoded, have labels added or changed, or
 have units of 
@@ -103,7 +103,7 @@ d <-
          )
 
 saveRDS(d, 'stressEcho.rds', compress='xz')
-# Or qsave(d, 'stressEcho.qs')
+# Or qs_save(d, 'stressEcho.qs2')
 
 # Note that we could have automatically recoded all 0:1 variables
 # if they were all to be treated identically:
@@ -189,10 +189,10 @@ variables and automatically convert dates to `Date` variables:
 
 ```
 require(Hmisc)
-require(qs)
+require(qs2)
 getRs('importREDCap.r')   # source() code to define function
 mydata <- importREDCap()  # by default operates on last downloaded export
-qsave(mydata, 'mydata.qs')
+qs_save(mydata, 'mydata.qs2')
 ```
 
 When file names are not given to `importREDCap` the function looks for
@@ -415,12 +415,12 @@ if(any(j)) cat('Variables never dropped:',
 # binary file for fast retrieval
 # Add export_time attribute to R to define export date/time
 attr(R, 'export_time') <- when
-qsave(R, 'R.qs')    # 5.8MB 0.2s
+qs_save(R, 'R.qs2')    # 5.8MB 0.2s
 # saveRDS(..., compress='xz') resulted in 3MB R.rds file, 10.7s
-# qsave(R, 'R.qs', preset='archive')  resulted in 3.8M, 2.8s
+# qs_save(R, 'R.qs2', preset='archive')  resulted in 3.8M, 2.8s
 ```
 
-Subsequent programs may retrieve the database using `R <- qread('R.qs')` and access the export date/time stamp using `attr(R, 'export_time')`.
+Subsequent programs may retrieve the database using `R <- qs_read('R.qs2')` and access the export date/time stamp using `attr(R, 'export_time')`.
 
 See the `Multiple Files` tab for useful R examples for processing multiple files inside objects like the `R` list just created.
 
@@ -524,7 +524,7 @@ for(f in files) {
   X[[dnames[i]]] <- d
 }
 saveRDS(X, 'X.rds', compress='xz')  # Efficiently store all datasets together
-# Or qsave(X, 'X.qs')
+# Or qs_save(X, 'X.qs2')
 ```
 
 To process one of the datasets one can do things like `summary(X[[3]])` or `summary(X$baseline)` where the third dataset stored was named `baseline` because it was imported from `baseline.csv`.
@@ -687,16 +687,16 @@ contents(dr)
 invisible(file.remove('d.fst', 'd-attr.rds'))
 ```
 
-## Efficient Storage and Retrieval With `qs` {#sec-fcreate-qs}
+## Efficient Storage and Retrieval With `qs2` {#sec-fcreate-qs}
 
-The [`qs`](https://cran.r-project.org/web/packages/qs) package, like `fst`, provides fast reading and writing of R objects.  Unlike `fst`, `qs` can store any type of object, does not lose attributes, and does not allow for direct access of selected rows or columns.  Let's compare `qs`, `fst`, and `saveRDS` for speed and disk storage efficiency.   First, make sure that `qs` keeps all attributes.
+The [`qs2`](https://cran.r-project.org/web/packages/qs2) package, like `fst`, provides fast reading and writing of R objects.  Unlike `fst`, `qs2` can store any type of object, does not lose attributes, and does not allow for direct access of selected rows or columns.  Let's compare `qs2`, `fst`, and `saveRDS` for speed and disk storage efficiency.   First, make sure that `qs2` keeps all attributes.
 
 ```{r}
-require(qs)
+require(qs2)
 getHdata(support)   # loads from hbiostat.org/data; has
                     # lots of variable attributes
-qsave(support, '/tmp/support.qs')
-w <- qread('/tmp/support.qs')
+qs_save(support, '/tmp/support.qs2')
+w <- qs_read('/tmp/support.qs2')
 identical(support, w)
 ```
 
@@ -707,7 +707,7 @@ saveRDS(d, '/tmp/d.rds')                  # 13.6s 128M
 saveRDS(d, '/tmp/dc.rds', compress='xz')  #  124s 116M
 write_fst(d, '/tmp/d.fst')                #  0.2s 161M
 write_fst(d, '/tmp/dc.fst', compress=100) #  1.4s 122M
-qsave(d, '/tmp/d.qs', nthreads=3)         #  0.3s 110M
+qs_save(d, '/tmp/d.qs2', nthreads=3)         #  0.3s 110M
 ```
 
 Read times are as follows.
@@ -717,11 +717,11 @@ readRDS('/tmp/d.rds')           # 0.9 s
 readRDS('/tmp/dc.rds')          # 7.5 s
 read_fst('/tmp/d.fst')          # 0.04s
 read_fst('/tmp/dc.fst')         # 0.07s
-qread('/tmp/d.qs')              # 0.2 s
-qread('/tmp/d.qs', nthreads=6)  # 0.16s
+qs_read('/tmp/d.qs2')              # 0.2 s
+qs_read('/tmp/d.qs2', nthreads=6)  # 0.16s
 ```
 
-When direct access is not needed, i.e., when whole data frames/tables are to be read, the `qs` package would be a good default, especially if one takes into account that `qs` preserves all object attributes.  `qs` dependencies are also more actively supported.
+When direct access is not needed, i.e., when whole data frames/tables are to be read, the `qs2` package would be a good default, especially if one takes into account that `qs2` preserves all object attributes.  `qs2` dependencies are also more actively supported.
 
 ## Secure File Storage and Transmission {#sec-fcreate-secure}
 
@@ -731,10 +731,10 @@ The `Hmisc` package has a function `qcrypt` that greatly simplifies a workflow t
 
 * System keyrings are used to cache passwords, and the creator of the file is asked for the password only once (possibly again if rebooting the computer or otherwise starting a new session); handled by the [`keyring`](https://cran.r-project.org/web/packages/keyring/index.html) package
 * Passwords do not appear in R code but are entered into a pop-up window; done by the [`getPass`](https://cran.r-project.org/web/packages/getPass) package
-* Objects are saved externally in a very efficient manner using the `qs` package (see above)
+* Objects are saved externally in a very efficient manner using the `qs2` package (see above)
 * The saved unencrypted file exists only momentarily in a temporary directory
 * The file is encrypted and saved in the current working directory using the [`safer`](https://cran.r-project.org/web/packages/safer) package and the unencrypted file is immediately deleted [The overhead of encrypting and decrypting is small, e.g., 0.5s for a data frame with 100,000 rows and 100 columns.]{.aside}
-* When a stored file is decrypted, the decrypted `.qs` file is stored only momentarily in a temporary directory, and is deleted once the unencrypted file is read using `qs::qread`.
+* When a stored file is decrypted, the decrypted `.qs2` file is stored only momentarily in a temporary directory, and is deleted once the unencrypted file is read using `qs2::qs_read`.
 
 Here is an example using `qcrypt` to encrypt and then to decrypt a data frame.  The decryption phase can appear in a different script and the password will still be cached.
 
@@ -743,26 +743,26 @@ x <- data.frame(...)
 qcrypt(x, 'x')   # <1>
 x <- qcrypt('x') # <2>
 ```
-1. Asks for a password (one-time); use `qs::qsave` to create a temporary file `x.qs` in a temporary directory; store encrypted version as `x.qs.encrypted` in current working directory; delete `x.qs`
-2. Unencrypt `x.qs.encrypted` into a temporary directory as `x.qs` using the cached password; use `qs::qread` to read it; store the result in `x`
+1. Asks for a password (one-time); use `qs2::qs_save` to create a temporary file `x.qss\2` in a temporary directory; store encrypted version as `x.qs2.encrypted` in current working directory; delete `x.qs2`
+2. Unencrypt `x.qs2.encrypted` into a temporary directory as `x.qs2` using the cached password; use `qs2::qs_read` to read it; store the result in `x`
 
-`qcrypt` also has the capability to encrypt general files such as html and pdf reports and csv files. [The `safer` package can encrypt/decrypt R objects and general files.  `qcrypt` did not use `safer`'s object encryption capabilities because in a test the resulting `.qs` file was much larger due to originally sparse data not being sparse any more upon encryption.]{.aside}
+`qcrypt` also has the capability to encrypt general files such as html and pdf reports and csv files. [The `safer` package can encrypt/decrypt R objects and general files.  `qcrypt` did not use `safer`'s object encryption capabilities because in a test the resulting `.qs2` file was much larger due to originally sparse data not being sparse any more upon encryption.]{.aside}
 
 The functions that `qcrypt` calls may only be called in an interactive R session.  If you want to be able to run the main part (e.g., `main.qmd`) of a script in batch mode, create an interactive script like the following. If your operating system does not have a `/tmp` directory for storing temporary files, use another appropriate directory name.
 
 ```{r eval=FALSE}
 require(Hmisc)
-require(qs)
+require(qs2)
 
-w <- qcrypt('w')                    # reads w.qs.encrypted
-qsave(w, '/tmp/w.qs')
+w <- qcrypt('w')                    # reads w.qs2.encrypted
+qs_save(w, '/tmp/w.qs2')
 
 system('quarto render main.qmd')    # creates /tmp/u.qs
 
-u <- qread('/tmp/u.qs')
-qcrypt(u, 'u')                      # writes u.qs.encrypted
+u <- qs_read('/tmp/u.qs2')
+qcrypt(u, 'u')                      # writes u.qs2.encrypted
 
-unlink(c('/tmp/w.qs', '/tmp/u.qs')) # remove temporary files
+unlink(c('/tmp/w.qs2', '/tmp/u.qs2')) # remove temporary files
 ```
 
 ### Depositing Files on `REDCap` {#sec-fcreate-rcdep}

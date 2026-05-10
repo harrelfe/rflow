@@ -46,11 +46,12 @@ The author wishes to thank the R Core team and R package developers along with R
 
 | Date | Sections | Changes |
 |:--|:-|:------------|
+| 2026-05-09 | [-@sec-fcreate]           | Change `qs` package usage to `qs2`|
 | 2026-03-08 | [-@sec-rbasics-resources] | Added link to Big Book of R |
 | 2026-01-30 | [-@sec-graphics-ggplot2]  | Added automatic use of labels by `ggplot2` |
 | 2025-12-16 | [-@sec-rformat-verb]      | Added subsection for how to include verbatim text with no limitations |
 | 2025-12-15 | [-@sec-rformat-diagrams]  | Added methods for putting generated graphiviz markup in a Quarto figure environment |
-| 2025-11-06 | [-@sec-descript-ae]       | Added `ggplot2` code for 2-panel adverse event charts | 
+| 2025-11-06 | [-@sec-descript-ae]       | Added `ggplot2` code for 2-panel adverse event charts |
 | 2025-08-25 | [-@sec-long-ai]           | New subsection: using AI as a data.table coding assistant |
 | 2025-07-11 | [-@sec-merge-closest]     | New subsection with non-equi join to count close observations |
 | 2025-06-29 | [-@sec-graphics-mgg]      | New subsection on displaying multiple variables with `ggplot2` |
@@ -65,7 +66,7 @@ The author wishes to thank the R Core team and R package developers along with R
 | 2024-08-11 | [-@sec-manip-dtspec]      | New subsection defining special `data.table` variables |
 | 2024-07-27 | [-@sec-manip-asubsets]    | Added two ways to run `describe` over subsets, getting around a `knitr` bug in rendering the original approach |
 | 2024-07-15 | [-@sec-graphics-ggplot2]  | Added `ggiraph` for tooltips on `ggplot2` plots |
-| 2024-07-06 | [-@sec-resenv]            | Changed environment pretty-printing to use the `grateful` package 
+| 2024-07-06 | [-@sec-resenv]            | Changed environment pretty-printing to use the `grateful` package
 | 2024-05-26 | [-@sec-rformat]           | Added link to updated recommended general report template |
 | 2024-05-04 | [-@sec-rformat-printl]    | New subsection for printing calculations in context when code is folded |
 | 2024-04-30 | [-@sec-manip-ftable]      | New subsection on expanding a frequency table into raw data rows |
@@ -118,7 +119,7 @@ The author wishes to thank the R Core team and R package developers along with R
 | 2022-12-11 | [-@sec-rformat-diagrams]  | New section on `graphviz` for diagrams |
 | 2022-12-04 | [-@sec-rbasics-dates]     | New section on dates and date/times |
 | 2022-12-03 | [-@sec-graphics;-@sec-graphics-types] | Linked to hex binning example and added new section |
-| 2022-12-03 |                           | Replaced `length(unique(x))` with `uniqueN(x)` everywhere | 
+| 2022-12-03 |                           | Replaced `length(unique(x))` with `uniqueN(x)` everywhere |
 | 2022-11-29 | [-@sec-merge-closest]     | New rolling join (closest match) example |
 | 2022-11-22 | [-@sec-manip-acr]         | Added `let` alias for `:=` in `data.table` |
 | 2022-11-09 | [-@sec-fcreate-import]    | Discussed `multDataOverview` function to summarize a `list` of datasets |

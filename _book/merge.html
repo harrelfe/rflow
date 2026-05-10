@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.13">
+<meta name="generator" content="quarto-1.9.20">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>12&nbsp; Merging Data – R Workflow</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -74,10 +77,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-ac077c1e730dfeb5e42400639d17284e.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-3512cbed9e2527d986e9b0b56d261405.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-9d16bd9ddc44c4bc1d4ae3488c927ea9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-ca52c48b12645450bbae4e0fad355f8b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -132,7 +135,7 @@ gtag('config', 'G-FN79JJ28KR', { 'anonymize_ip': true});
 <link href="site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
   <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <script type="text/javascript">
 const typesetMath = (el) => {
@@ -164,8 +167,8 @@ window.Quarto = {
 <link rel="stylesheet" href="h.css">
 <meta name="twitter:title" content="12&nbsp; Merging Data – R Workflow">
 <meta name="twitter:description" content="">
-<meta name="twitter:creator" content="@f2harrell">
-<meta name="twitter:site" content="@f2harrell">
+<meta name="twitter:creator" content="f2harrell">
+<meta name="twitter:site" content="f2harrell">
 <meta name="twitter:card" content="summary">
 </head>
 
@@ -758,7 +761,7 @@ setkey(d, state, city)</code></pre>
 
 <div class="no-row-height column-margin column-container"><div class="">
 <pre><code>   user  system elapsed 
-  0.274   0.008   0.194s</code></pre>
+  0.324   0.006   0.225s</code></pre>
 </div></div><div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>m</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -782,7 +785,7 @@ setkey(d, state, city)</code></pre>
 999867 555325     26     26 </code></pre>
 </div>
 </div>
-<p>The elapsed time was 0.194 seconds. From the above counts of the numbers of distinct values, an observation from <code>b</code> tended to be the closest match to two observations in <code>a</code>.</p>
+<p>The elapsed time was 0.225 seconds. From the above counts of the numbers of distinct values, an observation from <code>b</code> tended to be the closest match to two observations in <code>a</code>.</p>
 <p>Let’s key each data table (which sorts) and check the speed again.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">setkey</span>(a, ax)   <span class="co"># took 0.05s</span></span>
 <span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="fu">setkey</span>(b, bx)   <span class="co"># " "</span></span>
@@ -791,7 +794,7 @@ setkey(d, state, city)</code></pre>
 
 <div class="no-row-height column-margin column-container"><div class="">
 <pre><code>   user  system elapsed 
-  0.059   0.005   0.060s</code></pre>
+  0.082   0.003   0.083s</code></pre>
 </div></div><p>See also <a href="long.html#sec-long-overlap" class="quarto-xref"><span>Section 13.7</span></a> and <a href="https://stackoverflow.com/questions/74176606">here</a> for more complex non-equi joins and considerations of overlapping intervals from each of two data tables.</p>
 </section>
 <section id="closest-match-within-groups" class="level3 page-columns page-full" data-number="12.2.2">
@@ -1249,7 +1252,7 @@ count    4    4    4    4    2    2    1    3    3     3     2     2     0</code
 <span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a>flowchart LR</span>
 <span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a>SM[Merge One Record/Subject Data Table With Longitudinal Data]</span>
 <span id="cb57-8"><a href="#cb57-8" aria-hidden="true" tabindex="-1"></a>HM[<span class="fu">Hmisc::Merge</span>&lt;br&gt;Monitors Merging Process]</span>
-<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a>tlu[Merging <span class="kw">for</span> Table Look-up]</span>
+<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a>tlu[Merging <span class="cf">for</span> Table Look-up]</span>
 <span id="cb57-10"><a href="#cb57-10" aria-hidden="true" tabindex="-1"></a><span class="fu">close</span>[Merging on Closest Matches]</span>
 <span id="cb57-11"><a href="#cb57-11" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-12"><a href="#cb57-12" aria-hidden="true" tabindex="-1"></a></span>

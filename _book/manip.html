@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.13">
+<meta name="generator" content="quarto-1.9.20">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>10&nbsp; Data Manipulation and Aggregation – R Workflow</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -74,10 +77,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-ac077c1e730dfeb5e42400639d17284e.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-3512cbed9e2527d986e9b0b56d261405.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-9d16bd9ddc44c4bc1d4ae3488c927ea9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-ca52c48b12645450bbae4e0fad355f8b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -137,7 +140,7 @@ gtag('config', 'G-FN79JJ28KR', { 'anonymize_ip': true});
 <script src="site_libs/sparkline-binding-2.0/sparkline.js"></script>
 
   <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <script type="text/javascript">
 const typesetMath = (el) => {
@@ -171,8 +174,8 @@ window.Quarto = {
 <meta name="twitter:description" content="">
 <meta name="twitter:image" content="https://hbiostat.org/rflow/data:image/png;base64,
 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">
-<meta name="twitter:creator" content="@f2harrell">
-<meta name="twitter:site" content="@f2harrell">
+<meta name="twitter:creator" content="f2harrell">
+<meta name="twitter:site" content="f2harrell">
 <meta name="twitter:image:alt" content="image">
 <meta name="twitter:card" content="summary_large_image">
 </head>
@@ -722,22 +725,22 @@ bottom: -1ex;
 <span style="font-weight:bold">age</span>: Age <span style="font-family:Verdana;font-size:75%;">years</span><div style="float: right; text-align: right;"><img src="data:image/png;base64,
 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" alt="image"></div>
 <style>
- .hmisctable184740 {
+ .hmisctable643453 {
  border: none;
  font-size: 74%;
  }
- .hmisctable184740 td {
+ .hmisctable643453 td {
  text-align: center;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable184740 th {
+ .hmisctable643453 th {
  color: MidnightBlue;
  text-align: center;
  padding: 0 1ex 0 1ex;
  font-weight: normal;
  }
  </style>
- <table data-quarto-disable-processing="true" class="hmisctable184740">
+ <table data-quarto-disable-processing="true" class="hmisctable643453">
  <tbody><tr><th>n</th><th>missing</th><th>distinct</th><th>Info</th><th>Mean</th><th>pMedian</th><th>Gmd</th><th>.05</th><th>.10</th><th>.25</th><th>.50</th><th>.75</th><th>.90</th><th>.95</th></tr>
  <tr><td>558</td><td>0</td><td>62</td><td>0.999</td><td>67.34</td><td>68</td><td>13.41</td><td>46.85</td><td>51.00</td><td>60.00</td><td>69.00</td><td>75.00</td><td>82.00</td><td>85.00</td></tr>
  </tbody></table>
@@ -781,22 +784,22 @@ bottom: -1ex;
 <span style="font-weight:bold">age</span>: Age <span style="font-family:Verdana;font-size:75%;">years</span><div style="float: right; text-align: right;"><img src="data:image/png;base64,
 iVBORw0KGgoAAAANSUhEUgAAAJcAAAANCAYAAACkYvxcAAAEDmlDQ1BrQ0dDb2xvclNwYWNlR2VuZXJpY1JHQgAAOI2NVV1oHFUUPpu5syskzoPUpqaSDv41lLRsUtGE2uj+ZbNt3CyTbLRBkMns3Z1pJjPj/KRpKT4UQRDBqOCT4P9bwSchaqvtiy2itFCiBIMo+ND6R6HSFwnruTOzu5O4a73L3PnmnO9+595z7t4LkLgsW5beJQIsGq4t5dPis8fmxMQ6dMF90A190C0rjpUqlSYBG+PCv9rt7yDG3tf2t/f/Z+uuUEcBiN2F2Kw4yiLiZQD+FcWyXYAEQfvICddi+AnEO2ycIOISw7UAVxieD/Cyz5mRMohfRSwoqoz+xNuIB+cj9loEB3Pw2448NaitKSLLRck2q5pOI9O9g/t/tkXda8Tbg0+PszB9FN8DuPaXKnKW4YcQn1Xk3HSIry5ps8UQ/2W5aQnxIwBdu7yFcgrxPsRjVXu8HOh0qao30cArp9SZZxDfg3h1wTzKxu5E/LUxX5wKdX5SnAzmDx4A4OIqLbB69yMesE1pKojLjVdoNsfyiPi45hZmAn3uLWdpOtfQOaVmikEs7ovj8hFWpz7EV6mel0L9Xy23FMYlPYZenAx0yDB1/PX6dledmQjikjkXCxqMJS9WtfFCyH9XtSekEF+2dH+P4tzITduTygGfv58a5VCTH5PtXD7EFZiNyUDBhHnsFTBgE0SQIA9pfFtgo6cKGuhooeilaKH41eDs38Ip+f4At1Rq/sjr6NEwQqb/I/DQqsLvaFUjvAx+eWirddAJZnAj1DFJL0mSg/gcIpPkMBkhoyCSJ8lTZIxk0TpKDjXHliJzZPO50dR5ASNSnzeLvIvod0HG/mdkmOC0z8VKnzcQ2M/Yz2vKldduXjp9bleLu0ZWn7vWc+l0JGcaai10yNrUnXLP/8Jf59ewX+c3Wgz+B34Df+vbVrc16zTMVgp9um9bxEfzPU5kPqUtVWxhs6OiWTVW+gIfywB9uXi7CGcGW/zk98k/kmvJ95IfJn/j3uQ+4c5zn3Kfcd+AyF3gLnJfcl9xH3OfR2rUee80a+6vo7EK5mmXUdyfQlrYLTwoZIU9wsPCZEtP6BWGhAlhL3p2N6sTjRdduwbHsG9kq32sgBepc+xurLPW4T9URpYGJ3ym4+8zA05u44QjST8ZIoVtu3qE7fWmdn5LPdqvgcZz8Ww8BWJ8X3w0PhQ/wnCDGd+LvlHs8dRy6bLLDuKMaZ20tZrqisPJ5ONiCq8yKhYM5cCgKOu66Lsc0aYOtZdo5QCwezI4wm9J/v0X23mlZXOfBjj8Jzv3WrY5D+CsA9D7aMs2gGfjve8ArD6mePZSeCfEYt8CONWDw8FXTxrPqx/r9Vt4biXeANh8vV7/+/16ffMD1N8AuKD/A/8leAvFY9bLAAAAOGVYSWZNTQAqAAAACAABh2kABAAAAAEAAAAaAAAAAAACoAIABAAAAAEAAACXoAMABAAAAAEAAAANAAAAABXzt1gAAAWiSURBVFgJ7ZlZSJVbFIDXtVNkkWVapoEaRPVQGDbogyFhTm+RPfQgKoXkk5QPEgX2GAUl9mKilg0ggaiROEASUT1omGSac4NiRYOWc+Vw+xbsw39Ox7zca9i5ueA/+//3Xmuvtfdaew37/PXmzZtpWYBfvgNPnz6VmJgYKSoqktjYWOXX3t4ua9askdWrV/9y/vPBwLZu3br54PvH8fx+iHXN3t7eYvZ89+7dcuDAAVm1apUsXbpUTpw44bAvX79+lfv370tUVJRDv7t8eLiLoPMp57NnzyQsLEw+fvw4p2J8+fJFeO7cuSO1tbWSm5srhw8ftvO4ffu27Nu3T54/f27vc6eXBeP6B9pqa2uT+vp6ef369azY3d3dcu/evRnxJicnBY9VU1PzA05dXZ3cvXtXysvLJSIiQr59+6Y48N22bZu0trb+QPM7dywY1xxr5+zZs5KSkiJlZWWyfft2mZ52TGnxVI8ePZKWlpYZOTc3N8vDhw9lampKcd6+fSv0dXR0yNatW6WqqkrzNzzd0aNHJTMzc8a55nPANp/M/w+8yYfi4+Nl165d4uHhIXgmHrzdkydP5MOHD1JSUqLj/3W94+PjapQY2ePHj2Xz5s3KgzzOwMuXL+XBgweSmJhouuattbEBfyrgGTCI2QCFAXgbqr39+/eLl5eX9lEFkpDfvHlT5/L39xcScZPAX758WRP18+fPK/6rV6+0JdQR9jC+kZERmZiYkP7+fgdag2taI0dfX5/iG9pFixZJamqqIEtoaKjmboRRAFmKi4vl4MGDsnz5cu2rqKiQLVu2yMaNG/W7qalJ3r9/P+eFgy0kJEQZ/Ek/eIAlS5YIhnDu3DlJTk7+6fLJowBoLly4IHv27NGHvsWLF4uPj48aCUrm3czNeGBgII0EBQU5tAEBAUrr6+urhujp6alXElZaZ5rg4GCdY/369WKz2QRaDAZDHxsbUxn8/PwUx+iVXDE7O1uvP6g8Dx06JBg6a05ISFBcQnljY6NkZGTo91z9zH5s54rTL5rnzJkzLvMXQhMewQqfP3/WpHzlypVanb17985lkk5YuXTpkpIODg7apzD5Ex7P2m9H+A1fjMzIy1UHXos+04/Izt/WZbBn/xbcOudCySdPntQchyqLHGRgYEBDATlPaWmpcI0AcGr37t0rlZWVOk5IMfDp0ydZtmyZvTq7fv26KgHvcPz4cSG0WQHDxXvgEdwFjDGZ1pXcrIu9wPsC7B3hFe+3Y8cOVyQ/7Ztz40JpuHgT311xJ4cwLp9x8o+1a9eqq3eFb/qomrKystStr1ixwuH04eojIyN1rtHRUd0U7qXIJwoLCzWfYPOGhobMdPaWMBcdHS0vXrxQQzWXnORAw8PDmt/Ykb+/kB/Rz7g7Q15enuDFDXBYiATosLe3Vw2NA2xd5+nTp3UvqVpJCdDDTOAQFkkYyUcM4AVQKJd8lLsop7Oz0ww7tCgG2ri4ODl27JjDmPWDkEPuQLVD3O/q6lKPk5OTo4aB+2YxhKzq6mo5deqUKhO8hoYGyc/P1wopKSnJ5eWi88lE9osXL2pOYpXD+o7rtz7WMXd9xyj4e+lnUFBQIDdu3LCjmD3gGmXDhg0aBRhE71zuch2CAd66dUuLmrS0NDVAihd0bwoOM6EN4zFAEggBoQDgHa9CBYIQhALGCDmmWjK0uM/09HRlRuVhndfg0Pb09OgnxnXt2jW9UMQLICBl/c6dO9W4cM+EOS4UKbXJFzhpAPwJXeHh4fqNN8KbkNRyj0SFhPdiU0xuxHwABwYw39CCBz60KMXQGi9ncJ1bKy08qTxnonXmi1yGr6FFftYxG19okZOcElrkdqalqj1y5IhcvXpV12v4W2mpVjEKwr/xxhxOvBbzGx2isytXrsimTZvsfJmPCMU9G0bM/6XkqVaD/hur2poqYSIbSAAAAABJRU5ErkJggg==" alt="image"></div>
 <style>
- .hmisctable330258 {
+ .hmisctable308668 {
  border: none;
  font-size: 74%;
  }
- .hmisctable330258 td {
+ .hmisctable308668 td {
  text-align: center;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable330258 th {
+ .hmisctable308668 th {
  color: MidnightBlue;
  text-align: center;
  padding: 0 1ex 0 1ex;
  font-weight: normal;
  }
  </style>
- <table data-quarto-disable-processing="true" class="hmisctable330258">
+ <table data-quarto-disable-processing="true" class="hmisctable308668">
  <tbody><tr><th>n</th><th>missing</th><th>distinct</th><th>Info</th><th>Mean</th><th>pMedian</th><th>Gmd</th><th>.05</th><th>.10</th><th>.25</th><th>.50</th><th>.75</th><th>.90</th><th>.95</th></tr>
  <tr><td>558</td><td>0</td><td>62</td><td>0.999</td><td>67.34</td><td>68</td><td>13.41</td><td>46.85</td><td>51.00</td><td>60.00</td><td>69.00</td><td>75.00</td><td>82.00</td><td>85.00</td></tr>
  </tbody></table>
@@ -805,22 +808,22 @@ iVBORw0KGgoAAAANSUhEUgAAAJcAAAANCAYAAACkYvxcAAAEDmlDQ1BrQ0dDb2xvclNwYWNlR2VuZXJp
 <hr class="thinhr">
 <span style="font-weight:bold">gender</span>
 <style>
- .hmisctable104572 {
+ .hmisctable353844 {
  border: none;
  font-size: 85%;
  }
- .hmisctable104572 td {
+ .hmisctable353844 td {
  text-align: center;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable104572 th {
+ .hmisctable353844 th {
  color: MidnightBlue;
  text-align: center;
  padding: 0 1ex 0 1ex;
  font-weight: normal;
  }
  </style>
- <table data-quarto-disable-processing="true" class="hmisctable104572">
+ <table data-quarto-disable-processing="true" class="hmisctable353844">
  <tbody><tr><th>n</th><th>missing</th><th>distinct</th></tr>
  <tr><td>558</td><td>0</td><td>2</td></tr>
  </tbody></table>
@@ -866,22 +869,22 @@ bottom: -1ex;
 <span style="font-weight:bold">age</span>: Age <span style="font-family:Verdana;font-size:75%;">years</span><div style="float: right; text-align: right;"><img src="data:image/png;base64,
 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" alt="image"></div>
 <style>
- .hmisctable271812 {
+ .hmisctable252970 {
  border: none;
  font-size: 74%;
  }
- .hmisctable271812 td {
+ .hmisctable252970 td {
  text-align: center;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable271812 th {
+ .hmisctable252970 th {
  color: MidnightBlue;
  text-align: center;
  padding: 0 1ex 0 1ex;
  font-weight: normal;
  }
  </style>
- <table data-quarto-disable-processing="true" class="hmisctable271812">
+ <table data-quarto-disable-processing="true" class="hmisctable252970">
  <tbody><tr><th>n</th><th>missing</th><th>distinct</th><th>Info</th><th>Mean</th><th>pMedian</th><th>Gmd</th><th>.05</th><th>.10</th><th>.25</th><th>.50</th><th>.75</th><th>.90</th><th>.95</th></tr>
  <tr><td>338</td><td>0</td><td>58</td><td>0.999</td><td>67.01</td><td>67.5</td><td>13.74</td><td>47.00</td><td>50.70</td><td>59.25</td><td>68.00</td><td>76.00</td><td>83.00</td><td>85.00</td></tr>
  </tbody></table>
@@ -925,22 +928,22 @@ bottom: -1ex;
 <span style="font-weight:bold">age</span>: Age <span style="font-family:Verdana;font-size:75%;">years</span><div style="float: right; text-align: right;"><img src="data:image/png;base64,
 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" alt="image"></div>
 <style>
- .hmisctable800779 {
+ .hmisctable628207 {
  border: none;
  font-size: 74%;
  }
- .hmisctable800779 td {
+ .hmisctable628207 td {
  text-align: center;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable800779 th {
+ .hmisctable628207 th {
  color: MidnightBlue;
  text-align: center;
  padding: 0 1ex 0 1ex;
  font-weight: normal;
  }
  </style>
- <table data-quarto-disable-processing="true" class="hmisctable800779">
+ <table data-quarto-disable-processing="true" class="hmisctable628207">
  <tbody><tr><th>n</th><th>missing</th><th>distinct</th><th>Info</th><th>Mean</th><th>pMedian</th><th>Gmd</th><th>.05</th><th>.10</th><th>.25</th><th>.50</th><th>.75</th><th>.90</th><th>.95</th></tr>
  <tr><td>558</td><td>0</td><td>62</td><td>0.999</td><td>67.34</td><td>68</td><td>13.41</td><td>46.85</td><td>51.00</td><td>60.00</td><td>69.00</td><td>75.00</td><td>82.00</td><td>85.00</td></tr>
  </tbody></table>
@@ -949,22 +952,22 @@ iVBORw0KGgoAAAANSUhEUgAAAJcAAAANCAYAAACkYvxcAAAEDmlDQ1BrQ0dDb2xvclNwYWNlR2VuZXJp
 <hr class="thinhr">
 <span style="font-weight:bold">gender</span>
 <style>
- .hmisctable859212 {
+ .hmisctable661379 {
  border: none;
  font-size: 85%;
  }
- .hmisctable859212 td {
+ .hmisctable661379 td {
  text-align: center;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable859212 th {
+ .hmisctable661379 th {
  color: MidnightBlue;
  text-align: center;
  padding: 0 1ex 0 1ex;
  font-weight: normal;
  }
  </style>
- <table data-quarto-disable-processing="true" class="hmisctable859212">
+ <table data-quarto-disable-processing="true" class="hmisctable661379">
  <tbody><tr><th>n</th><th>missing</th><th>distinct</th></tr>
  <tr><td>558</td><td>0</td><td>2</td></tr>
  </tbody></table>
@@ -1032,8 +1035,8 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
 </dl>
 </div>
 <div class="cell-output-display">
-<span id="htmlwidget-800eb91cdab18fa3ff08" class="sparkline html-widget"></span>
-<script type="application/json" data-for="htmlwidget-800eb91cdab18fa3ff08">{"x":{"values":0,"options":{"height":20,"width":60},"width":60,"height":20},"evals":[],"jsHooks":[]}</script>
+<span id="htmlwidget-165a24e33c5627deb20c" class="sparkline html-widget"></span>
+<script type="application/json" data-for="htmlwidget-165a24e33c5627deb20c">{"x":{"values":0,"options":{"height":20,"width":60},"width":60,"height":20},"evals":[],"jsHooks":[]}</script>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   gender     V1
@@ -1091,23 +1094,23 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
 
 </div>
 <div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
-<div id="tmcavblxlu" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#tmcavblxlu table {
+<div id="zeqiavqrun" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#zeqiavqrun table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#tmcavblxlu thead, #tmcavblxlu tbody, #tmcavblxlu tfoot, #tmcavblxlu tr, #tmcavblxlu td, #tmcavblxlu th {
+#zeqiavqrun thead, #zeqiavqrun tbody, #zeqiavqrun tfoot, #zeqiavqrun tr, #zeqiavqrun td, #zeqiavqrun th {
   border-style: none;
 }
 
-#tmcavblxlu p {
+#zeqiavqrun p {
   margin: 0;
   padding: 0;
 }
 
-#tmcavblxlu .gt_table {
+#zeqiavqrun .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -1133,12 +1136,12 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-left-color: #D3D3D3;
 }
 
-#tmcavblxlu .gt_caption {
+#zeqiavqrun .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#tmcavblxlu .gt_title {
+#zeqiavqrun .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -1150,7 +1153,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-bottom-width: 0;
 }
 
-#tmcavblxlu .gt_subtitle {
+#zeqiavqrun .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -1162,7 +1165,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-top-width: 0;
 }
 
-#tmcavblxlu .gt_heading {
+#zeqiavqrun .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -1174,13 +1177,13 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-right-color: #D3D3D3;
 }
 
-#tmcavblxlu .gt_bottom_border {
+#zeqiavqrun .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#tmcavblxlu .gt_col_headings {
+#zeqiavqrun .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1195,7 +1198,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-right-color: #D3D3D3;
 }
 
-#tmcavblxlu .gt_col_heading {
+#zeqiavqrun .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1215,7 +1218,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   overflow-x: hidden;
 }
 
-#tmcavblxlu .gt_column_spanner_outer {
+#zeqiavqrun .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1227,15 +1230,15 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   padding-right: 4px;
 }
 
-#tmcavblxlu .gt_column_spanner_outer:first-child {
+#zeqiavqrun .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#tmcavblxlu .gt_column_spanner_outer:last-child {
+#zeqiavqrun .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#tmcavblxlu .gt_column_spanner {
+#zeqiavqrun .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -1247,11 +1250,11 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   width: 100%;
 }
 
-#tmcavblxlu .gt_spanner_row {
+#zeqiavqrun .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#tmcavblxlu .gt_group_heading {
+#zeqiavqrun .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1277,7 +1280,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   text-align: left;
 }
 
-#tmcavblxlu .gt_empty_group_heading {
+#zeqiavqrun .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -1292,15 +1295,15 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   vertical-align: middle;
 }
 
-#tmcavblxlu .gt_from_md > :first-child {
+#zeqiavqrun .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#tmcavblxlu .gt_from_md > :last-child {
+#zeqiavqrun .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#tmcavblxlu .gt_row {
+#zeqiavqrun .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1319,7 +1322,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   overflow-x: hidden;
 }
 
-#tmcavblxlu .gt_stub {
+#zeqiavqrun .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1332,7 +1335,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   padding-right: 5px;
 }
 
-#tmcavblxlu .gt_stub_row_group {
+#zeqiavqrun .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1346,15 +1349,15 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   vertical-align: top;
 }
 
-#tmcavblxlu .gt_row_group_first td {
+#zeqiavqrun .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#tmcavblxlu .gt_row_group_first th {
+#zeqiavqrun .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#tmcavblxlu .gt_summary_row {
+#zeqiavqrun .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1364,16 +1367,16 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   padding-right: 5px;
 }
 
-#tmcavblxlu .gt_first_summary_row {
+#zeqiavqrun .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#tmcavblxlu .gt_first_summary_row.thick {
+#zeqiavqrun .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#tmcavblxlu .gt_last_summary_row {
+#zeqiavqrun .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1383,7 +1386,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-bottom-color: #D3D3D3;
 }
 
-#tmcavblxlu .gt_grand_summary_row {
+#zeqiavqrun .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1393,7 +1396,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   padding-right: 5px;
 }
 
-#tmcavblxlu .gt_first_grand_summary_row {
+#zeqiavqrun .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1403,7 +1406,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-top-color: #D3D3D3;
 }
 
-#tmcavblxlu .gt_last_grand_summary_row_top {
+#zeqiavqrun .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1413,11 +1416,11 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-bottom-color: #D3D3D3;
 }
 
-#tmcavblxlu .gt_striped {
+#zeqiavqrun .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#tmcavblxlu .gt_table_body {
+#zeqiavqrun .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1426,7 +1429,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-bottom-color: #D3D3D3;
 }
 
-#tmcavblxlu .gt_footnotes {
+#zeqiavqrun .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1440,7 +1443,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-right-color: #D3D3D3;
 }
 
-#tmcavblxlu .gt_footnote {
+#zeqiavqrun .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -1449,7 +1452,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   padding-right: 5px;
 }
 
-#tmcavblxlu .gt_sourcenotes {
+#zeqiavqrun .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1463,7 +1466,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-right-color: #D3D3D3;
 }
 
-#tmcavblxlu .gt_sourcenote {
+#zeqiavqrun .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -1471,72 +1474,72 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   padding-right: 5px;
 }
 
-#tmcavblxlu .gt_left {
+#zeqiavqrun .gt_left {
   text-align: left;
 }
 
-#tmcavblxlu .gt_center {
+#zeqiavqrun .gt_center {
   text-align: center;
 }
 
-#tmcavblxlu .gt_right {
+#zeqiavqrun .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#tmcavblxlu .gt_font_normal {
+#zeqiavqrun .gt_font_normal {
   font-weight: normal;
 }
 
-#tmcavblxlu .gt_font_bold {
+#zeqiavqrun .gt_font_bold {
   font-weight: bold;
 }
 
-#tmcavblxlu .gt_font_italic {
+#zeqiavqrun .gt_font_italic {
   font-style: italic;
 }
 
-#tmcavblxlu .gt_super {
+#zeqiavqrun .gt_super {
   font-size: 65%;
 }
 
-#tmcavblxlu .gt_footnote_marks {
+#zeqiavqrun .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#tmcavblxlu .gt_asterisk {
+#zeqiavqrun .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#tmcavblxlu .gt_indent_1 {
+#zeqiavqrun .gt_indent_1 {
   text-indent: 5px;
 }
 
-#tmcavblxlu .gt_indent_2 {
+#zeqiavqrun .gt_indent_2 {
   text-indent: 10px;
 }
 
-#tmcavblxlu .gt_indent_3 {
+#zeqiavqrun .gt_indent_3 {
   text-indent: 15px;
 }
 
-#tmcavblxlu .gt_indent_4 {
+#zeqiavqrun .gt_indent_4 {
   text-indent: 20px;
 }
 
-#tmcavblxlu .gt_indent_5 {
+#zeqiavqrun .gt_indent_5 {
   text-indent: 25px;
 }
 
-#tmcavblxlu .katex-display {
+#zeqiavqrun .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
 
-#tmcavblxlu div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#zeqiavqrun div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
@@ -1577,8 +1580,8 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
 <td class="gt_row gt_right" headers="Mean">67.86</td>
 <td class="gt_row gt_right" headers="pMedian">68.5</td>
 <td class="gt_row gt_right" headers="Gmd">12.91</td>
-<td class="gt_row gt_right" headers=" "><span id="htmlwidget-5bd6c3ea01ee280deb7f" class="sparkline html-widget"></span>
-<script type="application/json" data-for="htmlwidget-5bd6c3ea01ee280deb7f">{"x":{"values":[1,0,0,0,1,0,0,0,3,0,2,0,0,1,0,3,1,2,1,2,4,3,0,2,5,1,1,2,4,8,2,3,8,7,4,8,5,12,8,9,8,10,8,9,10,10,6,6,7,5,0,7,4,2,1,1,3,2,4,4],"options":{"type":"bar","chartRangeMin":0,"zeroColor":"lightgray","barWidth":1,"barSpacing":1,"tooltipFormatter":"function(sparkline, options, field){\n       debugger;\n       return [\"Bin: [30, 31)<br>Observed:<br>30<br>Proportion:0.0045 (n=1)<br>Cumulative:0.0045\",\"\",\"\",\"\",\"Bin: [34, 35)<br>Observed:<br>34<br>Proportion:0.0045 (n=1)<br>Cumulative:0.0091\",\"\",\"\",\"\",\"Bin: [38, 39)<br>Observed:<br>38 (3)<br>Proportion:0.0136 (n=3)<br>Cumulative:0.0227\",\"\",\"Bin: [40, 41)<br>Observed:<br>40 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.0318\",\"\",\"\",\"Bin: [43, 44)<br>Observed:<br>43<br>Proportion:0.0045 (n=1)<br>Cumulative:0.0364\",\"\",\"Bin: [45, 46)<br>Observed:<br>45 (3)<br>Proportion:0.0136 (n=3)<br>Cumulative:0.05\",\"Bin: [46, 47)<br>Observed:<br>46<br>Proportion:0.0045 (n=1)<br>Cumulative:0.0545\",\"Bin: [47, 48)<br>Observed:<br>47 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.0636\",\"Bin: [48, 49)<br>Observed:<br>48<br>Proportion:0.0045 (n=1)<br>Cumulative:0.0682\",\"Bin: [49, 50)<br>Observed:<br>49 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.0773\",\"Bin: [50, 51)<br>Observed:<br>50 (4)<br>Proportion:0.0182 (n=4)<br>Cumulative:0.0955\",\"Bin: [51, 52)<br>Observed:<br>51 (3)<br>Proportion:0.0136 (n=3)<br>Cumulative:0.1091\",\"\",\"Bin: [53, 54)<br>Observed:<br>53 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.1182\",\"Bin: [54, 55)<br>Observed:<br>54 (5)<br>Proportion:0.0227 (n=5)<br>Cumulative:0.1409\",\"Bin: [55, 56)<br>Observed:<br>55<br>Proportion:0.0045 (n=1)<br>Cumulative:0.1455\",\"Bin: [56, 57)<br>Observed:<br>56<br>Proportion:0.0045 (n=1)<br>Cumulative:0.15\",\"Bin: [57, 58)<br>Observed:<br>57 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.1591\",\"Bin: [58, 59)<br>Observed:<br>58 (4)<br>Proportion:0.0182 (n=4)<br>Cumulative:0.1773\",\"Bin: [59, 60)<br>Observed:<br>59 (8)<br>Proportion:0.0364 (n=8)<br>Cumulative:0.2136\",\"Bin: [60, 61)<br>Observed:<br>60 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.2227\",\"Bin: [61, 62)<br>Observed:<br>61 (3)<br>Proportion:0.0136 (n=3)<br>Cumulative:0.2364\",\"Bin: [62, 63)<br>Observed:<br>62 (8)<br>Proportion:0.0364 (n=8)<br>Cumulative:0.2727\",\"Bin: [63, 64)<br>Observed:<br>63 (7)<br>Proportion:0.0318 (n=7)<br>Cumulative:0.3045\",\"Bin: [64, 65)<br>Observed:<br>64 (4)<br>Proportion:0.0182 (n=4)<br>Cumulative:0.3227\",\"Bin: [65, 66)<br>Observed:<br>65 (8)<br>Proportion:0.0364 (n=8)<br>Cumulative:0.3591\",\"Bin: [66, 67)<br>Observed:<br>66 (5)<br>Proportion:0.0227 (n=5)<br>Cumulative:0.3818\",\"Bin: [67, 68)<br>Observed:<br>67 (12)<br>Proportion:0.0545 (n=12)<br>Cumulative:0.4364\",\"Bin: [68, 69)<br>Observed:<br>68 (8)<br>Proportion:0.0364 (n=8)<br>Cumulative:0.4727\",\"Bin: [69, 70)<br>Observed:<br>69 (9)<br>Proportion:0.0409 (n=9)<br>Cumulative:0.5136\",\"Bin: [70, 71)<br>Observed:<br>70 (8)<br>Proportion:0.0364 (n=8)<br>Cumulative:0.55\",\"Bin: [71, 72)<br>Observed:<br>71 (10)<br>Proportion:0.0455 (n=10)<br>Cumulative:0.5955\",\"Bin: [72, 73)<br>Observed:<br>72 (8)<br>Proportion:0.0364 (n=8)<br>Cumulative:0.6318\",\"Bin: [73, 74)<br>Observed:<br>73 (9)<br>Proportion:0.0409 (n=9)<br>Cumulative:0.6727\",\"Bin: [74, 75)<br>Observed:<br>74 (10)<br>Proportion:0.0455 (n=10)<br>Cumulative:0.7182\",\"Bin: [75, 76)<br>Observed:<br>75 (10)<br>Proportion:0.0455 (n=10)<br>Cumulative:0.7636\",\"Bin: [76, 77)<br>Observed:<br>76 (6)<br>Proportion:0.0273 (n=6)<br>Cumulative:0.7909\",\"Bin: [77, 78)<br>Observed:<br>77 (6)<br>Proportion:0.0273 (n=6)<br>Cumulative:0.8182\",\"Bin: [78, 79)<br>Observed:<br>78 (7)<br>Proportion:0.0318 (n=7)<br>Cumulative:0.85\",\"Bin: [79, 80)<br>Observed:<br>79 (5)<br>Proportion:0.0227 (n=5)<br>Cumulative:0.8727\",\"\",\"Bin: [81, 82)<br>Observed:<br>81 (7)<br>Proportion:0.0318 (n=7)<br>Cumulative:0.9045\",\"Bin: [82, 83)<br>Observed:<br>82 (4)<br>Proportion:0.0182 (n=4)<br>Cumulative:0.9227\",\"Bin: [83, 84)<br>Observed:<br>83 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.9318\",\"Bin: [84, 85)<br>Observed:<br>84<br>Proportion:0.0045 (n=1)<br>Cumulative:0.9364\",\"Bin: [85, 86)<br>Observed:<br>85<br>Proportion:0.0045 (n=1)<br>Cumulative:0.9409\",\"Bin: [86, 87)<br>Observed:<br>86 (3)<br>Proportion:0.0136 (n=3)<br>Cumulative:0.9545\",\"Bin: [87, 88)<br>Observed:<br>87 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.9636\",\"Bin: [88, 89]<br>Observed:<br>88 (3)<br>89<br>Proportion:0.0182 (n=4)<br>Cumulative:0.9818\",\"Q<sub>0.99<\\/sub>:91<br>Bin: (89, 93]<br>Observed:<br>91 (2)<br>92<br>93<br>Proportion:0.0182 (n=4)<br>Cumulative:1\"][field[0].offset];\n       }","height":20,"width":200},"width":200,"height":20},"evals":["options.tooltipFormatter"],"jsHooks":[]}</script></td>
+<td class="gt_row gt_right" headers=" "><span id="htmlwidget-d0879512790f6ae0f237" class="sparkline html-widget"></span>
+<script type="application/json" data-for="htmlwidget-d0879512790f6ae0f237">{"x":{"values":[1,0,0,0,1,0,0,0,3,0,2,0,0,1,0,3,1,2,1,2,4,3,0,2,5,1,1,2,4,8,2,3,8,7,4,8,5,12,8,9,8,10,8,9,10,10,6,6,7,5,0,7,4,2,1,1,3,2,4,4],"options":{"type":"bar","chartRangeMin":0,"zeroColor":"lightgray","barWidth":1,"barSpacing":1,"tooltipFormatter":"function(sparkline, options, field){\n       debugger;\n       return [\"Bin: [30, 31)<br>Observed:<br>30<br>Proportion:0.0045 (n=1)<br>Cumulative:0.0045\",\"\",\"\",\"\",\"Bin: [34, 35)<br>Observed:<br>34<br>Proportion:0.0045 (n=1)<br>Cumulative:0.0091\",\"\",\"\",\"\",\"Bin: [38, 39)<br>Observed:<br>38 (3)<br>Proportion:0.0136 (n=3)<br>Cumulative:0.0227\",\"\",\"Bin: [40, 41)<br>Observed:<br>40 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.0318\",\"\",\"\",\"Bin: [43, 44)<br>Observed:<br>43<br>Proportion:0.0045 (n=1)<br>Cumulative:0.0364\",\"\",\"Bin: [45, 46)<br>Observed:<br>45 (3)<br>Proportion:0.0136 (n=3)<br>Cumulative:0.05\",\"Bin: [46, 47)<br>Observed:<br>46<br>Proportion:0.0045 (n=1)<br>Cumulative:0.0545\",\"Bin: [47, 48)<br>Observed:<br>47 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.0636\",\"Bin: [48, 49)<br>Observed:<br>48<br>Proportion:0.0045 (n=1)<br>Cumulative:0.0682\",\"Bin: [49, 50)<br>Observed:<br>49 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.0773\",\"Bin: [50, 51)<br>Observed:<br>50 (4)<br>Proportion:0.0182 (n=4)<br>Cumulative:0.0955\",\"Bin: [51, 52)<br>Observed:<br>51 (3)<br>Proportion:0.0136 (n=3)<br>Cumulative:0.1091\",\"\",\"Bin: [53, 54)<br>Observed:<br>53 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.1182\",\"Bin: [54, 55)<br>Observed:<br>54 (5)<br>Proportion:0.0227 (n=5)<br>Cumulative:0.1409\",\"Bin: [55, 56)<br>Observed:<br>55<br>Proportion:0.0045 (n=1)<br>Cumulative:0.1455\",\"Bin: [56, 57)<br>Observed:<br>56<br>Proportion:0.0045 (n=1)<br>Cumulative:0.15\",\"Bin: [57, 58)<br>Observed:<br>57 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.1591\",\"Bin: [58, 59)<br>Observed:<br>58 (4)<br>Proportion:0.0182 (n=4)<br>Cumulative:0.1773\",\"Bin: [59, 60)<br>Observed:<br>59 (8)<br>Proportion:0.0364 (n=8)<br>Cumulative:0.2136\",\"Bin: [60, 61)<br>Observed:<br>60 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.2227\",\"Bin: [61, 62)<br>Observed:<br>61 (3)<br>Proportion:0.0136 (n=3)<br>Cumulative:0.2364\",\"Bin: [62, 63)<br>Observed:<br>62 (8)<br>Proportion:0.0364 (n=8)<br>Cumulative:0.2727\",\"Bin: [63, 64)<br>Observed:<br>63 (7)<br>Proportion:0.0318 (n=7)<br>Cumulative:0.3045\",\"Bin: [64, 65)<br>Observed:<br>64 (4)<br>Proportion:0.0182 (n=4)<br>Cumulative:0.3227\",\"Bin: [65, 66)<br>Observed:<br>65 (8)<br>Proportion:0.0364 (n=8)<br>Cumulative:0.3591\",\"Bin: [66, 67)<br>Observed:<br>66 (5)<br>Proportion:0.0227 (n=5)<br>Cumulative:0.3818\",\"Bin: [67, 68)<br>Observed:<br>67 (12)<br>Proportion:0.0545 (n=12)<br>Cumulative:0.4364\",\"Bin: [68, 69)<br>Observed:<br>68 (8)<br>Proportion:0.0364 (n=8)<br>Cumulative:0.4727\",\"Bin: [69, 70)<br>Observed:<br>69 (9)<br>Proportion:0.0409 (n=9)<br>Cumulative:0.5136\",\"Bin: [70, 71)<br>Observed:<br>70 (8)<br>Proportion:0.0364 (n=8)<br>Cumulative:0.55\",\"Bin: [71, 72)<br>Observed:<br>71 (10)<br>Proportion:0.0455 (n=10)<br>Cumulative:0.5955\",\"Bin: [72, 73)<br>Observed:<br>72 (8)<br>Proportion:0.0364 (n=8)<br>Cumulative:0.6318\",\"Bin: [73, 74)<br>Observed:<br>73 (9)<br>Proportion:0.0409 (n=9)<br>Cumulative:0.6727\",\"Bin: [74, 75)<br>Observed:<br>74 (10)<br>Proportion:0.0455 (n=10)<br>Cumulative:0.7182\",\"Bin: [75, 76)<br>Observed:<br>75 (10)<br>Proportion:0.0455 (n=10)<br>Cumulative:0.7636\",\"Bin: [76, 77)<br>Observed:<br>76 (6)<br>Proportion:0.0273 (n=6)<br>Cumulative:0.7909\",\"Bin: [77, 78)<br>Observed:<br>77 (6)<br>Proportion:0.0273 (n=6)<br>Cumulative:0.8182\",\"Bin: [78, 79)<br>Observed:<br>78 (7)<br>Proportion:0.0318 (n=7)<br>Cumulative:0.85\",\"Bin: [79, 80)<br>Observed:<br>79 (5)<br>Proportion:0.0227 (n=5)<br>Cumulative:0.8727\",\"\",\"Bin: [81, 82)<br>Observed:<br>81 (7)<br>Proportion:0.0318 (n=7)<br>Cumulative:0.9045\",\"Bin: [82, 83)<br>Observed:<br>82 (4)<br>Proportion:0.0182 (n=4)<br>Cumulative:0.9227\",\"Bin: [83, 84)<br>Observed:<br>83 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.9318\",\"Bin: [84, 85)<br>Observed:<br>84<br>Proportion:0.0045 (n=1)<br>Cumulative:0.9364\",\"Bin: [85, 86)<br>Observed:<br>85<br>Proportion:0.0045 (n=1)<br>Cumulative:0.9409\",\"Bin: [86, 87)<br>Observed:<br>86 (3)<br>Proportion:0.0136 (n=3)<br>Cumulative:0.9545\",\"Bin: [87, 88)<br>Observed:<br>87 (2)<br>Proportion:0.0091 (n=2)<br>Cumulative:0.9636\",\"Bin: [88, 89]<br>Observed:<br>88 (3)<br>89<br>Proportion:0.0182 (n=4)<br>Cumulative:0.9818\",\"Q<sub>0.99<\\/sub>:91<br>Bin: (89, 93]<br>Observed:<br>91 (2)<br>92<br>93<br>Proportion:0.0182 (n=4)<br>Cumulative:1\"][field[0].offset];\n       }","height":20,"width":200},"width":200,"height":20},"evals":["options.tooltipFormatter"],"jsHooks":[]}</script></td>
 <td class="gt_row gt_center" headers="Quantiles"><font size="1"> 45.95 </font><font size="2"> 51.00 </font><font size="3"> 62.00 </font><font size="4"> <strong>69.00</strong> </font><font size="3"> 75.00 </font><font size="2"> 81.00 </font><font size="1"> 86.00 </font></td>
 </tr>
 </tbody>
@@ -1587,23 +1590,23 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
 </div>
 </div>
 <div id="tabset-1-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
-<div id="wnhfahedix" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#wnhfahedix table {
+<div id="cywtivbdrt" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#cywtivbdrt table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#wnhfahedix thead, #wnhfahedix tbody, #wnhfahedix tfoot, #wnhfahedix tr, #wnhfahedix td, #wnhfahedix th {
+#cywtivbdrt thead, #cywtivbdrt tbody, #cywtivbdrt tfoot, #cywtivbdrt tr, #cywtivbdrt td, #cywtivbdrt th {
   border-style: none;
 }
 
-#wnhfahedix p {
+#cywtivbdrt p {
   margin: 0;
   padding: 0;
 }
 
-#wnhfahedix .gt_table {
+#cywtivbdrt .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -1629,12 +1632,12 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-left-color: #D3D3D3;
 }
 
-#wnhfahedix .gt_caption {
+#cywtivbdrt .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#wnhfahedix .gt_title {
+#cywtivbdrt .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -1646,7 +1649,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-bottom-width: 0;
 }
 
-#wnhfahedix .gt_subtitle {
+#cywtivbdrt .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -1658,7 +1661,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-top-width: 0;
 }
 
-#wnhfahedix .gt_heading {
+#cywtivbdrt .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -1670,13 +1673,13 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-right-color: #D3D3D3;
 }
 
-#wnhfahedix .gt_bottom_border {
+#cywtivbdrt .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#wnhfahedix .gt_col_headings {
+#cywtivbdrt .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1691,7 +1694,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-right-color: #D3D3D3;
 }
 
-#wnhfahedix .gt_col_heading {
+#cywtivbdrt .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1711,7 +1714,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   overflow-x: hidden;
 }
 
-#wnhfahedix .gt_column_spanner_outer {
+#cywtivbdrt .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1723,15 +1726,15 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   padding-right: 4px;
 }
 
-#wnhfahedix .gt_column_spanner_outer:first-child {
+#cywtivbdrt .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#wnhfahedix .gt_column_spanner_outer:last-child {
+#cywtivbdrt .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#wnhfahedix .gt_column_spanner {
+#cywtivbdrt .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -1743,11 +1746,11 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   width: 100%;
 }
 
-#wnhfahedix .gt_spanner_row {
+#cywtivbdrt .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#wnhfahedix .gt_group_heading {
+#cywtivbdrt .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1773,7 +1776,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   text-align: left;
 }
 
-#wnhfahedix .gt_empty_group_heading {
+#cywtivbdrt .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -1788,15 +1791,15 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   vertical-align: middle;
 }
 
-#wnhfahedix .gt_from_md > :first-child {
+#cywtivbdrt .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#wnhfahedix .gt_from_md > :last-child {
+#cywtivbdrt .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#wnhfahedix .gt_row {
+#cywtivbdrt .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1815,7 +1818,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   overflow-x: hidden;
 }
 
-#wnhfahedix .gt_stub {
+#cywtivbdrt .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1828,7 +1831,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   padding-right: 5px;
 }
 
-#wnhfahedix .gt_stub_row_group {
+#cywtivbdrt .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1842,15 +1845,15 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   vertical-align: top;
 }
 
-#wnhfahedix .gt_row_group_first td {
+#cywtivbdrt .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#wnhfahedix .gt_row_group_first th {
+#cywtivbdrt .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#wnhfahedix .gt_summary_row {
+#cywtivbdrt .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1860,16 +1863,16 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   padding-right: 5px;
 }
 
-#wnhfahedix .gt_first_summary_row {
+#cywtivbdrt .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#wnhfahedix .gt_first_summary_row.thick {
+#cywtivbdrt .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#wnhfahedix .gt_last_summary_row {
+#cywtivbdrt .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1879,7 +1882,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-bottom-color: #D3D3D3;
 }
 
-#wnhfahedix .gt_grand_summary_row {
+#cywtivbdrt .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1889,7 +1892,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   padding-right: 5px;
 }
 
-#wnhfahedix .gt_first_grand_summary_row {
+#cywtivbdrt .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1899,7 +1902,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-top-color: #D3D3D3;
 }
 
-#wnhfahedix .gt_last_grand_summary_row_top {
+#cywtivbdrt .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1909,11 +1912,11 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-bottom-color: #D3D3D3;
 }
 
-#wnhfahedix .gt_striped {
+#cywtivbdrt .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#wnhfahedix .gt_table_body {
+#cywtivbdrt .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1922,7 +1925,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-bottom-color: #D3D3D3;
 }
 
-#wnhfahedix .gt_footnotes {
+#cywtivbdrt .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1936,7 +1939,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-right-color: #D3D3D3;
 }
 
-#wnhfahedix .gt_footnote {
+#cywtivbdrt .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -1945,7 +1948,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   padding-right: 5px;
 }
 
-#wnhfahedix .gt_sourcenotes {
+#cywtivbdrt .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1959,7 +1962,7 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   border-right-color: #D3D3D3;
 }
 
-#wnhfahedix .gt_sourcenote {
+#cywtivbdrt .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -1967,72 +1970,72 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
   padding-right: 5px;
 }
 
-#wnhfahedix .gt_left {
+#cywtivbdrt .gt_left {
   text-align: left;
 }
 
-#wnhfahedix .gt_center {
+#cywtivbdrt .gt_center {
   text-align: center;
 }
 
-#wnhfahedix .gt_right {
+#cywtivbdrt .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#wnhfahedix .gt_font_normal {
+#cywtivbdrt .gt_font_normal {
   font-weight: normal;
 }
 
-#wnhfahedix .gt_font_bold {
+#cywtivbdrt .gt_font_bold {
   font-weight: bold;
 }
 
-#wnhfahedix .gt_font_italic {
+#cywtivbdrt .gt_font_italic {
   font-style: italic;
 }
 
-#wnhfahedix .gt_super {
+#cywtivbdrt .gt_super {
   font-size: 65%;
 }
 
-#wnhfahedix .gt_footnote_marks {
+#cywtivbdrt .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#wnhfahedix .gt_asterisk {
+#cywtivbdrt .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#wnhfahedix .gt_indent_1 {
+#cywtivbdrt .gt_indent_1 {
   text-indent: 5px;
 }
 
-#wnhfahedix .gt_indent_2 {
+#cywtivbdrt .gt_indent_2 {
   text-indent: 10px;
 }
 
-#wnhfahedix .gt_indent_3 {
+#cywtivbdrt .gt_indent_3 {
   text-indent: 15px;
 }
 
-#wnhfahedix .gt_indent_4 {
+#cywtivbdrt .gt_indent_4 {
   text-indent: 20px;
 }
 
-#wnhfahedix .gt_indent_5 {
+#cywtivbdrt .gt_indent_5 {
   text-indent: 25px;
 }
 
-#wnhfahedix .katex-display {
+#cywtivbdrt .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
 
-#wnhfahedix div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#cywtivbdrt div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
@@ -2073,8 +2076,8 @@ lowest : 26 28 29 33 34, highest: 87 88 89 90 91</code></pre>
 <td class="gt_row gt_right" headers="Mean">67.01</td>
 <td class="gt_row gt_right" headers="pMedian">67.5</td>
 <td class="gt_row gt_right" headers="Gmd">13.74</td>
-<td class="gt_row gt_right" headers=" "><span id="htmlwidget-60779633d79076138c29" class="sparkline html-widget"></span>
-<script type="application/json" data-for="htmlwidget-60779633d79076138c29">{"x":{"values":[4,1,2,0,0,0,0,2,1,1,1,1,1,1,1,6,5,4,3,1,7,7,6,4,4,6,3,13,10,4,7,7,14,9,9,15,11,15,15,11,11,13,9,7,11,11,6,9,1,5,6,10,3,11,2,1,5,5],"options":{"type":"bar","chartRangeMin":0,"zeroColor":"lightgray","barWidth":1,"barSpacing":1,"tooltipFormatter":"function(sparkline, options, field){\n       debugger;\n       return [\"Q<sub>0.01<\\/sub>:29<br>Bin: [26, 33)<br>Observed:<br>26<br>28<br>29 (2)<br>Proportion:0.0118 (n=4)<br>Cumulative:0.0118\",\"Bin: [33, 34)<br>Observed:<br>33<br>Proportion:0.003 (n=1)<br>Cumulative:0.0148\",\"Bin: [34, 35)<br>Observed:<br>34 (2)<br>Proportion:0.0059 (n=2)<br>Cumulative:0.0207\",\"\",\"\",\"\",\"\",\"Bin: [39, 40)<br>Observed:<br>39 (2)<br>Proportion:0.0059 (n=2)<br>Cumulative:0.0266\",\"Bin: [40, 41)<br>Observed:<br>40<br>Proportion:0.003 (n=1)<br>Cumulative:0.0296\",\"Bin: [41, 42)<br>Observed:<br>41<br>Proportion:0.003 (n=1)<br>Cumulative:0.0325\",\"Bin: [42, 43)<br>Observed:<br>42<br>Proportion:0.003 (n=1)<br>Cumulative:0.0355\",\"Bin: [43, 44)<br>Observed:<br>43<br>Proportion:0.003 (n=1)<br>Cumulative:0.0385\",\"Bin: [44, 45)<br>Observed:<br>44<br>Proportion:0.003 (n=1)<br>Cumulative:0.0414\",\"Bin: [45, 46)<br>Observed:<br>45<br>Proportion:0.003 (n=1)<br>Cumulative:0.0444\",\"Bin: [46, 47)<br>Observed:<br>46<br>Proportion:0.003 (n=1)<br>Cumulative:0.0473\",\"Bin: [47, 48)<br>Observed:<br>47 (6)<br>Proportion:0.0178 (n=6)<br>Cumulative:0.0651\",\"Bin: [48, 49)<br>Observed:<br>48 (5)<br>Proportion:0.0148 (n=5)<br>Cumulative:0.0799\",\"Bin: [49, 50)<br>Observed:<br>49 (4)<br>Proportion:0.0118 (n=4)<br>Cumulative:0.0917\",\"Bin: [50, 51)<br>Observed:<br>50 (3)<br>Proportion:0.0089 (n=3)<br>Cumulative:0.1006\",\"Bin: [51, 52)<br>Observed:<br>51<br>Proportion:0.003 (n=1)<br>Cumulative:0.1036\",\"Bin: [52, 53)<br>Observed:<br>52 (7)<br>Proportion:0.0207 (n=7)<br>Cumulative:0.1243\",\"Bin: [53, 54)<br>Observed:<br>53 (7)<br>Proportion:0.0207 (n=7)<br>Cumulative:0.145\",\"Bin: [54, 55)<br>Observed:<br>54 (6)<br>Proportion:0.0178 (n=6)<br>Cumulative:0.1627\",\"Bin: [55, 56)<br>Observed:<br>55 (4)<br>Proportion:0.0118 (n=4)<br>Cumulative:0.1746\",\"Bin: [56, 57)<br>Observed:<br>56 (4)<br>Proportion:0.0118 (n=4)<br>Cumulative:0.1864\",\"Bin: [57, 58)<br>Observed:<br>57 (6)<br>Proportion:0.0178 (n=6)<br>Cumulative:0.2041\",\"Bin: [58, 59)<br>Observed:<br>58 (3)<br>Proportion:0.0089 (n=3)<br>Cumulative:0.213\",\"Bin: [59, 60)<br>Observed:<br>59 (13)<br>Proportion:0.0385 (n=13)<br>Cumulative:0.2515\",\"Bin: [60, 61)<br>Observed:<br>60 (10)<br>Proportion:0.0296 (n=10)<br>Cumulative:0.2811\",\"Bin: [61, 62)<br>Observed:<br>61 (4)<br>Proportion:0.0118 (n=4)<br>Cumulative:0.2929\",\"Bin: [62, 63)<br>Observed:<br>62 (7)<br>Proportion:0.0207 (n=7)<br>Cumulative:0.3136\",\"Bin: [63, 64)<br>Observed:<br>63 (7)<br>Proportion:0.0207 (n=7)<br>Cumulative:0.3343\",\"Bin: [64, 65)<br>Observed:<br>64 (14)<br>Proportion:0.0414 (n=14)<br>Cumulative:0.3757\",\"Bin: [65, 66)<br>Observed:<br>65 (9)<br>Proportion:0.0266 (n=9)<br>Cumulative:0.4024\",\"Bin: [66, 67)<br>Observed:<br>66 (9)<br>Proportion:0.0266 (n=9)<br>Cumulative:0.429\",\"Bin: [67, 68)<br>Observed:<br>67 (15)<br>Proportion:0.0444 (n=15)<br>Cumulative:0.4734\",\"Bin: [68, 69)<br>Observed:<br>68 (11)<br>Proportion:0.0325 (n=11)<br>Cumulative:0.5059\",\"Bin: [69, 70)<br>Observed:<br>69 (15)<br>Proportion:0.0444 (n=15)<br>Cumulative:0.5503\",\"Bin: [70, 71)<br>Observed:<br>70 (15)<br>Proportion:0.0444 (n=15)<br>Cumulative:0.5947\",\"Bin: [71, 72)<br>Observed:<br>71 (11)<br>Proportion:0.0325 (n=11)<br>Cumulative:0.6272\",\"Bin: [72, 73)<br>Observed:<br>72 (11)<br>Proportion:0.0325 (n=11)<br>Cumulative:0.6598\",\"Bin: [73, 74)<br>Observed:<br>73 (13)<br>Proportion:0.0385 (n=13)<br>Cumulative:0.6982\",\"Bin: [74, 75)<br>Observed:<br>74 (9)<br>Proportion:0.0266 (n=9)<br>Cumulative:0.7249\",\"Bin: [75, 76)<br>Observed:<br>75 (7)<br>Proportion:0.0207 (n=7)<br>Cumulative:0.7456\",\"Bin: [76, 77)<br>Observed:<br>76 (11)<br>Proportion:0.0325 (n=11)<br>Cumulative:0.7781\",\"Bin: [77, 78)<br>Observed:<br>77 (11)<br>Proportion:0.0325 (n=11)<br>Cumulative:0.8107\",\"Bin: [78, 79)<br>Observed:<br>78 (6)<br>Proportion:0.0178 (n=6)<br>Cumulative:0.8284\",\"Bin: [79, 80)<br>Observed:<br>79 (9)<br>Proportion:0.0266 (n=9)<br>Cumulative:0.855\",\"Bin: [80, 81)<br>Observed:<br>80<br>Proportion:0.003 (n=1)<br>Cumulative:0.858\",\"Bin: [81, 82)<br>Observed:<br>81 (5)<br>Proportion:0.0148 (n=5)<br>Cumulative:0.8728\",\"Bin: [82, 83)<br>Observed:<br>82 (6)<br>Proportion:0.0178 (n=6)<br>Cumulative:0.8905\",\"Bin: [83, 84)<br>Observed:<br>83 (10)<br>Proportion:0.0296 (n=10)<br>Cumulative:0.9201\",\"Bin: [84, 85)<br>Observed:<br>84 (3)<br>Proportion:0.0089 (n=3)<br>Cumulative:0.929\",\"Bin: [85, 86)<br>Observed:<br>85 (11)<br>Proportion:0.0325 (n=11)<br>Cumulative:0.9615\",\"Bin: [86, 87)<br>Observed:<br>86 (2)<br>Proportion:0.0059 (n=2)<br>Cumulative:0.9675\",\"Bin: [87, 88)<br>Observed:<br>87<br>Proportion:0.003 (n=1)<br>Cumulative:0.9704\",\"Bin: [88, 89]<br>Observed:<br>88 (4)<br>89<br>Proportion:0.0148 (n=5)<br>Cumulative:0.9852\",\"Q<sub>0.99<\\/sub>:90<br>Bin: (89, 91]<br>Observed:<br>90 (4)<br>91<br>Proportion:0.0148 (n=5)<br>Cumulative:1\"][field[0].offset];\n       }","height":20,"width":200},"width":200,"height":20},"evals":["options.tooltipFormatter"],"jsHooks":[]}</script></td>
+<td class="gt_row gt_right" headers=" "><span id="htmlwidget-3074c3c8c640bbf857d2" class="sparkline html-widget"></span>
+<script type="application/json" data-for="htmlwidget-3074c3c8c640bbf857d2">{"x":{"values":[4,1,2,0,0,0,0,2,1,1,1,1,1,1,1,6,5,4,3,1,7,7,6,4,4,6,3,13,10,4,7,7,14,9,9,15,11,15,15,11,11,13,9,7,11,11,6,9,1,5,6,10,3,11,2,1,5,5],"options":{"type":"bar","chartRangeMin":0,"zeroColor":"lightgray","barWidth":1,"barSpacing":1,"tooltipFormatter":"function(sparkline, options, field){\n       debugger;\n       return [\"Q<sub>0.01<\\/sub>:29<br>Bin: [26, 33)<br>Observed:<br>26<br>28<br>29 (2)<br>Proportion:0.0118 (n=4)<br>Cumulative:0.0118\",\"Bin: [33, 34)<br>Observed:<br>33<br>Proportion:0.003 (n=1)<br>Cumulative:0.0148\",\"Bin: [34, 35)<br>Observed:<br>34 (2)<br>Proportion:0.0059 (n=2)<br>Cumulative:0.0207\",\"\",\"\",\"\",\"\",\"Bin: [39, 40)<br>Observed:<br>39 (2)<br>Proportion:0.0059 (n=2)<br>Cumulative:0.0266\",\"Bin: [40, 41)<br>Observed:<br>40<br>Proportion:0.003 (n=1)<br>Cumulative:0.0296\",\"Bin: [41, 42)<br>Observed:<br>41<br>Proportion:0.003 (n=1)<br>Cumulative:0.0325\",\"Bin: [42, 43)<br>Observed:<br>42<br>Proportion:0.003 (n=1)<br>Cumulative:0.0355\",\"Bin: [43, 44)<br>Observed:<br>43<br>Proportion:0.003 (n=1)<br>Cumulative:0.0385\",\"Bin: [44, 45)<br>Observed:<br>44<br>Proportion:0.003 (n=1)<br>Cumulative:0.0414\",\"Bin: [45, 46)<br>Observed:<br>45<br>Proportion:0.003 (n=1)<br>Cumulative:0.0444\",\"Bin: [46, 47)<br>Observed:<br>46<br>Proportion:0.003 (n=1)<br>Cumulative:0.0473\",\"Bin: [47, 48)<br>Observed:<br>47 (6)<br>Proportion:0.0178 (n=6)<br>Cumulative:0.0651\",\"Bin: [48, 49)<br>Observed:<br>48 (5)<br>Proportion:0.0148 (n=5)<br>Cumulative:0.0799\",\"Bin: [49, 50)<br>Observed:<br>49 (4)<br>Proportion:0.0118 (n=4)<br>Cumulative:0.0917\",\"Bin: [50, 51)<br>Observed:<br>50 (3)<br>Proportion:0.0089 (n=3)<br>Cumulative:0.1006\",\"Bin: [51, 52)<br>Observed:<br>51<br>Proportion:0.003 (n=1)<br>Cumulative:0.1036\",\"Bin: [52, 53)<br>Observed:<br>52 (7)<br>Proportion:0.0207 (n=7)<br>Cumulative:0.1243\",\"Bin: [53, 54)<br>Observed:<br>53 (7)<br>Proportion:0.0207 (n=7)<br>Cumulative:0.145\",\"Bin: [54, 55)<br>Observed:<br>54 (6)<br>Proportion:0.0178 (n=6)<br>Cumulative:0.1627\",\"Bin: [55, 56)<br>Observed:<br>55 (4)<br>Proportion:0.0118 (n=4)<br>Cumulative:0.1746\",\"Bin: [56, 57)<br>Observed:<br>56 (4)<br>Proportion:0.0118 (n=4)<br>Cumulative:0.1864\",\"Bin: [57, 58)<br>Observed:<br>57 (6)<br>Proportion:0.0178 (n=6)<br>Cumulative:0.2041\",\"Bin: [58, 59)<br>Observed:<br>58 (3)<br>Proportion:0.0089 (n=3)<br>Cumulative:0.213\",\"Bin: [59, 60)<br>Observed:<br>59 (13)<br>Proportion:0.0385 (n=13)<br>Cumulative:0.2515\",\"Bin: [60, 61)<br>Observed:<br>60 (10)<br>Proportion:0.0296 (n=10)<br>Cumulative:0.2811\",\"Bin: [61, 62)<br>Observed:<br>61 (4)<br>Proportion:0.0118 (n=4)<br>Cumulative:0.2929\",\"Bin: [62, 63)<br>Observed:<br>62 (7)<br>Proportion:0.0207 (n=7)<br>Cumulative:0.3136\",\"Bin: [63, 64)<br>Observed:<br>63 (7)<br>Proportion:0.0207 (n=7)<br>Cumulative:0.3343\",\"Bin: [64, 65)<br>Observed:<br>64 (14)<br>Proportion:0.0414 (n=14)<br>Cumulative:0.3757\",\"Bin: [65, 66)<br>Observed:<br>65 (9)<br>Proportion:0.0266 (n=9)<br>Cumulative:0.4024\",\"Bin: [66, 67)<br>Observed:<br>66 (9)<br>Proportion:0.0266 (n=9)<br>Cumulative:0.429\",\"Bin: [67, 68)<br>Observed:<br>67 (15)<br>Proportion:0.0444 (n=15)<br>Cumulative:0.4734\",\"Bin: [68, 69)<br>Observed:<br>68 (11)<br>Proportion:0.0325 (n=11)<br>Cumulative:0.5059\",\"Bin: [69, 70)<br>Observed:<br>69 (15)<br>Proportion:0.0444 (n=15)<br>Cumulative:0.5503\",\"Bin: [70, 71)<br>Observed:<br>70 (15)<br>Proportion:0.0444 (n=15)<br>Cumulative:0.5947\",\"Bin: [71, 72)<br>Observed:<br>71 (11)<br>Proportion:0.0325 (n=11)<br>Cumulative:0.6272\",\"Bin: [72, 73)<br>Observed:<br>72 (11)<br>Proportion:0.0325 (n=11)<br>Cumulative:0.6598\",\"Bin: [73, 74)<br>Observed:<br>73 (13)<br>Proportion:0.0385 (n=13)<br>Cumulative:0.6982\",\"Bin: [74, 75)<br>Observed:<br>74 (9)<br>Proportion:0.0266 (n=9)<br>Cumulative:0.7249\",\"Bin: [75, 76)<br>Observed:<br>75 (7)<br>Proportion:0.0207 (n=7)<br>Cumulative:0.7456\",\"Bin: [76, 77)<br>Observed:<br>76 (11)<br>Proportion:0.0325 (n=11)<br>Cumulative:0.7781\",\"Bin: [77, 78)<br>Observed:<br>77 (11)<br>Proportion:0.0325 (n=11)<br>Cumulative:0.8107\",\"Bin: [78, 79)<br>Observed:<br>78 (6)<br>Proportion:0.0178 (n=6)<br>Cumulative:0.8284\",\"Bin: [79, 80)<br>Observed:<br>79 (9)<br>Proportion:0.0266 (n=9)<br>Cumulative:0.855\",\"Bin: [80, 81)<br>Observed:<br>80<br>Proportion:0.003 (n=1)<br>Cumulative:0.858\",\"Bin: [81, 82)<br>Observed:<br>81 (5)<br>Proportion:0.0148 (n=5)<br>Cumulative:0.8728\",\"Bin: [82, 83)<br>Observed:<br>82 (6)<br>Proportion:0.0178 (n=6)<br>Cumulative:0.8905\",\"Bin: [83, 84)<br>Observed:<br>83 (10)<br>Proportion:0.0296 (n=10)<br>Cumulative:0.9201\",\"Bin: [84, 85)<br>Observed:<br>84 (3)<br>Proportion:0.0089 (n=3)<br>Cumulative:0.929\",\"Bin: [85, 86)<br>Observed:<br>85 (11)<br>Proportion:0.0325 (n=11)<br>Cumulative:0.9615\",\"Bin: [86, 87)<br>Observed:<br>86 (2)<br>Proportion:0.0059 (n=2)<br>Cumulative:0.9675\",\"Bin: [87, 88)<br>Observed:<br>87<br>Proportion:0.003 (n=1)<br>Cumulative:0.9704\",\"Bin: [88, 89]<br>Observed:<br>88 (4)<br>89<br>Proportion:0.0148 (n=5)<br>Cumulative:0.9852\",\"Q<sub>0.99<\\/sub>:90<br>Bin: (89, 91]<br>Observed:<br>90 (4)<br>91<br>Proportion:0.0148 (n=5)<br>Cumulative:1\"][field[0].offset];\n       }","height":20,"width":200},"width":200,"height":20},"evals":["options.tooltipFormatter"],"jsHooks":[]}</script></td>
 <td class="gt_row gt_center" headers="Quantiles"><font size="1"> 47.00 </font><font size="2"> 50.70 </font><font size="3"> 59.25 </font><font size="4"> <strong>68.00</strong> </font><font size="3"> 76.00 </font><font size="2"> 83.00 </font><font size="1"> 85.00 </font></td>
 </tr>
 </tbody>
@@ -2646,16 +2649,16 @@ expression(z * 1000)</code></pre>
 <hr><h4 class="anchored">Data frame:A</h4>2 observations and 4 variables, maximum # NAs:0  
 <hr>
 <style>
- .hmisctable275755 {
+ .hmisctable237335 {
  border: 1px solid gray;
  border-collapse: collapse;
  font-size: 100%;
  }
- .hmisctable275755 td {
+ .hmisctable237335 td {
  text-align: right;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable275755 th {
+ .hmisctable237335 th {
  color: Black;
  text-align: center;
  padding: 0 1ex 0 1ex;
@@ -2663,7 +2666,7 @@ expression(z * 1000)</code></pre>
  }
  </style>
  
-<table class="hmisctable275755 table table-sm table-striped small" data-border="1">
+<table class="hmisctable237335 table table-sm table-striped small" data-border="1">
 <tbody>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">Name</th>
@@ -2725,16 +2728,16 @@ Existing variable z changed</code></pre>
 <hr><h4 class="anchored">Data frame:B</h4>2 observations and 4 variables, maximum # NAs:0  
 <hr>
 <style>
- .hmisctable894276 {
+ .hmisctable976418 {
  border: 1px solid gray;
  border-collapse: collapse;
  font-size: 100%;
  }
- .hmisctable894276 td {
+ .hmisctable976418 td {
  text-align: right;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable894276 th {
+ .hmisctable976418 th {
  color: Black;
  text-align: center;
  padding: 0 1ex 0 1ex;
@@ -2742,7 +2745,7 @@ Existing variable z changed</code></pre>
  }
  </style>
  
-<table class="hmisctable894276 table table-sm table-striped small" data-border="1">
+<table class="hmisctable976418 table table-sm table-striped small" data-border="1">
 <tbody>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">Name</th>
@@ -3011,7 +3014,8 @@ $val
 18:   male   0.90 0.87252920
 19:   male   0.95 0.92846722
 20:   male   0.99 0.98198539
-       sex   stat        val</code></pre>
+       sex   stat        val
+    &lt;char&gt; &lt;fctr&gt;      &lt;num&gt;</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb117"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb117-1"><a href="#cb117-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(w, <span class="fu">aes</span>(<span class="at">x =</span> val, <span class="at">y=</span>stat, <span class="at">color=</span>sex)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span></span>
 <span id="cb117-2"><a href="#cb117-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">'y'</span>) <span class="sc">+</span> <span class="fu">ylab</span>(<span class="st">'Statistic'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -3138,7 +3142,8 @@ $val
 22:     3    93       C1     11.0
 23:     3    93       C2     11.1
 24:     3    93       D1      3.0
-       id     y chemical exposure</code></pre>
+       id     y chemical exposure
+    &lt;int&gt; &lt;int&gt;   &lt;fctr&gt;    &lt;num&gt;</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb128"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb128-1"><a href="#cb128-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Split off subclasses</span></span>
 <span id="cb128-2"><a href="#cb128-2" aria-hidden="true" tabindex="-1"></a>w[, sub      <span class="sc">:</span><span class="er">=</span> <span class="fu">sub</span>(<span class="st">'.*?([0-9]*$)'</span>, <span class="st">'</span><span class="sc">\\</span><span class="st">1'</span>, chemical)]   <span class="co"># sub = ending integer</span></span>
@@ -3172,7 +3177,8 @@ $val
 22:     3    93        C     11.0      1
 23:     3    93        C     11.1      2
 24:     3    93        D      3.0      1
-       id     y chemical exposure    sub</code></pre>
+       id     y chemical exposure    sub
+    &lt;int&gt; &lt;int&gt;   &lt;char&gt;    &lt;num&gt; &lt;char&gt;</code></pre>
 </div>
 </div>
 </section>
@@ -3301,7 +3307,8 @@ Computed fit from fit1, fit2, fit3, fit4 </code></pre>
 21:     1       V7       Death
 22:     3       V7           -
 23:     1       V8           -
-     line variable        word</code></pre>
+     line variable        word
+    &lt;int&gt;   &lt;fctr&gt;      &lt;char&gt;</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb146"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb146-1"><a href="#cb146-1" aria-hidden="true" tabindex="-1"></a>u <span class="ot">&lt;-</span> u[, <span class="fu">.q</span>(line, wordno, variable, word) <span class="sc">:</span><span class="er">=</span></span>
 <span id="cb146-2"><a href="#cb146-2" aria-hidden="true" tabindex="-1"></a>          .(line, <span class="fu">as.integer</span>(<span class="fu">substring</span>(variable, <span class="dv">2</span>)), <span class="cn">NULL</span>, word)]</span>
@@ -3334,7 +3341,8 @@ Computed fit from fit1, fit2, fit3, fit4 </code></pre>
 21:     3           -      7
 22:     4         and      1
 23:     4 Immortality      2
-     line        word wordno</code></pre>
+     line        word wordno
+    &lt;int&gt;      &lt;char&gt;  &lt;int&gt;</code></pre>
 </div>
 </div>
 <p>The work can be done with a single line of code if you use the <a href="https://cran.r-project.org/web/packages/splitstackshape/index.html"><code>splitstackshape</code> package’s <code>cSplit</code> function</a>. Or use the following intuitive function, which requires only simple functions.</p>
@@ -3374,7 +3382,8 @@ Computed fit from fit1, fit2, fit3, fit4 </code></pre>
 21:     3      7           -
 22:     4      1         and
 23:     4      2 Immortality
-     line wordno        word</code></pre>
+     line wordno        word
+    &lt;int&gt;  &lt;int&gt;      &lt;char&gt;</code></pre>
 </div>
 </div>
 <p>As seen above, tokenizing words in text strings is not that difficult. Tokenizing sentences is harder due to the presence of abbreviations that contain periods. The <code>corpus</code> package handles this nicely, including support for multiple languages. Let’s do some text processing on Barack Obama’s 2016 State of the Union Speech provided by Taylor Arnold and Lauren Tilton in their <a href="https://programminghistorian.org/en/lessons/basic-text-processing-in-r">text analysis tutorial</a>. Paragraphs are delimited by blank lines, and there can be multiple sentences within a paragraph. Use <code>corpus</code>’s <code>text_split</code> function to tokenize sentences, putting each sentence into a separate line. Then the same function is used on the tokenized sentences to tokenize words. This allows us to link a word back to a particular sentence using the <code>parent</code> variable created by <code>text_split</code>.</p>

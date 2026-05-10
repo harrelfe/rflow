@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.13">
+<meta name="generator" content="quarto-1.9.20">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>11&nbsp; Computing Summary Statistics – R Workflow</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -74,10 +77,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-ac077c1e730dfeb5e42400639d17284e.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-3512cbed9e2527d986e9b0b56d261405.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-9d16bd9ddc44c4bc1d4ae3488c927ea9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-ca52c48b12645450bbae4e0fad355f8b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -132,7 +135,7 @@ gtag('config', 'G-FN79JJ28KR', { 'anonymize_ip': true});
 <link href="site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
   <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <script type="text/javascript">
 const typesetMath = (el) => {
@@ -166,8 +169,8 @@ window.Quarto = {
 <meta name="twitter:description" content="">
 <meta name="twitter:image" content="https://hbiostat.org/rflow/data:image/png;base64,
 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">
-<meta name="twitter:creator" content="@f2harrell">
-<meta name="twitter:site" content="@f2harrell">
+<meta name="twitter:creator" content="f2harrell">
+<meta name="twitter:site" content="f2harrell">
 <meta name="twitter:image:alt" content="image">
 <meta name="twitter:card" content="summary_large_image">
 </head>
@@ -779,22 +782,22 @@ bottom: -1ex;
 <span style="font-weight:bold">age for male</span>: Age <span style="font-family:Verdana;font-size:75%;">years</span><div style="float: right; text-align: right;"><img src="data:image/png;base64,
 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" alt="image"></div>
 <style>
- .hmisctable472005 {
+ .hmisctable655570 {
  border: none;
  font-size: 74%;
  }
- .hmisctable472005 td {
+ .hmisctable655570 td {
  text-align: center;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable472005 th {
+ .hmisctable655570 th {
  color: MidnightBlue;
  text-align: center;
  padding: 0 1ex 0 1ex;
  font-weight: normal;
  }
  </style>
- <table data-quarto-disable-processing="true" class="hmisctable472005">
+ <table data-quarto-disable-processing="true" class="hmisctable655570">
  <tbody><tr><th>n</th><th>missing</th><th>distinct</th><th>Info</th><th>Mean</th><th>pMedian</th><th>Gmd</th><th>.05</th><th>.10</th><th>.25</th><th>.50</th><th>.75</th><th>.90</th><th>.95</th></tr>
  <tr><td>220</td><td>0</td><td>51</td><td>0.999</td><td>67.86</td><td>68.5</td><td>12.91</td><td>45.95</td><td>51.00</td><td>62.00</td><td>69.00</td><td>75.00</td><td>81.00</td><td>86.00</td></tr>
  </tbody></table>
@@ -804,22 +807,22 @@ iVBORw0KGgoAAAANSUhEUgAAAJcAAAANCAYAAACkYvxcAAAEDmlDQ1BrQ0dDb2xvclNwYWNlR2VuZXJp
 <span style="font-weight:bold">age for female</span>: Age <span style="font-family:Verdana;font-size:75%;">years</span><div style="float: right; text-align: right;"><img src="data:image/png;base64,
 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" alt="image"></div>
 <style>
- .hmisctable545952 {
+ .hmisctable233418 {
  border: none;
  font-size: 74%;
  }
- .hmisctable545952 td {
+ .hmisctable233418 td {
  text-align: center;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable545952 th {
+ .hmisctable233418 th {
  color: MidnightBlue;
  text-align: center;
  padding: 0 1ex 0 1ex;
  font-weight: normal;
  }
  </style>
- <table data-quarto-disable-processing="true" class="hmisctable545952">
+ <table data-quarto-disable-processing="true" class="hmisctable233418">
  <tbody><tr><th>n</th><th>missing</th><th>distinct</th><th>Info</th><th>Mean</th><th>pMedian</th><th>Gmd</th><th>.05</th><th>.10</th><th>.25</th><th>.50</th><th>.75</th><th>.90</th><th>.95</th></tr>
  <tr><td>338</td><td>0</td><td>58</td><td>0.999</td><td>67.01</td><td>67.5</td><td>13.74</td><td>47.00</td><td>50.70</td><td>59.25</td><td>68.00</td><td>76.00</td><td>83.00</td><td>85.00</td></tr>
  </tbody></table>
