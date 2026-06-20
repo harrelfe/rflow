@@ -517,6 +517,8 @@ gsub('[a-z][0-9]{2}[a-z]', 'Z', x)
 x <- c('3/27/1964', '12/24/1971', '3/2/2011', '12/241/1972')
 # Note: there are built-in R functions for date conversions
 gsub('([0-9]{1,2})/([0-9]{1,2})/([0-9]{4})', '\\3-\\1-\\2', x)
+# Find dates with 3-digit days
+grep('([0-9]{1,2})/([0-9]{3})/([0-9]{4})', x)
 ```
 
 
