@@ -46,6 +46,7 @@ The author wishes to thank the R Core team and R package developers along with R
 
 | Date | Sections | Changes |
 |:--|:-|:------------|
+| 2026-07-03 | [-@sec-graphics]          | Reference Healy's book |
 | 2026-05-09 | [-@sec-fcreate]           | Change `qs` package usage to `qs2`|
 | 2026-03-08 | [-@sec-rbasics-resources] | Added link to Big Book of R |
 | 2026-01-30 | [-@sec-graphics-ggplot2]  | Added automatic use of labels by `ggplot2` |

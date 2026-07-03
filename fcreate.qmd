@@ -26,10 +26,10 @@ For multi-analyst projects or ones in which you want to capture the entire code 
 
 I typically create a compact analysis file in a separate R script
 called `create.r` and have it produce compressed R binary `data.frame`
-or `data.table` `.rds` files using `saveRDS(name, 'name.rds', compress='xz')`.  Then I have an analysis script named for example `a.qmd` (for [Quarto](https://quarto.org) reports) or `a.Rmd` (for RMarkdown reports) that starts with `d <- readRDS('name.rds')`.  [See @sec-fcreate-qs for an alternative that is generally preferable to `saveRDS` using the `qs2` package: `qs_save(name, 'name.qs2')` and `d <- qs_read('name.qs2')`.<br><br>Templates for analysis reports are [here](http://hbiostat.org/rr/index.html#template), and a comprehensive report example may be found [here](https://hbiostat.org/R/Hmisc/markov).]{.aside} This process is especially helpful with analysis file creation takes multiple steps or files are large.  `readRDS` is very fast for loading binary R objects, and `qread` is even faster.  [There is an older way to read/write binary R objects using R `load` and `save` and `Hmisc` frontends for them `Load` and `Save`.  Files using these formats typically have suffixes of `.rda`, `.RData`, or `.sav`, and using `load` stores the object under its original name, which might not be clear until you check your R `.global` environment by looking in the upper right `RStudio` panel.]{.aside}
+or `data.table` `.rds` files using `saveRDS(name, 'name.rds', compress='xz')`.  Then I have an analysis script named for example `a.qmd` (for [Quarto](https://quarto.org) reports) or `a.Rmd` (for RMarkdown reports) that starts with `d <- readRDS('name.rds')`.  [See @sec-fcreate-qs for an alternative that is generally preferable to `saveRDS` using the `qs2` package: `qs_save(name, 'name.qs2')` and `d <- qs_read('name.qs2')`.<br><br>Templates for analysis reports are [here](http://hbiostat.org/rr/index.html#template), and a comprehensive report example may be found [here](https://hbiostat.org/R/Hmisc/markov).]{.aside} This process is especially helpful with analysis file creation takes multiple steps or files are large.  `readRDS` is very fast for loading binary R objects, and `qs2::qs_read` is even faster.  [There is an older way to read/write binary R objects using R `load` and `save` and `Hmisc` frontends for them `Load` and `Save`.  Files using these formats typically have suffixes of `.rda`, `.RData`, or `.sav`, and using `load` stores the object under its original name, which might not be clear until you check your R `.global` environment by looking in the upper right `RStudio` panel.]{.aside}
 
 When variables need to be recoded, have labels added or changed, or
-have units of 
+have units of
 measurement added[Variable labels and units of measurement are used in special ways in my R packages.  This will show up in the `describe` and `contents` function outputs below and in axis labels for graphics.]{.aside}, I specify those using the `Hmisc` package [`upData`
 function](https://www.rdocumentation.org/packages/Hmisc/versions/4.7-0/topics/upData).
 
@@ -57,7 +57,7 @@ d <-
          hxofHT   = yn(hxofHT),
          hxofDM   = yn(hxofDM),
          hxofCig  = factor(hxofCig, c(0, 0.5, 1),
-                           c('heavy', 'moderate', 'non-smoker')), 
+                           c('heavy', 'moderate', 'non-smoker')),
          hxofMI   = yn(hxofMI),
          hxofPTCA = yn(hxofPTCA),
          hxofCABG = yn(hxofCABG),
@@ -81,15 +81,15 @@ d <-
            dpmaxdo   = 'Double product on max dobutamine dose',
            dobdose   = 'Dobutamine dose at max double product',
            baseEF    = 'Baseline cardiac ejection fraction',
-           dobEF     = 'Ejection fraction on dobutamine', 
-           chestpain = 'Chest pain', 
+           dobEF     = 'Ejection fraction on dobutamine',
+           chestpain = 'Chest pain',
            ecg       = 'Baseline electrocardiogram diagnosis',
-           restwma   = 'Resting wall motion abnormality on echocardiogram', 
+           restwma   = 'Resting wall motion abnormality on echocardiogram',
            posSE     = 'Positive stress echocardiogram',
            newMI     = 'New myocardial infarction',
            newPTCA   = 'Recent angioplasty',
-           newCABG   = 'Recent bypass surgery', 
-           hxofHT    = 'History of hypertension', 
+           newCABG   = 'Recent bypass surgery',
+           hxofHT    = 'History of hypertension',
            hxofDM    = 'History of diabetes',
            hxofMI    = 'History of myocardial infarction',
            hxofCig   = 'History of smoking',
@@ -108,7 +108,7 @@ saveRDS(d, 'stressEcho.rds', compress='xz')
 # Note that we could have automatically recoded all 0:1 variables
 # if they were all to be treated identically:
 
-for(x in names(d)) 
+for(x in names(d))
   if(all(d[[x]] %in% c(0,1))) d[[x]] <- yn(d[[x]])
 ```
 
@@ -116,7 +116,7 @@ for(x in names(d))
 
 ::: {.panel-tabset}
 
-##  
+##
 
 
 
@@ -178,7 +178,7 @@ d
 contents(d)
 ```
 
-The [`fread`](https://www.rdocumentation.org/packages/data.table/versions/1.14.2/topics/fread) function in the `data.table` package is blazing fast for reading large files and offers a number of options. 
+The [`fread`](https://www.rdocumentation.org/packages/data.table/versions/1.14.2/topics/fread) function in the `data.table` package is blazing fast for reading large files and offers a number of options.
 
 ## REDCap
 
@@ -278,7 +278,7 @@ meta <- edc_conn$metadata()
 meta$field_label <- markupSpecs$html$totxt(meta$field_label)
 
 head(meta)
-# Data frame meta contains the following variables: 
+# Data frame meta contains the following variables:
 # field_name form_name section_header field_type field_label select_choices_or_calculations
 # field_note text_validation_type_or_show_slider_number text_validation_min text_validation_max
 # identifier branching_logic required_field custom_alignment question_number matrix_group_name
@@ -368,7 +368,7 @@ etrans <- function(event) {
   event[event == 'screening'] <- 'day_-1'
   sub('day_([1-9])$', 'day_0\\1', event)
 }
-  
+
 for(n in names(L)) {
   L[[n]]$day <- etrans(L[[n]]$redcap_event_name)
   setDT(L[[n]], key=.q(record_id, day))
@@ -483,7 +483,7 @@ names(d) <- tolower(names(d))
 If your spreadsheet has column headings that are more suitable as variable labels, you can use `upData` to move these labels to become variable names, and save the original column headings as labels.  Here is an example where a data frame is constructed that might resemble the imported sheet, then it is transformed.
 
 ```{r}
-d <- data.frame('Age in Years'     = c(23, 47), 
+d <- data.frame('Age in Years'     = c(23, 47),
                 'Cholesterol, mg%' = c(226, 147),
                 check.names=FALSE)
 d
@@ -703,22 +703,22 @@ identical(support, w)
 Now try some things on the 10,000,000 row data table created above.
 
 ```{r eval=FALSE}
-saveRDS(d, '/tmp/d.rds')                  # 13.6s 128M
-saveRDS(d, '/tmp/dc.rds', compress='xz')  #  124s 116M
-write_fst(d, '/tmp/d.fst')                #  0.2s 161M
-write_fst(d, '/tmp/dc.fst', compress=100) #  1.4s 122M
-qs_save(d, '/tmp/d.qs2', nthreads=3)         #  0.3s 110M
+saveRDS(d, '/tmp/d.rds')                  # 8.4s 127M
+saveRDS(d, '/tmp/dc.rds', compress='xz')  #  61s 115M
+write_fst(d, '/tmp/d.fst')                #  0.1s 160M
+write_fst(d, '/tmp/dc.fst', compress=100) #  3.8s 122M
+qs_save(d, '/tmp/d.qs2', nthreads=3)         #  0.2s 119M
 ```
 
 Read times are as follows.
 
 ```{r eval=FALSE}
-readRDS('/tmp/d.rds')           # 0.9 s
-readRDS('/tmp/dc.rds')          # 7.5 s
-read_fst('/tmp/d.fst')          # 0.04s
-read_fst('/tmp/dc.fst')         # 0.07s
-qs_read('/tmp/d.qs2')              # 0.2 s
-qs_read('/tmp/d.qs2', nthreads=6)  # 0.16s
+readRDS('/tmp/d.rds')           # 0.3s
+readRDS('/tmp/dc.rds')          # 3.5s
+read_fst('/tmp/d.fst')          # 0.2s
+read_fst('/tmp/dc.fst')         # 0.2s
+qs_read('/tmp/d.qs2')              # 0.14s
+qs_read('/tmp/d.qs2', nthreads=6)  # 0.04s
 ```
 
 When direct access is not needed, i.e., when whole data frames/tables are to be read, the `qs2` package would be a good default, especially if one takes into account that `qs2` preserves all object attributes.  `qs2` dependencies are also more actively supported.

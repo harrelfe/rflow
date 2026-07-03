@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.20">
+<meta name="generator" content="quarto-1.10.0">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -72,15 +72,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="./rformat.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-3512cbed9e2527d986e9b0b56d261405.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-9c5e1a58ae97b3faeeb5cca0e0e2eaf1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-ca52c48b12645450bbae4e0fad355f8b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-39d25629837ca44e2eea0020ef944eda.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -372,7 +371,7 @@ Im --&gt; mf[Multiple Files&lt;br&gt;Looping]
 </section>
 <section id="sec-fcreate-import" class="level2 page-columns page-full" data-number="5.2">
 <h2 data-number="5.2" class="anchored" data-anchor-id="sec-fcreate-import"><span class="header-section-number">5.2</span> Importing and Creating Annotated Analysis Files</h2>
-<div class="page-columns page-full"><p>I typically create a compact analysis file in a separate R script called <code>create.r</code> and have it produce compressed R binary <code>data.frame</code> or <code>data.table</code> <code>.rds</code> files using <code>saveRDS(name, 'name.rds', compress='xz')</code>. Then I have an analysis script named for example <code>a.qmd</code> (for <a href="https://quarto.org">Quarto</a> reports) or <code>a.Rmd</code> (for RMarkdown reports) that starts with <code>d &lt;- readRDS('name.rds')</code>.  This process is especially helpful with analysis file creation takes multiple steps or files are large. <code>readRDS</code> is very fast for loading binary R objects, and <code>qread</code> is even faster. </p><div class="no-row-height column-margin column-container"><span class="margin-aside">See <a href="#sec-fcreate-qs" class="quarto-xref"><span>Section 5.6</span></a> for an alternative that is generally preferable to <code>saveRDS</code> using the <code>qs2</code> package: <code>qs_save(name, 'name.qs2')</code> and <code>d &lt;- qs_read('name.qs2')</code>.<br><br>Templates for analysis reports are <a href="http://hbiostat.org/rr/index.html#template">here</a>, and a comprehensive report example may be found <a href="https://hbiostat.org/R/Hmisc/markov">here</a>.</span><span class="margin-aside">There is an older way to read/write binary R objects using R <code>load</code> and <code>save</code> and <code>Hmisc</code> frontends for them <code>Load</code> and <code>Save</code>. Files using these formats typically have suffixes of <code>.rda</code>, <code>.RData</code>, or <code>.sav</code>, and using <code>load</code> stores the object under its original name, which might not be clear until you check your R <code>.global</code> environment by looking in the upper right <code>RStudio</code> panel.</span></div></div>
+<div class="page-columns page-full"><p>I typically create a compact analysis file in a separate R script called <code>create.r</code> and have it produce compressed R binary <code>data.frame</code> or <code>data.table</code> <code>.rds</code> files using <code>saveRDS(name, 'name.rds', compress='xz')</code>. Then I have an analysis script named for example <code>a.qmd</code> (for <a href="https://quarto.org">Quarto</a> reports) or <code>a.Rmd</code> (for RMarkdown reports) that starts with <code>d &lt;- readRDS('name.rds')</code>.  This process is especially helpful with analysis file creation takes multiple steps or files are large. <code>readRDS</code> is very fast for loading binary R objects, and <code>qs2::qs_read</code> is even faster. </p><div class="no-row-height column-margin column-container"><span class="margin-aside">See <a href="#sec-fcreate-qs" class="quarto-xref"><span>Section 5.6</span></a> for an alternative that is generally preferable to <code>saveRDS</code> using the <code>qs2</code> package: <code>qs_save(name, 'name.qs2')</code> and <code>d &lt;- qs_read('name.qs2')</code>.<br><br>Templates for analysis reports are <a href="http://hbiostat.org/rr/index.html#template">here</a>, and a comprehensive report example may be found <a href="https://hbiostat.org/R/Hmisc/markov">here</a>.</span><span class="margin-aside">There is an older way to read/write binary R objects using R <code>load</code> and <code>save</code> and <code>Hmisc</code> frontends for them <code>Load</code> and <code>Save</code>. Files using these formats typically have suffixes of <code>.rda</code>, <code>.RData</code>, or <code>.sav</code>, and using <code>load</code> stores the object under its original name, which might not be clear until you check your R <code>.global</code> environment by looking in the upper right <code>RStudio</code> panel.</span></div></div>
 <div class="page-columns page-full"><p>When variables need to be recoded, have labels added or changed, or have units of measurement added, I specify those using the <code>Hmisc</code> package <a href="https://www.rdocumentation.org/packages/Hmisc/versions/4.7-0/topics/upData"><code>upData</code> function</a>.</p><div class="no-row-height column-margin column-container"><span class="margin-aside">Variable labels and units of measurement are used in special ways in my R packages. This will show up in the <code>describe</code> and <code>contents</code> function outputs below and in axis labels for graphics.</span></div></div>
 <p>To facilitate some operations requiring variable names to be quoted, the <code>Hmnisc</code> package provides the <code>.q</code> function so that you don’t have to quote names that are legal R object names.</p>
 <div class="cell">
@@ -402,7 +401,7 @@ Im --&gt; mf[Multiple Files&lt;br&gt;Looping]
 <span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>         <span class="at">hxofHT   =</span> <span class="fu">yn</span>(hxofHT),</span>
 <span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>         <span class="at">hxofDM   =</span> <span class="fu">yn</span>(hxofDM),</span>
 <span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>         <span class="at">hxofCig  =</span> <span class="fu">factor</span>(hxofCig, <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.5</span>, <span class="dv">1</span>),</span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>                           <span class="fu">c</span>(<span class="st">'heavy'</span>, <span class="st">'moderate'</span>, <span class="st">'non-smoker'</span>)), </span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>                           <span class="fu">c</span>(<span class="st">'heavy'</span>, <span class="st">'moderate'</span>, <span class="st">'non-smoker'</span>)),</span>
 <span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>         <span class="at">hxofMI   =</span> <span class="fu">yn</span>(hxofMI),</span>
 <span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>         <span class="at">hxofPTCA =</span> <span class="fu">yn</span>(hxofPTCA),</span>
 <span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>         <span class="at">hxofCABG =</span> <span class="fu">yn</span>(hxofCABG),</span>
@@ -426,15 +425,15 @@ Im --&gt; mf[Multiple Files&lt;br&gt;Looping]
 <span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>           <span class="at">dpmaxdo   =</span> <span class="st">'Double product on max dobutamine dose'</span>,</span>
 <span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>           <span class="at">dobdose   =</span> <span class="st">'Dobutamine dose at max double product'</span>,</span>
 <span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>           <span class="at">baseEF    =</span> <span class="st">'Baseline cardiac ejection fraction'</span>,</span>
-<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>           <span class="at">dobEF     =</span> <span class="st">'Ejection fraction on dobutamine'</span>, </span>
-<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>           <span class="at">chestpain =</span> <span class="st">'Chest pain'</span>, </span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>           <span class="at">dobEF     =</span> <span class="st">'Ejection fraction on dobutamine'</span>,</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>           <span class="at">chestpain =</span> <span class="st">'Chest pain'</span>,</span>
 <span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>           <span class="at">ecg       =</span> <span class="st">'Baseline electrocardiogram diagnosis'</span>,</span>
-<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>           <span class="at">restwma   =</span> <span class="st">'Resting wall motion abnormality on echocardiogram'</span>, </span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>           <span class="at">restwma   =</span> <span class="st">'Resting wall motion abnormality on echocardiogram'</span>,</span>
 <span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>           <span class="at">posSE     =</span> <span class="st">'Positive stress echocardiogram'</span>,</span>
 <span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>           <span class="at">newMI     =</span> <span class="st">'New myocardial infarction'</span>,</span>
 <span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>           <span class="at">newPTCA   =</span> <span class="st">'Recent angioplasty'</span>,</span>
-<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>           <span class="at">newCABG   =</span> <span class="st">'Recent bypass surgery'</span>, </span>
-<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>           <span class="at">hxofHT    =</span> <span class="st">'History of hypertension'</span>, </span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>           <span class="at">newCABG   =</span> <span class="st">'Recent bypass surgery'</span>,</span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>           <span class="at">hxofHT    =</span> <span class="st">'History of hypertension'</span>,</span>
 <span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>           <span class="at">hxofDM    =</span> <span class="st">'History of diabetes'</span>,</span>
 <span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>           <span class="at">hxofMI    =</span> <span class="st">'History of myocardial infarction'</span>,</span>
 <span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>           <span class="at">hxofCig   =</span> <span class="st">'History of smoking'</span>,</span>
@@ -453,7 +452,7 @@ Im --&gt; mf[Multiple Files&lt;br&gt;Looping]
 <span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a><span class="co"># Note that we could have automatically recoded all 0:1 variables</span></span>
 <span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a><span class="co"># if they were all to be treated identically:</span></span>
 <span id="cb5-64"><a href="#cb5-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-65"><a href="#cb5-65" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(x <span class="cf">in</span> <span class="fu">names</span>(d)) </span>
+<span id="cb5-65"><a href="#cb5-65" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(x <span class="cf">in</span> <span class="fu">names</span>(d))</span>
 <span id="cb5-66"><a href="#cb5-66" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">all</span>(d[[x]] <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">1</span>))) d[[x]] <span class="ot">&lt;-</span> <span class="fu">yn</span>(d[[x]])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p><a name="simport"></a></p>
@@ -598,7 +597,7 @@ meta &lt;- edc_conn$metadata()
 meta$field_label &lt;- markupSpecs$html$totxt(meta$field_label)
 
 head(meta)
-# Data frame meta contains the following variables: 
+# Data frame meta contains the following variables:
 # field_name form_name section_header field_type field_label select_choices_or_calculations
 # field_note text_validation_type_or_show_slider_number text_validation_min text_validation_max
 # identifier branching_logic required_field custom_alignment question_number matrix_group_name
@@ -688,7 +687,7 @@ etrans &lt;- function(event) {
   event[event == 'screening'] &lt;- 'day_-1'
   sub('day_([1-9])$', 'day_0\\1', event)
 }
-  
+
 for(n in names(L)) {
   L[[n]]$day &lt;- etrans(L[[n]]$redcap_event_name)
   setDT(L[[n]], key=.q(record_id, day))
@@ -788,7 +787,7 @@ R$demographics[, aiw := inmChoice(race_eth, c('American Indian or Alaska Native'
 </div>
 <p>If your spreadsheet has column headings that are more suitable as variable labels, you can use <code>upData</code> to move these labels to become variable names, and save the original column headings as labels. Here is an example where a data frame is constructed that might resemble the imported sheet, then it is transformed.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="st">'Age in Years'</span>     <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">23</span>, <span class="dv">47</span>), </span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="st">'Age in Years'</span>     <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">23</span>, <span class="dv">47</span>),</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>                <span class="st">'Cholesterol, mg%'</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">226</span>, <span class="dv">147</span>),</span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">check.names=</span><span class="cn">FALSE</span>)</span>
 <span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>d</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -949,16 +948,16 @@ chol Cholesterol, mg% integer integer</code></pre>
 <hr><h4 class="anchored">Data frame:d</h4>558 observations and 31 variables, maximum # NAs:0  
 <hr>
 <style>
- .hmisctable289838 {
+ .hmisctable842635 {
  border: 1px solid gray;
  border-collapse: collapse;
  font-size: 100%;
  }
- .hmisctable289838 td {
+ .hmisctable842635 td {
  text-align: right;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable289838 th {
+ .hmisctable842635 th {
  color: Black;
  text-align: center;
  padding: 0 1ex 0 1ex;
@@ -966,7 +965,7 @@ chol Cholesterol, mg% integer integer</code></pre>
  }
  </style>
  
-<table class="hmisctable289838 table table-sm table-striped small" data-border="1">
+<table class="hmisctable842635 table table-sm table-striped small" data-border="1">
 <tbody>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">Name</th>
@@ -1272,16 +1271,16 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <hr><h4 class="anchored">Data frame:dr</h4>10000000 observations and 3 variables, maximum # NAs:0  
 <hr>
 <style>
- .hmisctable482713 {
+ .hmisctable159338 {
  border: 1px solid gray;
  border-collapse: collapse;
  font-size: 100%;
  }
- .hmisctable482713 td {
+ .hmisctable159338 td {
  text-align: right;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable482713 th {
+ .hmisctable159338 th {
  color: Black;
  text-align: center;
  padding: 0 1ex 0 1ex;
@@ -1289,7 +1288,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
  }
  </style>
  
-<table class="hmisctable482713 table table-sm table-striped small" data-border="1">
+<table class="hmisctable159338 table table-sm table-striped small" data-border="1">
 <tbody>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">Name</th>
@@ -1331,16 +1330,16 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <hr><h4 class="anchored">Data frame:dr</h4>10000000 observations and 3 variables, maximum # NAs:0  
 <hr>
 <style>
- .hmisctable656240 {
+ .hmisctable216757 {
  border: 1px solid gray;
  border-collapse: collapse;
  font-size: 100%;
  }
- .hmisctable656240 td {
+ .hmisctable216757 td {
  text-align: right;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable656240 th {
+ .hmisctable216757 th {
  color: Black;
  text-align: center;
  padding: 0 1ex 0 1ex;
@@ -1348,7 +1347,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
  }
  </style>
  
-<table class="hmisctable656240 table table-sm table-striped small" data-border="1">
+<table class="hmisctable216757 table table-sm table-striped small" data-border="1">
 <tbody>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">Name</th>
@@ -1413,16 +1412,16 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <hr><h4 class="anchored">Data frame:dr</h4>1000 observations and 2 variables, maximum # NAs:0  
 <hr>
 <style>
- .hmisctable665537 {
+ .hmisctable275989 {
  border: 1px solid gray;
  border-collapse: collapse;
  font-size: 100%;
  }
- .hmisctable665537 td {
+ .hmisctable275989 td {
  text-align: right;
  padding: 0 1ex 0 1ex;
  }
- .hmisctable665537 th {
+ .hmisctable275989 th {
  color: Black;
  text-align: center;
  padding: 0 1ex 0 1ex;
@@ -1430,7 +1429,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
  }
  </style>
  
-<table class="hmisctable665537 table table-sm table-striped small" data-border="1">
+<table class="hmisctable275989 table table-sm table-striped small" data-border="1">
 <tbody>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">Name</th>
@@ -1478,20 +1477,20 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 </div>
 <p>Now try some things on the 10,000,000 row data table created above.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(d, <span class="st">'/tmp/d.rds'</span>)                  <span class="co"># 13.6s 128M</span></span>
-<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(d, <span class="st">'/tmp/dc.rds'</span>, <span class="at">compress=</span><span class="st">'xz'</span>)  <span class="co">#  124s 116M</span></span>
-<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a><span class="fu">write_fst</span>(d, <span class="st">'/tmp/d.fst'</span>)                <span class="co">#  0.2s 161M</span></span>
-<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a><span class="fu">write_fst</span>(d, <span class="st">'/tmp/dc.fst'</span>, <span class="at">compress=</span><span class="dv">100</span>) <span class="co">#  1.4s 122M</span></span>
-<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_save</span>(d, <span class="st">'/tmp/d.qs2'</span>, <span class="at">nthreads=</span><span class="dv">3</span>)         <span class="co">#  0.3s 110M</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(d, <span class="st">'/tmp/d.rds'</span>)                  <span class="co"># 8.4s 127M</span></span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(d, <span class="st">'/tmp/dc.rds'</span>, <span class="at">compress=</span><span class="st">'xz'</span>)  <span class="co">#  61s 115M</span></span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a><span class="fu">write_fst</span>(d, <span class="st">'/tmp/d.fst'</span>)                <span class="co">#  0.1s 160M</span></span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a><span class="fu">write_fst</span>(d, <span class="st">'/tmp/dc.fst'</span>, <span class="at">compress=</span><span class="dv">100</span>) <span class="co">#  3.8s 122M</span></span>
+<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_save</span>(d, <span class="st">'/tmp/d.qs2'</span>, <span class="at">nthreads=</span><span class="dv">3</span>)         <span class="co">#  0.2s 119M</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Read times are as follows.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="fu">readRDS</span>(<span class="st">'/tmp/d.rds'</span>)           <span class="co"># 0.9 s</span></span>
-<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a><span class="fu">readRDS</span>(<span class="st">'/tmp/dc.rds'</span>)          <span class="co"># 7.5 s</span></span>
-<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a><span class="fu">read_fst</span>(<span class="st">'/tmp/d.fst'</span>)          <span class="co"># 0.04s</span></span>
-<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a><span class="fu">read_fst</span>(<span class="st">'/tmp/dc.fst'</span>)         <span class="co"># 0.07s</span></span>
-<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_read</span>(<span class="st">'/tmp/d.qs2'</span>)              <span class="co"># 0.2 s</span></span>
-<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_read</span>(<span class="st">'/tmp/d.qs2'</span>, <span class="at">nthreads=</span><span class="dv">6</span>)  <span class="co"># 0.16s</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="fu">readRDS</span>(<span class="st">'/tmp/d.rds'</span>)           <span class="co"># 0.3s</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a><span class="fu">readRDS</span>(<span class="st">'/tmp/dc.rds'</span>)          <span class="co"># 3.5s</span></span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a><span class="fu">read_fst</span>(<span class="st">'/tmp/d.fst'</span>)          <span class="co"># 0.2s</span></span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a><span class="fu">read_fst</span>(<span class="st">'/tmp/dc.fst'</span>)         <span class="co"># 0.2s</span></span>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_read</span>(<span class="st">'/tmp/d.qs2'</span>)              <span class="co"># 0.14s</span></span>
+<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_read</span>(<span class="st">'/tmp/d.qs2'</span>, <span class="at">nthreads=</span><span class="dv">6</span>)  <span class="co"># 0.04s</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>When direct access is not needed, i.e., when whole data frames/tables are to be read, the <code>qs2</code> package would be a good default, especially if one takes into account that <code>qs2</code> preserves all object attributes. <code>qs2</code> dependencies are also more actively supported.</p>
 </section>
@@ -1979,10 +1978,10 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-28"><a href="#cb57-28" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-29"><a href="#cb57-29" aria-hidden="true" tabindex="-1"></a>I typically create a compact analysis file in a separate R script</span>
 <span id="cb57-30"><a href="#cb57-30" aria-hidden="true" tabindex="-1"></a>called <span class="in">`create.r`</span> and have it produce compressed R binary <span class="in">`data.frame`</span></span>
-<span id="cb57-31"><a href="#cb57-31" aria-hidden="true" tabindex="-1"></a>or <span class="in">`data.table`</span> <span class="in">`.rds`</span> files using <span class="in">`saveRDS(name, 'name.rds', compress='xz')`</span>.  Then I have an analysis script named for example <span class="in">`a.qmd`</span> (for <span class="co">[</span><span class="ot">Quarto</span><span class="co">](https://quarto.org)</span> reports) or <span class="in">`a.Rmd`</span> (for RMarkdown reports) that starts with <span class="in">`d &lt;- readRDS('name.rds')`</span>.  <span class="co">[</span><span class="ot">See @sec-fcreate-qs for an alternative that is generally preferable to `saveRDS` using the `qs2` package: `qs_save(name, 'name.qs2')` and `d &lt;- qs_read('name.qs2')`.&lt;br&gt;&lt;br&gt;Templates for analysis reports are [here](http://hbiostat.org/rr/index.html#template), and a comprehensive report example may be found [here](https://hbiostat.org/R/Hmisc/markov).</span><span class="co">]</span>{.aside} This process is especially helpful with analysis file creation takes multiple steps or files are large.  <span class="in">`readRDS`</span> is very fast for loading binary R objects, and <span class="in">`qread`</span> is even faster.  <span class="co">[</span><span class="ot">There is an older way to read/write binary R objects using R `load` and `save` and `Hmisc` frontends for them `Load` and `Save`.  Files using these formats typically have suffixes of `.rda`, `.RData`, or `.sav`, and using `load` stores the object under its original name, which might not be clear until you check your R `.global` environment by looking in the upper right `RStudio` panel.</span><span class="co">]</span>{.aside}</span>
+<span id="cb57-31"><a href="#cb57-31" aria-hidden="true" tabindex="-1"></a>or <span class="in">`data.table`</span> <span class="in">`.rds`</span> files using <span class="in">`saveRDS(name, 'name.rds', compress='xz')`</span>.  Then I have an analysis script named for example <span class="in">`a.qmd`</span> (for <span class="co">[</span><span class="ot">Quarto</span><span class="co">](https://quarto.org)</span> reports) or <span class="in">`a.Rmd`</span> (for RMarkdown reports) that starts with <span class="in">`d &lt;- readRDS('name.rds')`</span>.  <span class="co">[</span><span class="ot">See @sec-fcreate-qs for an alternative that is generally preferable to `saveRDS` using the `qs2` package: `qs_save(name, 'name.qs2')` and `d &lt;- qs_read('name.qs2')`.&lt;br&gt;&lt;br&gt;Templates for analysis reports are [here](http://hbiostat.org/rr/index.html#template), and a comprehensive report example may be found [here](https://hbiostat.org/R/Hmisc/markov).</span><span class="co">]</span>{.aside} This process is especially helpful with analysis file creation takes multiple steps or files are large.  <span class="in">`readRDS`</span> is very fast for loading binary R objects, and <span class="in">`qs2::qs_read`</span> is even faster.  <span class="co">[</span><span class="ot">There is an older way to read/write binary R objects using R `load` and `save` and `Hmisc` frontends for them `Load` and `Save`.  Files using these formats typically have suffixes of `.rda`, `.RData`, or `.sav`, and using `load` stores the object under its original name, which might not be clear until you check your R `.global` environment by looking in the upper right `RStudio` panel.</span><span class="co">]</span>{.aside}</span>
 <span id="cb57-32"><a href="#cb57-32" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-33"><a href="#cb57-33" aria-hidden="true" tabindex="-1"></a>When variables need to be recoded, have labels added or changed, or</span>
-<span id="cb57-34"><a href="#cb57-34" aria-hidden="true" tabindex="-1"></a>have units of </span>
+<span id="cb57-34"><a href="#cb57-34" aria-hidden="true" tabindex="-1"></a>have units of</span>
 <span id="cb57-35"><a href="#cb57-35" aria-hidden="true" tabindex="-1"></a>measurement added<span class="co">[</span><span class="ot">Variable labels and units of measurement are used in special ways in my R packages.  This will show up in the `describe` and `contents` function outputs below and in axis labels for graphics.</span><span class="co">]</span>{.aside}, I specify those using the <span class="in">`Hmisc`</span> package [<span class="in">`upData`</span></span>
 <span id="cb57-36"><a href="#cb57-36" aria-hidden="true" tabindex="-1"></a>function](https://www.rdocumentation.org/packages/Hmisc/versions/4.7-0/topics/upData).</span>
 <span id="cb57-37"><a href="#cb57-37" aria-hidden="true" tabindex="-1"></a></span>
@@ -2010,7 +2009,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-59"><a href="#cb57-59" aria-hidden="true" tabindex="-1"></a>         <span class="at">hxofHT   =</span> <span class="fu">yn</span>(hxofHT),</span>
 <span id="cb57-60"><a href="#cb57-60" aria-hidden="true" tabindex="-1"></a>         <span class="at">hxofDM   =</span> <span class="fu">yn</span>(hxofDM),</span>
 <span id="cb57-61"><a href="#cb57-61" aria-hidden="true" tabindex="-1"></a>         <span class="at">hxofCig  =</span> <span class="fu">factor</span>(hxofCig, <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.5</span>, <span class="dv">1</span>),</span>
-<span id="cb57-62"><a href="#cb57-62" aria-hidden="true" tabindex="-1"></a>                           <span class="fu">c</span>(<span class="st">'heavy'</span>, <span class="st">'moderate'</span>, <span class="st">'non-smoker'</span>)), </span>
+<span id="cb57-62"><a href="#cb57-62" aria-hidden="true" tabindex="-1"></a>                           <span class="fu">c</span>(<span class="st">'heavy'</span>, <span class="st">'moderate'</span>, <span class="st">'non-smoker'</span>)),</span>
 <span id="cb57-63"><a href="#cb57-63" aria-hidden="true" tabindex="-1"></a>         <span class="at">hxofMI   =</span> <span class="fu">yn</span>(hxofMI),</span>
 <span id="cb57-64"><a href="#cb57-64" aria-hidden="true" tabindex="-1"></a>         <span class="at">hxofPTCA =</span> <span class="fu">yn</span>(hxofPTCA),</span>
 <span id="cb57-65"><a href="#cb57-65" aria-hidden="true" tabindex="-1"></a>         <span class="at">hxofCABG =</span> <span class="fu">yn</span>(hxofCABG),</span>
@@ -2034,15 +2033,15 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-83"><a href="#cb57-83" aria-hidden="true" tabindex="-1"></a>           <span class="at">dpmaxdo   =</span> <span class="st">'Double product on max dobutamine dose'</span>,</span>
 <span id="cb57-84"><a href="#cb57-84" aria-hidden="true" tabindex="-1"></a>           <span class="at">dobdose   =</span> <span class="st">'Dobutamine dose at max double product'</span>,</span>
 <span id="cb57-85"><a href="#cb57-85" aria-hidden="true" tabindex="-1"></a>           <span class="at">baseEF    =</span> <span class="st">'Baseline cardiac ejection fraction'</span>,</span>
-<span id="cb57-86"><a href="#cb57-86" aria-hidden="true" tabindex="-1"></a>           <span class="at">dobEF     =</span> <span class="st">'Ejection fraction on dobutamine'</span>, </span>
-<span id="cb57-87"><a href="#cb57-87" aria-hidden="true" tabindex="-1"></a>           <span class="at">chestpain =</span> <span class="st">'Chest pain'</span>, </span>
+<span id="cb57-86"><a href="#cb57-86" aria-hidden="true" tabindex="-1"></a>           <span class="at">dobEF     =</span> <span class="st">'Ejection fraction on dobutamine'</span>,</span>
+<span id="cb57-87"><a href="#cb57-87" aria-hidden="true" tabindex="-1"></a>           <span class="at">chestpain =</span> <span class="st">'Chest pain'</span>,</span>
 <span id="cb57-88"><a href="#cb57-88" aria-hidden="true" tabindex="-1"></a>           <span class="at">ecg       =</span> <span class="st">'Baseline electrocardiogram diagnosis'</span>,</span>
-<span id="cb57-89"><a href="#cb57-89" aria-hidden="true" tabindex="-1"></a>           <span class="at">restwma   =</span> <span class="st">'Resting wall motion abnormality on echocardiogram'</span>, </span>
+<span id="cb57-89"><a href="#cb57-89" aria-hidden="true" tabindex="-1"></a>           <span class="at">restwma   =</span> <span class="st">'Resting wall motion abnormality on echocardiogram'</span>,</span>
 <span id="cb57-90"><a href="#cb57-90" aria-hidden="true" tabindex="-1"></a>           <span class="at">posSE     =</span> <span class="st">'Positive stress echocardiogram'</span>,</span>
 <span id="cb57-91"><a href="#cb57-91" aria-hidden="true" tabindex="-1"></a>           <span class="at">newMI     =</span> <span class="st">'New myocardial infarction'</span>,</span>
 <span id="cb57-92"><a href="#cb57-92" aria-hidden="true" tabindex="-1"></a>           <span class="at">newPTCA   =</span> <span class="st">'Recent angioplasty'</span>,</span>
-<span id="cb57-93"><a href="#cb57-93" aria-hidden="true" tabindex="-1"></a>           <span class="at">newCABG   =</span> <span class="st">'Recent bypass surgery'</span>, </span>
-<span id="cb57-94"><a href="#cb57-94" aria-hidden="true" tabindex="-1"></a>           <span class="at">hxofHT    =</span> <span class="st">'History of hypertension'</span>, </span>
+<span id="cb57-93"><a href="#cb57-93" aria-hidden="true" tabindex="-1"></a>           <span class="at">newCABG   =</span> <span class="st">'Recent bypass surgery'</span>,</span>
+<span id="cb57-94"><a href="#cb57-94" aria-hidden="true" tabindex="-1"></a>           <span class="at">hxofHT    =</span> <span class="st">'History of hypertension'</span>,</span>
 <span id="cb57-95"><a href="#cb57-95" aria-hidden="true" tabindex="-1"></a>           <span class="at">hxofDM    =</span> <span class="st">'History of diabetes'</span>,</span>
 <span id="cb57-96"><a href="#cb57-96" aria-hidden="true" tabindex="-1"></a>           <span class="at">hxofMI    =</span> <span class="st">'History of myocardial infarction'</span>,</span>
 <span id="cb57-97"><a href="#cb57-97" aria-hidden="true" tabindex="-1"></a>           <span class="at">hxofCig   =</span> <span class="st">'History of smoking'</span>,</span>
@@ -2061,7 +2060,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-110"><a href="#cb57-110" aria-hidden="true" tabindex="-1"></a><span class="co"># Note that we could have automatically recoded all 0:1 variables</span></span>
 <span id="cb57-111"><a href="#cb57-111" aria-hidden="true" tabindex="-1"></a><span class="co"># if they were all to be treated identically:</span></span>
 <span id="cb57-112"><a href="#cb57-112" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-113"><a href="#cb57-113" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(x <span class="cf">in</span> <span class="fu">names</span>(d)) </span>
+<span id="cb57-113"><a href="#cb57-113" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(x <span class="cf">in</span> <span class="fu">names</span>(d))</span>
 <span id="cb57-114"><a href="#cb57-114" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">all</span>(d[[x]] <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">1</span>))) d[[x]] <span class="ot">&lt;-</span> <span class="fu">yn</span>(d[[x]])</span>
 <span id="cb57-115"><a href="#cb57-115" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-116"><a href="#cb57-116" aria-hidden="true" tabindex="-1"></a></span>
@@ -2069,7 +2068,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-118"><a href="#cb57-118" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-119"><a href="#cb57-119" aria-hidden="true" tabindex="-1"></a>::: {.panel-tabset}</span>
 <span id="cb57-120"><a href="#cb57-120" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-121"><a href="#cb57-121" aria-hidden="true" tabindex="-1"></a><span class="fu">##  </span></span>
+<span id="cb57-121"><a href="#cb57-121" aria-hidden="true" tabindex="-1"></a>##</span>
 <span id="cb57-122"><a href="#cb57-122" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-123"><a href="#cb57-123" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-124"><a href="#cb57-124" aria-hidden="true" tabindex="-1"></a></span>
@@ -2131,7 +2130,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-182"><a href="#cb57-182" aria-hidden="true" tabindex="-1"></a><span class="fu">contents</span>(d)</span>
 <span id="cb57-183"><a href="#cb57-183" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-184"><a href="#cb57-184" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-185"><a href="#cb57-185" aria-hidden="true" tabindex="-1"></a>The <span class="co">[</span><span class="ot">`fread`</span><span class="co">](https://www.rdocumentation.org/packages/data.table/versions/1.14.2/topics/fread)</span> function in the <span class="in">`data.table`</span> package is blazing fast for reading large files and offers a number of options. </span>
+<span id="cb57-185"><a href="#cb57-185" aria-hidden="true" tabindex="-1"></a>The <span class="co">[</span><span class="ot">`fread`</span><span class="co">](https://www.rdocumentation.org/packages/data.table/versions/1.14.2/topics/fread)</span> function in the <span class="in">`data.table`</span> package is blazing fast for reading large files and offers a number of options.</span>
 <span id="cb57-186"><a href="#cb57-186" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-187"><a href="#cb57-187" aria-hidden="true" tabindex="-1"></a><span class="fu">## REDCap</span></span>
 <span id="cb57-188"><a href="#cb57-188" aria-hidden="true" tabindex="-1"></a></span>
@@ -2231,7 +2230,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-282"><a href="#cb57-282" aria-hidden="true" tabindex="-1"></a><span class="in">meta$field_label &lt;- markupSpecs$html$totxt(meta$field_label)</span></span>
 <span id="cb57-283"><a href="#cb57-283" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-284"><a href="#cb57-284" aria-hidden="true" tabindex="-1"></a><span class="in">head(meta)</span></span>
-<span id="cb57-285"><a href="#cb57-285" aria-hidden="true" tabindex="-1"></a><span class="in"># Data frame meta contains the following variables: </span></span>
+<span id="cb57-285"><a href="#cb57-285" aria-hidden="true" tabindex="-1"></a><span class="in"># Data frame meta contains the following variables:</span></span>
 <span id="cb57-286"><a href="#cb57-286" aria-hidden="true" tabindex="-1"></a><span class="in"># field_name form_name section_header field_type field_label select_choices_or_calculations</span></span>
 <span id="cb57-287"><a href="#cb57-287" aria-hidden="true" tabindex="-1"></a><span class="in"># field_note text_validation_type_or_show_slider_number text_validation_min text_validation_max</span></span>
 <span id="cb57-288"><a href="#cb57-288" aria-hidden="true" tabindex="-1"></a><span class="in"># identifier branching_logic required_field custom_alignment question_number matrix_group_name</span></span>
@@ -2321,7 +2320,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-372"><a href="#cb57-372" aria-hidden="true" tabindex="-1"></a><span class="in">  event[event == 'screening'] &lt;- 'day_-1'</span></span>
 <span id="cb57-373"><a href="#cb57-373" aria-hidden="true" tabindex="-1"></a><span class="in">  sub('day_([1-9])$', 'day_0\\1', event)</span></span>
 <span id="cb57-374"><a href="#cb57-374" aria-hidden="true" tabindex="-1"></a><span class="in">}</span></span>
-<span id="cb57-375"><a href="#cb57-375" aria-hidden="true" tabindex="-1"></a><span class="in">  </span></span>
+<span id="cb57-375"><a href="#cb57-375" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-376"><a href="#cb57-376" aria-hidden="true" tabindex="-1"></a><span class="in">for(n in names(L)) {</span></span>
 <span id="cb57-377"><a href="#cb57-377" aria-hidden="true" tabindex="-1"></a><span class="in">  L[[n]]$day &lt;- etrans(L[[n]]$redcap_event_name)</span></span>
 <span id="cb57-378"><a href="#cb57-378" aria-hidden="true" tabindex="-1"></a><span class="in">  setDT(L[[n]], key=.q(record_id, day))</span></span>
@@ -2436,7 +2435,7 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-487"><a href="#cb57-487" aria-hidden="true" tabindex="-1"></a>If your spreadsheet has column headings that are more suitable as variable labels, you can use <span class="in">`upData`</span> to move these labels to become variable names, and save the original column headings as labels.  Here is an example where a data frame is constructed that might resemble the imported sheet, then it is transformed.</span>
 <span id="cb57-488"><a href="#cb57-488" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-491"><a href="#cb57-491" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb57-492"><a href="#cb57-492" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="st">'Age in Years'</span>     <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">23</span>, <span class="dv">47</span>), </span>
+<span id="cb57-492"><a href="#cb57-492" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="st">'Age in Years'</span>     <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">23</span>, <span class="dv">47</span>),</span>
 <span id="cb57-493"><a href="#cb57-493" aria-hidden="true" tabindex="-1"></a>                <span class="st">'Cholesterol, mg%'</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">226</span>, <span class="dv">147</span>),</span>
 <span id="cb57-494"><a href="#cb57-494" aria-hidden="true" tabindex="-1"></a>                <span class="at">check.names=</span><span class="cn">FALSE</span>)</span>
 <span id="cb57-495"><a href="#cb57-495" aria-hidden="true" tabindex="-1"></a>d</span>
@@ -2656,22 +2655,22 @@ New object size:    200003688 bytes;    3 variables 10000000 observations</code>
 <span id="cb57-715"><a href="#cb57-715" aria-hidden="true" tabindex="-1"></a>Now try some things on the 10,000,000 row data table created above.</span>
 <span id="cb57-716"><a href="#cb57-716" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-717"><a href="#cb57-717" aria-hidden="true" tabindex="-1"></a><span class="in">```{r eval=FALSE}</span></span>
-<span id="cb57-718"><a href="#cb57-718" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(d, <span class="st">'/tmp/d.rds'</span>)                  <span class="co"># 13.6s 128M</span></span>
-<span id="cb57-719"><a href="#cb57-719" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(d, <span class="st">'/tmp/dc.rds'</span>, <span class="at">compress=</span><span class="st">'xz'</span>)  <span class="co">#  124s 116M</span></span>
-<span id="cb57-720"><a href="#cb57-720" aria-hidden="true" tabindex="-1"></a><span class="fu">write_fst</span>(d, <span class="st">'/tmp/d.fst'</span>)                <span class="co">#  0.2s 161M</span></span>
-<span id="cb57-721"><a href="#cb57-721" aria-hidden="true" tabindex="-1"></a><span class="fu">write_fst</span>(d, <span class="st">'/tmp/dc.fst'</span>, <span class="at">compress=</span><span class="dv">100</span>) <span class="co">#  1.4s 122M</span></span>
-<span id="cb57-722"><a href="#cb57-722" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_save</span>(d, <span class="st">'/tmp/d.qs2'</span>, <span class="at">nthreads=</span><span class="dv">3</span>)         <span class="co">#  0.3s 110M</span></span>
+<span id="cb57-718"><a href="#cb57-718" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(d, <span class="st">'/tmp/d.rds'</span>)                  <span class="co"># 8.4s 127M</span></span>
+<span id="cb57-719"><a href="#cb57-719" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(d, <span class="st">'/tmp/dc.rds'</span>, <span class="at">compress=</span><span class="st">'xz'</span>)  <span class="co">#  61s 115M</span></span>
+<span id="cb57-720"><a href="#cb57-720" aria-hidden="true" tabindex="-1"></a><span class="fu">write_fst</span>(d, <span class="st">'/tmp/d.fst'</span>)                <span class="co">#  0.1s 160M</span></span>
+<span id="cb57-721"><a href="#cb57-721" aria-hidden="true" tabindex="-1"></a><span class="fu">write_fst</span>(d, <span class="st">'/tmp/dc.fst'</span>, <span class="at">compress=</span><span class="dv">100</span>) <span class="co">#  3.8s 122M</span></span>
+<span id="cb57-722"><a href="#cb57-722" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_save</span>(d, <span class="st">'/tmp/d.qs2'</span>, <span class="at">nthreads=</span><span class="dv">3</span>)         <span class="co">#  0.2s 119M</span></span>
 <span id="cb57-723"><a href="#cb57-723" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-724"><a href="#cb57-724" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-725"><a href="#cb57-725" aria-hidden="true" tabindex="-1"></a>Read times are as follows.</span>
 <span id="cb57-726"><a href="#cb57-726" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-727"><a href="#cb57-727" aria-hidden="true" tabindex="-1"></a><span class="in">```{r eval=FALSE}</span></span>
-<span id="cb57-728"><a href="#cb57-728" aria-hidden="true" tabindex="-1"></a><span class="fu">readRDS</span>(<span class="st">'/tmp/d.rds'</span>)           <span class="co"># 0.9 s</span></span>
-<span id="cb57-729"><a href="#cb57-729" aria-hidden="true" tabindex="-1"></a><span class="fu">readRDS</span>(<span class="st">'/tmp/dc.rds'</span>)          <span class="co"># 7.5 s</span></span>
-<span id="cb57-730"><a href="#cb57-730" aria-hidden="true" tabindex="-1"></a><span class="fu">read_fst</span>(<span class="st">'/tmp/d.fst'</span>)          <span class="co"># 0.04s</span></span>
-<span id="cb57-731"><a href="#cb57-731" aria-hidden="true" tabindex="-1"></a><span class="fu">read_fst</span>(<span class="st">'/tmp/dc.fst'</span>)         <span class="co"># 0.07s</span></span>
-<span id="cb57-732"><a href="#cb57-732" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_read</span>(<span class="st">'/tmp/d.qs2'</span>)              <span class="co"># 0.2 s</span></span>
-<span id="cb57-733"><a href="#cb57-733" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_read</span>(<span class="st">'/tmp/d.qs2'</span>, <span class="at">nthreads=</span><span class="dv">6</span>)  <span class="co"># 0.16s</span></span>
+<span id="cb57-728"><a href="#cb57-728" aria-hidden="true" tabindex="-1"></a><span class="fu">readRDS</span>(<span class="st">'/tmp/d.rds'</span>)           <span class="co"># 0.3s</span></span>
+<span id="cb57-729"><a href="#cb57-729" aria-hidden="true" tabindex="-1"></a><span class="fu">readRDS</span>(<span class="st">'/tmp/dc.rds'</span>)          <span class="co"># 3.5s</span></span>
+<span id="cb57-730"><a href="#cb57-730" aria-hidden="true" tabindex="-1"></a><span class="fu">read_fst</span>(<span class="st">'/tmp/d.fst'</span>)          <span class="co"># 0.2s</span></span>
+<span id="cb57-731"><a href="#cb57-731" aria-hidden="true" tabindex="-1"></a><span class="fu">read_fst</span>(<span class="st">'/tmp/dc.fst'</span>)         <span class="co"># 0.2s</span></span>
+<span id="cb57-732"><a href="#cb57-732" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_read</span>(<span class="st">'/tmp/d.qs2'</span>)              <span class="co"># 0.14s</span></span>
+<span id="cb57-733"><a href="#cb57-733" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_read</span>(<span class="st">'/tmp/d.qs2'</span>, <span class="at">nthreads=</span><span class="dv">6</span>)  <span class="co"># 0.04s</span></span>
 <span id="cb57-734"><a href="#cb57-734" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb57-735"><a href="#cb57-735" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb57-736"><a href="#cb57-736" aria-hidden="true" tabindex="-1"></a>When direct access is not needed, i.e., when whole data frames/tables are to be read, the <span class="in">`qs2`</span> package would be a good default, especially if one takes into account that <span class="in">`qs2`</span> preserves all object attributes.  <span class="in">`qs2`</span> dependencies are also more actively supported.</span>
