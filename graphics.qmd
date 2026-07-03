@@ -15,6 +15,7 @@ Cleveland's [The Elements of Graphing Data](https://www.amazon.com/Elements-Grap
 are two of the best sources of how-to information on making scientific graphs.  Much information may be
 found at [hbiostat.org/bbr/descript.html](https://hbiostat.org/bbr/descript.html#sec-descript-graphics) and [hbiostat.org/R/hreport](https://hbiostat.org/R/hreport)
 especially these notes: [hbiostat.org/doc/graphscourse.pdf](https://hbiostat.org/doc/graphscourse.pdf).
+Kieran Healy has an excellent online book [Data Visualization: A Practical Introduction](https://socviz.co).
 John Rauser has an [exceptional video](https://www.youtube.com/watch?v=fSgEeI2Xpdc) about principles of good graphics.  Rafael Irizarry has an excellent chapter on [graphics principles and recommendations](https://rafalab.github.io/dsbook/data-visualization-principles.html).
 See [datamethods.org/t/journal-graphics](https://discourse.datamethods.org/t/journal-graphics) for graphical methods for journal articles.
 Also see Saloni Dattani's [excellenet article on data visualization]{https://www.scientificdiscovery.dev/p/salonis-guide-to-data-visualization).
@@ -43,7 +44,7 @@ get in the way of important information.  This is addressed below.
 * Fully interactive graphics can be built using `RShiny` but this requires a server to be running while the graph is viewed.
 
 For `ggplot2`, [www.cookbook-r.com/Graphs](http://www.cookbook-r.com/Graphs) contains a
-nice cookbook.  See also [learnr.wordpress.com](http://learnr.wordpress.com).  To get
+nice cookbook.  See also [learnr.wordpress.com](http://learnr.wordpress.com) and [Healy](https://socviz.co/08-polishing.html).  To get
 excellent documentation with examples for any
 `ggplot2` function, google `ggplot2 _functionname_`.
 `ggplot2` graphs can be converted into `plotly` graphics using
@@ -105,7 +106,7 @@ An easier way to make `Quarto/knitr` use `agg_png` throughout is to include the 
 
 ```
 knitr:
-  opts_chunk: 
+  opts_chunk:
     dev: "ragg_png"
 ```
 
@@ -191,10 +192,11 @@ g <-
 # Likewise for the legend
 #   theme(legend.text=element_text(family='mono', size=9))
 
-ggplotlyr(g, remove='.*): ')  # removes paste0("dose:", dose): 
+ggplotlyr(g, remove='.*): ')  # removes paste0("dose:", dose):
 # dose is in hover text for each point
 ```
 
+See [Healy](https://socviz.co/08-polishing.html) for many more ways to enhance `ggplot2` plots.
 
 ::: {.callout-note collapse="true"}
 # Using `ggplot2` Built-in Label Lookup
@@ -338,14 +340,14 @@ if(! require(ggthemr)) {
   devtools::install_github('Mikata-Project/ggthemr')
   require(ggthemr)
 }
-ggthemr('dust', layout='scientific') 
+ggthemr('dust', layout='scientific')
 g
 g + theme(panel.grid.major=element_line(linetype='dotted'))
 ```
 
 ## Adding Hover Text to Show Details
 
-The [`ggiraph` package](https://davidgohel.github.io/ggiraph) allows you to make certain elements of `ggplot2` graphics interactive.  [This example](https://stackoverflow.com/questions/78740958) shows how to use `ggiraph` to add a tooltip to facet labels. 
+The [`ggiraph` package](https://davidgohel.github.io/ggiraph) allows you to make certain elements of `ggplot2` graphics interactive.  [This example](https://stackoverflow.com/questions/78740958) shows how to use `ggiraph` to add a tooltip to facet labels.
 
 ## Two Independent Panels
 
