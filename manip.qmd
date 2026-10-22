@@ -12,7 +12,7 @@ flu[Fast Lookup<br>From Disk] --> dtf[data.table & fst]
 
 ## `data.table` {#sec-dt}
 
-The [`data.table`](https://hbiostat.org/R/data.table) package provides a concise, consistent syntax for managing simple and complex data manipulation tasks, and it is extremely efficient for large datasets.  One of the best organized tutorials is [this](https://riptutorial.com/data-table), and a cheatsheet for data transformation is [here](https://raw.githubusercontent.com/rstudio/cheatsheets/master/datatable.pdf).  Useful `data.table` vignettes are [here](https://cran.r-project.org/web/packages/data.table/vignettes). A master cheatsheet for `data.table` is [here](https://rdrr.io/cran/data.table/man/data.table.html) from which the general syntax below is taken, where `DT` represents a data table.[`data.table` [FAQ](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-faq.html#j-num)]{.aside}
+The [`data.table`](https://hbiostat.org/R/data.table) package provides a concise, consistent syntax for managing simple and complex data manipulation tasks, and it is extremely efficient for large datasets.  One of the best organized tutorials is [this](https://riptutorial.com/data-table), and a cheatsheet for data transformation is [here](https://raw.githubusercontent.com/rstudio/cheatsheets/master/datatable.pdf).  Useful `data.table` vignettes are [here](https://cran.r-project.org/web/packages/data.table/vignettes). A master cheatsheet for `data.table` is [here](https://rdrr.io/cran/data.table/man/data.table.html) from which the general syntax below is taken, where `DT` represents a data table.  See also many [side-by-side comparisons](https://arelbundock.com/posts/dt_tb_df/index.html) of the use of base R code vs. `data.table` vs. tidyverse and others for manipulating data. [`data.table` [FAQ](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-faq.html#j-num)]{.aside}
 
 ```
    DT[ i,  j,  by ] # + extra arguments
@@ -762,7 +762,7 @@ Suppose the dataset had blocks of questions that are to be summed to obtain tota
 ```{r}
 d <- data.table(
   id=1:3,
-  ill1=c(1,NA,3), ill2=c(2,2,3), ill3=c(1,1,1), 
+  ill1=c(1,NA,3), ill2=c(2,2,3), ill3=c(1,1,1),
   fit1=c(4,5,6), fit2=c(NA,2,3), fit3=c(NA,1,7), fit4=c(NA,3,6))
 d2 <- copy(d)
 d
@@ -1019,4 +1019,3 @@ u <- rbindlist(w)
 # Remove external files if no longer needed
 invisible(file.remove('states.fst', 'divlocs.fst', 'statelocs.fst'))
 ```
-

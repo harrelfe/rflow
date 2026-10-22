@@ -8,15 +8,34 @@ Place[Placement] --> places[Margin<br>Tabs<br>Expand/Hide<br>Mixing Tables and G
 rept[qreport] --> rhf[Report Writing<br>Helper Functions]
 OF[Overall Format] --> ofs[HTML]
 OF --> ltx[LaTeX] --> pdf[pdf]
+OF --> typst[Typst] --> pdf
 OF --> mfd[Multi-Format<br>Reports]
 MD[Metadata<br>Report<br>Annotations] --> mds[Variable Labels<br>and Units]
 ```
 
-A state-of-the-art way to make reproducible reports is to use a statistical computing language such as R and its [`knitr`](https://cran.r-project.org/web/packages/knitr) package in conjunction with either [`RMarkdown`](https://rmarkdown.rstudio.com) or [`Quarto`](https://quarto.org), with the latter likely to replace the former.  Both of the report-making systems allow one to produce reports in a variety of formats including html, pdf, and Word.  Html is recommended because pages can be automatically resized to allow optimum viewing on devices of most sizes, and because html allows for interactive graphics and other interactive components.  Pdf is produced by converting `RMarkdown` or `Quarto`-produced markdown elements to $\LaTeX$.[Report formatting is very much enhanced by using variable attributes such as labels and units of measurement that are not considered in base R.  Methods for better annotating output using labels and units are given below.]{.aside}
+A state-of-the-art way to make reproducible reports is to use a statistical computing language such as R and its [`knitr`](https://cran.r-project.org/web/packages/knitr) package in conjunction with either [`RMarkdown`](https://rmarkdown.rstudio.com) or [`Quarto`](https://quarto.org), with the latter replacing the former for reports, blogs, slide presentations, and web sites.  Both of the report-making systems allow one to produce reports in a variety of formats including html, pdf, and Word.  Html is recommended because pages can be automatically resized to allow optimum viewing on devices of most sizes, and because html allows for interactive graphics and other interactive components.  Pdf is produced by `pandoc` converting `RMarkdown` or `Quarto`-produced markdown elements to [$\LaTeX$](https://en.wikipedia.org/wiki/LaTeX) or [`Typst`](https://typst.app).[Report formatting is very much enhanced by using variable attributes such as labels and units of measurement that are not considered in base R.  Methods for better annotating output using labels and units are given below.]{.aside} `Typst` can be thought of as a completely re-engineered $\LaTeX$ which is far more compact and much faster for compiling, has better math notation, and has a functional language built-in for handling customizations and within-document computations.  See the [tutorial](https://typst.app/docs/tutorial), [reference documentation](https://typst.app/docs/reference), [templates & Packages](https://typst.app/universe) and [forum for questions](https://forum.typst.app).
 
-This document can serve as a template for using R with `Quarto`; one can see the raw script by clicking on `Code` at the top right of the report.  A recommended template for typical statistical reports is [here](https://hbiostat.org/R/reportTemplate.qmd) with [html](https://hbiostat.org/R/reportTemplate.html) and [pdf](https://hbiostat.org/R/reportTemplate.pdf) output.
+When writing a book or other complex document for which you need to use native $\LaTeX$ or `Typst` markup, it is best to use `RMarkdown` in an `.Rnw`, `.Rmarkdown`, or `.Rtyp` file and to bypass `Quarto` and `pandoc`.  You can run R code chunks and create a $\LaTeX$ `.tex` or `Typst` `.typ` document by running e.g. `Rscript -e "knitr::knit('my.Rtyp')"` from the command line. [When `Typst` or one of its user-contributed packages does not do what you need, Claude AI is exceedingly good at writing `Typst` functions (in the `Typst` language) to do what you need.  Successful examples include backreferences, alphabetic sorting of bibliographies, endnotes, and advanced phrase indexing.]{.aside}
 
-## General Formatting 
+::: {.callout-note collapse="true"}
+## `Typst` Extensions
+
+`Typst` is actively being extended in a number of ways, including
+
+* Creating html documents and web sites: [`calepin`](https://vincentarelbundock.github.io/calepin)
+* Using `Typst` math and other syntax inside `ggplot2` graphs: [`ggtypst`](https://yousa-mirage.github.io/ggtypst)
+* `ggplot2`-like grammar of graphics as a `Typst` function: [`Gribouille`](https://github.com/mcanouil/gribouille)
+* Many other [advanced data visualizations](https://typst.app/universe) directly in `Typst`
+
+`Typst` can also read `.csv` and other data files and process them during typesetting.
+
+:::
+
+Instead of writing in a dedicated typsetting syntax, writing a markdown-based `Quarto` document and specifying an output format of `pdf` (for $\LaTeX$) or `typst` (for `Typst`) will cause `pandoc` to convert markdown to native $\LaTeX$ or `Typst`.  The final result is a `pdf` file in either case.
+
+This remainder of this document serves as a template for using R with `Quarto`; one can see the raw script by clicking on `Code` at the top right of the report.  A recommended template for typical statistical reports is [here](https://hbiostat.org/R/reportTemplate.qmd) with [html](https://hbiostat.org/R/reportTemplate.html) and [pdf](https://hbiostat.org/R/reportTemplate.pdf) output.  Installing `Typst` and using `typst` format will result in superior pdf with extremely fast compilation and better error messages than $\LaTeX$.  This can also take advantage of the `Hmisc` and `rms` packages' `typst` printing methods.
+
+## General Formatting
 
 When one has only one output format target, things are fairly straightforward except some situations where mixed formats are rendered in the same code *chunk*. Click below for details.
 
@@ -25,7 +44,7 @@ When one has only one output format target, things are fairly straightforward ex
 
 With `Hmisc` package version 4.8 and later and `rms` package 6.5-0 and later, rendering in html no longer requires `results='asis'` in chunk headers, and a chunk can mix plain text and html without any problems.  The following applies to earlier versions.
 
-To make use of specialized functions that produce html or $\LaTeX$ markup, one often has to put `results='asis'` in the code chunk header to keep the system from disturbing the generated html or $\LaTeX$ markup so that it will be typeset correctly in the final document.  This process works smoothly but creates one complication: if you print an object that produces plain text in the same code chunk, the system will try to typeset it in html or $\LaTeX$.  To prevent this from happening you either need to split the chunks into multiple chunks (some with `results='asis'` and some not) or you need to make it clear that parts of the output are to be typeset verbatim.  To do that a simple function `pr` can sense if `results='asis'` is in effect for the current chunk.  If so, the object is surrounded by the `markdown` verbatim indicator---three consecutive back ticks.  If not the object is left alone.  `pr` is defined in the `marksupSpecs$markdown$pr` object, so you can bring it to your session by copying into a local function `pr` as shown below, which has a chunk option `results='asis'` to show that verbatim output appears anyway.  If the argument `obj` to `pr` is a data frame or data table, variables will be rounded to the value given in the argument `dec` (default `dec=3`) before printing.  If you specify `inline=x` the object `x` is printed with `cat()` instead of `print()`.  `inline` is more for printing character strings.
+To make use of specialized functions that produce html, `Typst`, or $\LaTeX$ markup, one often has to put `results='asis'` in the code chunk header to keep the system from disturbing the generated markup so that it will be typeset correctly in the final document.  This process works smoothly but creates one complication: if you print an object that produces plain text in the same code chunk, the system will try to typeset it in html or $\LaTeX$.  To prevent this from happening you either need to split the chunks into multiple chunks (some with `results='asis'` and some not) or you need to make it clear that parts of the output are to be typeset verbatim.  To do that a simple function `pr` can sense if `results='asis'` is in effect for the current chunk.  If so, the object is surrounded by the `markdown` verbatim indicator---three consecutive back ticks.  If not the object is left alone.  `pr` is defined in the `marksupSpecs$markdown$pr` object, so you can bring it to your session by copying into a local function `pr` as shown below, which has a chunk option `results='asis'` to show that verbatim output appears anyway.  If the argument `obj` to `pr` is a data frame or data table, variables will be rounded to the value given in the argument `dec` (default `dec=3`) before printing.  If you specify `inline=x` the object `x` is printed with `cat()` instead of `print()`.  `inline` is more for printing character strings.
 
 An example of something that may not render correctly due to `results='asis'` being in the chunk header (needed for `html(...)`):
 
@@ -264,7 +283,7 @@ To allow one report to be used to render multiple output formats, especially htm
 
 ```{r senseformat}
 outfmt <- if(knitr::is_html_output ()) 'html'  else 'pdf'
-markup <- if(knitr::is_latex_output()) 'latex' else 'html'
+markup <- if(knitr::is_latex_output()) 'latex' else 'html'   # also 'typst'
 ishtml <- outfmt == 'html'
 if(ishtml) require(plotly)
 ggp <- if(ishtml) ggplotlyr else function(ggobject, ...) ggobject
@@ -275,9 +294,9 @@ ggp <- if(ishtml) ggplotlyr else function(ggobject, ...) ggobject
 `Quarto` has a excellent facility for [conditionally including document sections](https://quarto.org/docs/authoring/conditional.html) depending on the currently chosen output format.
 
 ::: {.callout-note collapse="true"}
-## Special Considerations For $\LaTeX$/PDF
+## Special Considerations For $\LaTeX$.`Typst`/PDF
 
-The `Hmisc`, `rms`, and `rmsb` packages have a good deal of support for creating $\LaTeX$ output in addition to html.  They require some special $\LaTeX$ packages to be accessed.  In addition, if using any of `Quarto`'s nice features for making marginal notes, there is another $\LaTeX$ package to attach.  Below you'll find what needs to be added to the `yaml` prologue at the top of your script if using `Quarto`.  You have to modify `pdf-engine` to suit your needs.  I use `luatex` because it handles special unicode characters.  In the future (approximately July 2022) a bug in `Pandoc` will be fixed and you can put `links-as-notes: true` in the `yaml` header instead of redefining `href` and linking in `hyperref`.
+The `Hmisc`, `rms`, and `rmsb` packages have a good deal of support for creating `Typst` and $\LaTeX$ output in addition to html.  For $\LaTeX$ they require some special $\LaTeX$ packages to be accessed.  In addition, if using any of `Quarto`'s nice features for making marginal notes, there is another $\LaTeX$ package to attach.  Below you'll find what needs to be added to the `yaml` prologue at the top of your script if using `Quarto` with $\LaTeX$ as the pdf typsetter.  You have to modify `pdf-engine` to suit your needs.  I use `luatex` because it handles special unicode characters.  In the future (approximately July 2022) a bug in `Pandoc` will be fixed and you can put `links-as-notes: true` in the `yaml` header instead of redefining `href` and linking in `hyperref`.
 
 ```
 format:
@@ -314,7 +333,7 @@ Then use <tt>r mNote</tt> enclosed in back ticks in place of the `.column-margin
 ::: {.callout-note collapse="true"}
 ## Special Considerations For Microsoft Word
 
-`Quarto` and its workhorse `Pandoc` now are quite good at creating Word `.docx` files, even allowing $\LaTeX$ math expressions to render well and be editable in Word.  Missing is the ability to handle marginal notes including `.aside`s.  
+`Quarto` and its workhorse `Pandoc` now are quite good at creating Word `.docx` files, even allowing `Typst` and $\LaTeX$ math expressions to render well and be editable in Word.  Missing is the ability to handle marginal notes including `.aside`s.
 
 When collaborating with a Word user by sending her a `.docx` file whenever a report is updated, it is hard but necessary to discourage her from editing the `docx` file instead of communicating changes back to you to make in the primary `.qmd` file.  But often the collaborator is using parts of your report to build another Word document.  In that case it is important for the collaborator to be able to see what changed since the last report.  The minimal-effort way to do this is to save the last version of the `.docx` file and send both the last and current versions to the collaborator.  She can then [compare the two versions in Word](https://zapier.com/blog/compare-two-word-documents) to see exactly what has changed.
 
@@ -330,13 +349,13 @@ Even when producing only html, one may wish to save individual graphics for manu
 ::: {.callout-note collapse="true"}
 ## Using `Hmisc` Formatting for Variable Labels in Tables
 
-As done with various `Hmisc` and `rms` package functions, one can capitalize on `Hmisc`'s special formatting of variable labels and units when constructing tables in $\LaTeX$ or html.  The basic constructs are shown in the code below.
+As done with various `Hmisc` and `rms` package functions, one can capitalize on `Hmisc`'s special formatting of variable labels and units when constructing tables in `Typst`, $\LaTeX$ or html.  The basic constructs are shown in the code below.
 
 ```{r labtab,eval=FALSE}
 # Retrieve a set of markup functions depending on typesetting format
 # See below for definition of ishtml
 specs    <- markupSpecs[[if(ishtml) 'html' else 'latex']]
-# Hmisc markupSpecs functions create plain text, html, latex,
+# Hmisc markupSpecs functions create plain text, html, latex, typst,
 # markdown, or plotmath code
 varlabel <- specs$varlabel  # retrieve an individual function
 # Format text describing variable named x
@@ -356,11 +375,11 @@ For plotting and sometimes for html, the `Hmisc` `hlab` function is used.  It ma
 Nicely formatted tables can be created in multiple ways:
 
 * using customized code that directly writes html markup
-* using customized code that directly writes $\LaTeX$ markup
+* using customized code that directly writes `Typst` or $\LaTeX$ markup
 * using customized code that writes markdown markup (e.g., "pipe" tables)
 * hand coding markdown (usually pipe tables)
 
-The latter two provide less flexibility but have the advantage of being automatically converted to html or $\LaTeX$ depending on your destination format.
+The latter two provide less flexibility but have the advantage of being automatically converted to html, `Typst`, or $\LaTeX$ depending on your destination format.
 
 Here is an example of a hand coded markdown pipe table.  Note (1) the second line of the markup indicates that the first column is to be left-justified and the second column right-justified, and (2) you can include computed values from R expressions.  On the caption line we specify that the first column occupies 2/3 of the width.  We could have specified `tbl-colwidths="[67,33]"` to get the same result.
 
@@ -382,7 +401,7 @@ There is an automatic feature of html that makes it especially attractive as a d
 
 The `knitr` package `kable` function provides an easy way to produce html tables from data tables/frames and matrices, and `knitr::kables` allows one to put several tables together.  The `qreport` package `kabl` function combines the features of `kable` and `kables`.  The [`kableExtra`](https://cran.r-project.org/web/packages/kableExtra/index.html) package allows you to greatly extend what `kable` can do.
 
-There are many R packages and functions for making advanced html tables.  See for example the `Table 1` tab in @sec-descript.  This table was produced by the `Hmisc` package `summaryM` function, which used the `htmlTable` function in the [`htmlTable`](https://cran.r-project.org/web/packages/htmlTable) package.  Other packages to consider are [`gt`](https://cran.r-project.org/web/packages/gt/index.html) (see @sec-rformat-mix) and its uncredited predecessor  [`tangram`](https://cran.r-project.org/web/packages/tangram), and packages discussed [here](https://rfortherestofus.com/2019/11/how-to-make-beautiful-tables-in-r).  
+There are many R packages and functions for making advanced html tables.  See for example the `Table 1` tab in @sec-descript.  This table was produced by the `Hmisc` package `summaryM` function, which used the `htmlTable` function in the [`htmlTable`](https://cran.r-project.org/web/packages/htmlTable) package.  Other packages to consider are [`gt`](https://cran.r-project.org/web/packages/gt/index.html) (see @sec-rformat-mix) and its uncredited predecessor  [`tangram`](https://cran.r-project.org/web/packages/tangram), and packages discussed [here](https://rfortherestofus.com/2019/11/how-to-make-beautiful-tables-in-r).
 
 Quarto is capable of converting many raw html tables to markdown automatically, and it also allows you to embed markdown syntax in html tables; see [here](https://quarto.org/docs/authoring/tables.html#html-tables).
 
@@ -479,7 +498,7 @@ This is text that will appear smaller ...
 Here is an example using `smaller2`.
 
 ::: {.smaller2}
-This is text that will appear smaller.  More of the same.  More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. 
+This is text that will appear smaller.  More of the same.  More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same. More of the same.
 
 | X | Y |
 |---|---|
@@ -564,7 +583,7 @@ Foo [label=<
 </table>>];
 Bar [label=<This and that<br/><font face="courier" color="darkblue">and that and <b>that</b></font>>];
 
-Foo:3:w -> Foo:2:w; 
+Foo:3:w -> Foo:2:w;
 // node name:port:direction (n,ne,e,se,s,sw,w,nw,c,_)
 // c=center within node, _=use appropriate node side
 // See graphviz.org/docs/attr-types/portPos
@@ -595,7 +614,7 @@ Foo [label=<
 </table>>];
 Bar [label=<This and that<br/><font face="courier" color="darkblue">and that and <b>that</b></font>>];
 
-Foo:3:w -> Foo:2:w; 
+Foo:3:w -> Foo:2:w;
 // node name:port:direction (n,ne,e,se,s,sw,w,nw,c,_)
 // c=center within node, _=use appropriate node side
 // See graphviz.org/docs/attr-types/portPos
@@ -804,7 +823,7 @@ See [this tutorial](https://liluoma22.medium.com/gridtable-gridextra-tutorial-39
 Now consider the last option.  Instead of converting table elements to graphics we convert graphics elements to html by rendering them to svg text using the [`svglite` package](https://cran.r-project.org/web/packages/svglite) and marking the text as html with [`htmltools::HTML`](https://cran.r-project.org/web/packages/htmltools).  Here is a function that makes this easy to do.  The `expr` argument is any R expression that produces a graph.  It must be enclosed in braces if the expression has more than one command.  Arguments `ps, cex.lab, cex.axis, ...` are ignored when using `ggplot2`.
 
 ```{r}
-msvg <- function(expr, w=5, h=4, ps=10, cex.lab=.9, cex.axis=0.6, 
+msvg <- function(expr, w=5, h=4, ps=10, cex.lab=.9, cex.axis=0.6,
                  bg='transparent', ...) {
   f <- tempfile(fileext='.svg')
   on.exit(unlink(f))
@@ -812,7 +831,7 @@ msvg <- function(expr, w=5, h=4, ps=10, cex.lab=.9, cex.axis=0.6,
   qreport::spar(cex.lab=cex.lab, cex.axis=cex.axis, ...)
   .x. <- expr
   if(inherits(.x., 'ggplot')) print(.x.)
-  dev.off() 
+  dev.off()
   htmltools::HTML(readLines(f))
 }
 ```
@@ -821,7 +840,7 @@ In the following example the width of column 1 was specified to be twice the wid
 
 | `r rwrap('p1 <- msvg(plot(rnorm(20), ylab=\'\'), w=4, h=2)')`
 | `r rwrap('p2 <- msvg(ggplot(mapping=aes(x=1:10, y=rnorm(10))) + geom_point(), w=2.5, h=1.4)')`
-| 
+|
 | | A | B |
 | |:---|:---:|
 | | `r rwrap('p1')`           | Row 1 column 2 |
@@ -867,7 +886,7 @@ set.seed(1)
 x         <- rnorm(10000)
 sp        <- spikecomp(x, method='grid', normalize=FALSE)       # <1>
 spikehist <- pngNeedle(sp$y / max(sp$y), h=14, w=3, lwd=2)      # <2>
-gt(d) |> text_transform(locations=cells_body(rows=1, columns=A), 
+gt(d) |> text_transform(locations=cells_body(rows=1, columns=A),
                         fn=function(x) local_image(spikehist, height=14)) |>
          text_transform(locations=cells_body(rows=2, columns=B),
                         fn=function(x)
@@ -887,7 +906,7 @@ sparkline(0)   # load javascript dependencies
 spike <- htmltools::HTML(spk_chr(values=round(sp$y / sum(sp$y), 4), type='bar',
                                  chartRangeMin=0, zeroColor='lightgray',
                                  barWidth=1, barSpacing=1, width=200))
-gt(d) |> text_transform(locations=cells_body(rows=1, columns=A), 
+gt(d) |> text_transform(locations=cells_body(rows=1, columns=A),
                         fn=function(x) spike) |>
          text_transform(locations=cells_body(rows=2, columns=B),
                         fn=function(x) ggplot_image(g, height=200, aspect=1.5)) |>
@@ -925,7 +944,7 @@ tt <- function(xv)
       jsonlite::toJSON(xv) ) )
 
 sp <- spike(x)
-gt(d) |> text_transform(locations=cells_body(rows=1, columns=A), 
+gt(d) |> text_transform(locations=cells_body(rows=1, columns=A),
                         fn=function(x) sp) |>
          text_transform(locations=cells_body(rows=2, columns=B),
                         fn=function(x) ggplot_image(g, height=200, aspect=1.5)) |>
@@ -965,4 +984,3 @@ print(des, 'categorical')
 ```
 
 [`gt nanoplots`](https://gt.rstudio.com/reference/cols_nanoplot.html) are probably better than `sparklines`.  They are more flexible and may be more likely to render well when using R interactively.  But they do not allow for customized hover text.
-

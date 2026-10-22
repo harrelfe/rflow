@@ -1,5 +1,6 @@
+.DS_Store
 _freeze
-_book/
+_book
 Active
 .quarto
 .Rhistory
